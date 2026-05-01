@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import api from '../api'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
@@ -23,9 +24,11 @@ const KIND_BADGE = {
 }
 
 export default function Kham() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
-  const [openId, setOpenId] = useState(null)
+  const [openId, setOpenId] = useState(searchParams.get('id'))
+  const [showCreate, setShowCreate] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -36,6 +39,14 @@ export default function Kham() {
   }
   useEffect(() => { load() }, [])
 
+  // Sync ?id=... in URL when drawer opens/closes (so receptionist can deep-link
+  // a freshly-registered encounter)
+  useEffect(() => {
+    if (openId) setSearchParams({ id: openId }, { replace: true })
+    else if (searchParams.get('id')) setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId])
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -43,7 +54,10 @@ export default function Kham() {
           <h1 className="text-xl font-bold text-gray-800">Khám hôm nay</h1>
           <p className="text-xs text-gray-500 mt-0.5">Lượt khám trong ngày — gán gói, thực hiện dịch vụ, thêm kính/thuốc vào bill.</p>
         </div>
-        <button onClick={load} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200">⟳ Làm mới</button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">+ Tạo lượt khám</button>
+          <button onClick={load} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200">⟳ Làm mới</button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -86,7 +100,96 @@ export default function Kham() {
       </div>
 
       {openId && <EncounterDrawer id={openId} onClose={() => { setOpenId(null); load() }} />}
+      {showCreate && <CreateEncounterModal onClose={() => setShowCreate(false)} onCreated={(id) => { setShowCreate(false); setOpenId(id); load() }} />}
     </div>
+  )
+}
+
+// ── Create encounter (Lễ tân quick-create) ────────────────
+
+function CreateEncounterModal({ onClose, onCreated }) {
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [picked, setPicked] = useState(null)
+  const [site, setSite] = useState('Trung Kính')
+  const [creating, setCreating] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    if (!q.trim()) { setResults([]); return }
+    const t = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const r = await api.get('/registration/patients', { params: { q, limit: 10 } })
+        setResults(r.data || [])
+      } finally { setSearching(false) }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [q])
+
+  const submit = async () => {
+    if (!picked) return setErr('Chọn bệnh nhân')
+    setCreating(true); setErr('')
+    try {
+      const r = await api.post('/encounters', {
+        patientId: picked.patientId || picked._id,
+        patientName: picked.name,
+        site,
+        dob: picked.dob || '',
+        gender: picked.gender || 'M',
+      })
+      onCreated(r.data._id)
+    } catch (e) { setErr(e.response?.data?.error || 'Lỗi'); setCreating(false) }
+  }
+
+  return (
+    <Modal onClose={onClose} title="Tạo lượt khám mới" wide>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Bệnh nhân</label>
+          {picked ? (
+            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded p-2">
+              <div>
+                <div className="font-semibold text-sm">{picked.name}</div>
+                <div className="text-xs text-gray-500">{picked.patientId || picked._id} · {picked.phone || '—'}</div>
+              </div>
+              <button onClick={() => { setPicked(null); setQ('') }} className="text-xs text-blue-600 hover:text-blue-800">Đổi</button>
+            </div>
+          ) : (
+            <>
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm theo tên / mã BN / SĐT / CCCD..." className="w-full border rounded px-3 py-2 text-sm" autoFocus />
+              {searching && <div className="text-xs text-gray-400 mt-1">Đang tìm...</div>}
+              {results.length > 0 && (
+                <div className="mt-1 border rounded divide-y max-h-60 overflow-y-auto">
+                  {results.map(p => (
+                    <button key={p._id} onClick={() => setPicked(p)} className="w-full text-left px-3 py-2 hover:bg-gray-50">
+                      <div className="font-semibold text-sm">{p.name}</div>
+                      <div className="text-xs text-gray-500">{p.patientId || p._id} · {p.phone || '—'} · {p.dob || '—'}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!searching && q.trim() && results.length === 0 && (
+                <div className="text-xs text-gray-400 mt-1">Không tìm thấy. Tạo BN mới ở trang Đăng ký trước.</div>
+              )}
+            </>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Cơ sở</label>
+          <select value={site} onChange={e => setSite(e.target.value)} className="w-full border rounded px-3 py-2 text-sm">
+            <option value="Trung Kính">Trung Kính</option>
+            <option value="Kim Giang">Kim Giang</option>
+          </select>
+        </div>
+        {err && <div className="text-xs text-red-600">{err}</div>}
+        <div className="flex gap-2 pt-2">
+          <button onClick={submit} disabled={creating || !picked} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50">{creating ? 'Đang tạo...' : 'Tạo lượt khám'}</button>
+          <button onClick={onClose} className="ml-auto text-sm text-gray-500 hover:text-gray-700 px-4">Hủy</button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
@@ -122,12 +225,36 @@ function EncounterDrawer({ id, onClose }) {
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
       <div className="w-full max-w-3xl bg-white h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-5 py-3 border-b border-gray-200 flex items-start justify-between flex-shrink-0">
-          <div>
-            <div className="text-base font-semibold text-gray-900">{enc.patientName} <span className="font-mono text-xs text-gray-400 ml-1">{enc.patientId}</span></div>
+        <div className="px-5 py-3 border-b border-gray-200 flex items-start justify-between flex-shrink-0 gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-semibold text-gray-900 flex items-center gap-2">
+              {enc.patientName} <span className="font-mono text-xs text-gray-400">{enc.patientId}</span>
+              {enc.status === 'paid' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Đã thanh toán</span>}
+              {enc.status === 'cancelled' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Đã hủy</span>}
+            </div>
             <div className="text-xs text-gray-500 mt-0.5">{enc.site || '—'} · {enc._id}</div>
+            {enc.status === 'paid' && enc.paidByName && (
+              <div className="text-xs text-green-700 mt-0.5">Thu ngân: {enc.paidByName} · {enc.paidAt && new Date(enc.paidAt).toLocaleString('vi-VN')}</div>
+            )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {enc.status !== 'paid' && enc.status !== 'cancelled' && (
+              <button
+                onClick={async () => {
+                  if (!(enc.billItems || []).length) return alert('Bill chưa có mục nào — không thể thanh toán.')
+                  if (!confirm(`Xác nhận thanh toán ${fmtMoney(enc.billTotal)} đ cho ${enc.patientName}?\nSau khi thanh toán không thể chỉnh sửa thêm.`)) return
+                  try {
+                    await api.post(`/encounters/${enc._id}/checkout`)
+                    await load()
+                  } catch (e) { alert(e.response?.data?.error || 'Lỗi thanh toán') }
+                }}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap"
+              >
+                Thanh toán {fmtMoney(enc.billTotal)} đ
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">

@@ -16,9 +16,13 @@ const encounterSchema = new mongoose.Schema({
   studyDate: String,
   status: {
     type: String,
-    enum: ['scheduled', 'in_progress', 'pending_read', 'reading', 'reported', 'verified', 'cancelled'],
+    enum: ['scheduled', 'in_progress', 'pending_read', 'reading', 'reported', 'verified', 'completed', 'paid', 'cancelled'],
     default: 'scheduled',
   },
+  paidAt: String,
+  paidBy: String,
+  paidByName: String,
+  paidAmount: Number,
   priority: {
     type: String,
     enum: ['routine', 'urgent', 'stat'],

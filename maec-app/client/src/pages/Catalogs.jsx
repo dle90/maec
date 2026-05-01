@@ -94,8 +94,8 @@ const CATALOG_FIELDS = {
     ],
   },
   'services': {
-    columns: ['code', 'name', 'category', 'station', 'role', 'devices', 'basePrice'],
-    columnLabels: { code: 'Mã', name: 'Tên', category: 'Nhóm', station: 'Trạm', role: 'Người TH', devices: 'Thiết bị', basePrice: 'Đơn giá' },
+    columns: ['code', 'name', 'category', 'station', 'role', 'devices', 'basePrice', 'inPackagePrice'],
+    columnLabels: { code: 'Mã', name: 'Tên', category: 'Nhóm', station: 'Trạm', role: 'Người TH', devices: 'Thiết bị', basePrice: 'Giá lẻ', inPackagePrice: 'Giá trong gói' },
     editFields: [
       { key: 'code', label: 'Mã', required: true },
       { key: 'name', label: 'Tên', required: true, wide: true },
@@ -115,12 +115,14 @@ const CATALOG_FIELDS = {
         { value: 'bs-cl',        label: 'BS chuyên KTX' },
       ] },
       { key: 'devices', label: 'Thiết bị (cách nhau bằng dấu phẩy)' },
-      { key: 'basePrice', label: 'Đơn giá', type: 'number' },
+      { key: 'basePrice', label: 'Giá lẻ (à la carte)', type: 'number' },
+      { key: 'inPackagePrice', label: 'Giá trong gói (discount, để trống = dùng giá lẻ)', type: 'number' },
       { key: 'unit', label: 'Đơn vị' },
       { key: 'description', label: 'Mô tả', wide: true },
     ],
     formatCell: {
       basePrice: v => fmtMoney(v),
+      inPackagePrice: v => v == null ? '—' : fmtMoney(v),
       devices: v => Array.isArray(v) ? v.join(', ') : (v || ''),
       category: v => ({
         'khucxa': 'Khúc xạ / thị lực',
@@ -137,7 +139,7 @@ const CATALOG_FIELDS = {
         'bs-cl': 'BS KTX',
       }[v] || v || ''),
     },
-    rightAlign: ['basePrice'],
+    rightAlign: ['basePrice', 'inPackagePrice'],
   },
   'packages': {
     columns: ['code', 'name', 'bundledCount', 'priceDisplay', 'entitlementDisplay'],

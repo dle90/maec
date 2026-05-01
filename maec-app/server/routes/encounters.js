@@ -11,6 +11,34 @@ const now = () => new Date().toISOString()
 const todayISO = () => new Date().toISOString().slice(0, 10)
 const sumBill = (items) => (items || []).reduce((s, i) => s + (i.totalPrice || 0), 0)
 
+// POST /encounters — create new clinical encounter (Lễ tân workflow).
+// Minimal: just patientId + site. Package / services / bill items added via
+// subsequent endpoints (assign-package, services, bill-items).
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const { patientId, patientName, site, dob, gender } = req.body
+    if (!patientId || !patientName) return res.status(400).json({ error: 'patientId + patientName required' })
+    const id = `enc-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+    const enc = await new Encounter({
+      _id: id,
+      patientId,
+      patientName,
+      site: site || '',
+      dob: dob || '',
+      gender: ['M', 'F'].includes(gender) ? gender : 'M',
+      scheduledDate: new Date().toISOString().slice(0, 10),
+      studyDate: new Date().toISOString().slice(0, 10),
+      status: 'scheduled',
+      assignedServices: [],
+      billItems: [],
+      billTotal: 0,
+      createdAt: now(),
+      updatedAt: now(),
+    }).save()
+    res.status(201).json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
 // GET /encounters/today — encounters scheduled or in progress today
 router.get('/today', requireAuth, async (req, res) => {
   try {
@@ -193,6 +221,23 @@ router.post('/:id/bill-items', requireAuth, async (req, res) => {
     })
 
     enc.billTotal = sumBill(enc.billItems)
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// POST /encounters/:id/checkout — mark as paid (Thu ngân confirms bill)
+router.post('/:id/checkout', requireAuth, async (req, res) => {
+  try {
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (enc.status === 'paid') return res.status(400).json({ error: 'Lượt khám đã được thanh toán' })
+    enc.status = 'paid'
+    enc.paidAt = now()
+    enc.paidBy = req.user.username
+    enc.paidByName = req.user.displayName || req.user.username
+    enc.paidAmount = enc.billTotal
     enc.updatedAt = now()
     await enc.save()
     res.json(enc.toObject())

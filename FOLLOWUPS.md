@@ -2,6 +2,24 @@
 
 Living doc of deferred work / known limits. Append before finishing any feature; check before starting one.
 
+## Open package / pricing questions (filed 2026-05-01, awaiting MAEC review)
+
+Per user's "keep all, consolidate later" — these were preserved as-is from the price sheet but need de-duplication or refinement:
+
+1. **PKG-2 (350k both cyclo + TG2M) vs PKG-2A (350k cyclo only) vs PKG-2B (350k TG2M only)** — sheet has 2 separate 350k variants for kids, my model also keeps the bundled-both variant. Decide: keep all three, or consolidate.
+
+2. **PKG-OK-RECHECK 300k flat vs PKG-4 dynamic (free / 350k / 600k)** — both for ortho-K re-exams but different pricing models. Sheet's flat 300k is likely the customer-facing price; PKG-4's dynamic logic was design speculation. Reconcile: probably drop PKG-4 and keep PKG-OK-RECHECK, OR position PKG-4 as the "auto-discount based on entitlement history" variant of PKG-OK-RECHECK.
+
+3. **PKG-ATROPIN (1.5M)** — bundle services are placeholder (autoref + refract + IOP + slit + topo + OCT-trước + myopia consult). Need from MAEC: exactly which services included up-front, follow-up schedule, entitlement length (1 year? 6 months?), whether atropine drops product is bundled or separate.
+
+4. **PKG-RECHECK (Phí tái khám 150k)** — my placeholder bundles only refract + slit. Need from MAEC: exact services, time window for eligibility (e.g. within 30 days of any prior visit?), whether it stacks with other tái khám packages.
+
+5. **OCT pricing — "tổng" implicit** — sheet has OCT trước (400k) / OCT sau (400k) / OCT tổng (800k) standalone, plus 3 in-package variants (300/300/600k). Currently modelled as 2 services (#12 trước, #13 sau) with `inPackagePrice` discount. The "tổng" combo isn't a 3rd service — it's just both selected. Confirm OK, or do we need a separate "OCT tổng" service code that bundles both for a single bill line?
+
+6. **SVC-BIOMETRY 250k** — sheet does not list biometry. Price is placeholder. For cataract pre-op pipeline only.
+
+7. **Soft CL fitting** — confirmed à la carte (no package). PKG-3A/3B are ortho-K specific — name "Khám CL Ortho-K" should not be ambiguous. If MAEC adds soft-CL package later, model as PKG-CL-SOFT distinct from PKG-3A/3B.
+
 ## Done in 2026-05-01 P0/P1 pass
 
 ### P0

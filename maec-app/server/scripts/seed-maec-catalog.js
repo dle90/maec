@@ -12,26 +12,29 @@ const Package = require('../models/Package')
 
 const now = () => new Date().toISOString()
 
+// basePrice = à la carte (standalone) price.
+// inPackagePrice = discounted price when bundled into a Package (null = same as basePrice).
+// Sources: 2026-05-01 price sheet (Khám tab). Services not in sheet kept at prior estimate.
 const SERVICES = [
   { code: 'SVC-AUTOREF',         name: 'Chụp khúc xạ tự động (+ đo số kính cũ nếu có)', category: 'khucxa',     station: 'auto-ref',         role: 'ktv-khuc-xa', devices: ['Auto-refractor'],                          basePrice: 50000 },
   { code: 'SVC-REFRACT',         name: 'Đo khúc xạ (VA + chủ quan trial frame + khách quan SBĐT dry + PD)', category: 'khucxa',     station: 'va-refraction',    role: 'ktv-khuc-xa', devices: ['Trial frame + lens', 'VA chart'],          basePrice: 100000 },
-  { code: 'SVC-TG2M',            name: 'Đo thị giác hai mắt (alignment + fusion + lập thể + biên độ điều tiết)', category: 'khucxa',     station: 'tg2m',             role: 'ktv-khuc-xa', devices: ['Worth 4-dot', 'Maddox', 'Prism bar'],      basePrice: 200000 },
-  { code: 'SVC-CYCLO',           name: 'Liệt điều tiết + đo khúc xạ liệt điều tiết (45-min wait + wet SBĐT)', category: 'khucxa',     station: 'cyclo-room',       role: 'ktv-khuc-xa', devices: ['Cycloplegic drops', 'Trial frame'],        basePrice: 200000 },
+  { code: 'SVC-TG2M',            name: 'Đo thị giác hai mắt (alignment + fusion + lập thể + biên độ điều tiết)', category: 'khucxa',     station: 'tg2m',             role: 'ktv-khuc-xa', devices: ['Worth 4-dot', 'Maddox', 'Prism bar'],      basePrice: 100000, note: 'Sheet: Khám TG2M chuyên sâu 100k' },
+  { code: 'SVC-CYCLO',           name: 'Đo khúc xạ sau liệt điều tiết (Atropin / Cyclogyl)', category: 'khucxa',     station: 'cyclo-room',       role: 'ktv-khuc-xa', devices: ['Atropin 0.5%', 'Cyclogyl 1%', 'Trial frame'], basePrice: 150000, note: 'Drug as parameter (Atropin / Cyclogyl). Sheet: 150k each.' },
   { code: 'SVC-CONTRAST',        name: 'Đo độ tương phản',                                category: 'khucxa',     station: 'contrast',         role: 'ktv',         devices: ['Pelli-Robson chart'],                       basePrice: 150000 },
   { code: 'SVC-ISHIHARA',        name: 'Đo sắc giác (Ishihara)',                          category: 'khucxa',     station: 'color-vision',     role: 'ktv',         devices: ['Ishihara plates'],                          basePrice: 50000 },
-  { code: 'SVC-IOP',             name: 'Đo nhãn áp (iCare + Goldmann confirm khi bất thường)', category: 'iop-shv',     station: 'iop-portable',     role: 'ktv',         devices: ['iCare', 'Goldmann'],                       basePrice: 50000 },
+  { code: 'SVC-IOP',             name: 'Đo nhãn áp (iCare + Goldmann confirm khi bất thường)', category: 'iop-shv',     station: 'iop-portable',     role: 'ktv',         devices: ['iCare', 'Goldmann'],                       basePrice: 100000 },
   { code: 'SVC-SLIT',            name: 'Khám sinh hiển vi (multi-event: initial + conclusion + [ortho-K] CL eval)', category: 'iop-shv',     station: 'slit-lamp',        role: 'bs',          devices: ['Slit lamp', '90D / 78D'],                  basePrice: 200000 },
   { code: 'SVC-BIO',             name: 'Soi đáy mắt bằng BIO (indirect ophthalmoscopy)',  category: 'iop-shv',     station: 'bio',              role: 'bs',          devices: ['Indirect ophthalmoscope', '20D lens'],      basePrice: 100000 },
   { code: 'SVC-SCHIRMER',        name: 'Test Schirmer',                                   category: 'iop-shv',     station: 'schirmer',         role: 'ktv',         devices: ['Schirmer strips'],                          basePrice: 50000 },
-  { code: 'SVC-TOPO',            name: 'Bản đồ giác mạc',                                 category: 'imaging',    station: 'topo',             role: 'ktv',         devices: ['Medmont'],                                  basePrice: 250000 },
-  { code: 'SVC-OCT-ANT',         name: 'OCT bán phần trước (+ pachymetry)',               category: 'imaging',    station: 'oct',              role: 'ktv',         devices: ['Optopol Revo'],                             basePrice: 300000 },
-  { code: 'SVC-OCT-POST',        name: 'OCT bán phần sau (RNFL + macula + ONH)',          category: 'imaging',    station: 'oct',              role: 'ktv',         devices: ['Optopol Revo'],                             basePrice: 300000 },
-  { code: 'SVC-FUNDUS',          name: 'Chụp đáy mắt',                                    category: 'imaging',    station: 'fundus',           role: 'ktv',         devices: ['DRS Plus (Trung Kính)', 'Vietcan {model TBD} (Kim Giang)'], basePrice: 200000 },
-  { code: 'SVC-DRYEYE',          name: 'Đánh giá khô mắt',                                category: 'imaging',    station: 'dry-eye',          role: 'ktv',         devices: ['IDRA', 'Medmont Meridia'],                  basePrice: 300000 },
-  { code: 'SVC-BIOMETRY',        name: 'Sinh trắc nhãn cầu (IOL biometry)',               category: 'imaging',    station: 'biometry',         role: 'ktv',         devices: ['MediWorks AB800', 'Syseye', 'Optopol Revo'], basePrice: 250000 },
-  { code: 'SVC-CL-FIT',          name: 'Thử kính tiếp xúc (gộp chốt đơn) — soft / RGP / ortho-K', category: 'cl',         station: 'cl-fit',           role: 'bs-cl',       devices: ['Trial CL kit', 'Slit lamp'],                basePrice: 700000 },
+  { code: 'SVC-TOPO',            name: 'Bản đồ giác mạc',                                 category: 'imaging',    station: 'topo',             role: 'ktv',         devices: ['Medmont'],                                  basePrice: 350000, inPackagePrice: 250000 },
+  { code: 'SVC-OCT-ANT',         name: 'OCT bán phần trước (+ pachymetry)',               category: 'imaging',    station: 'oct',              role: 'ktv',         devices: ['Optopol Revo'],                             basePrice: 400000, inPackagePrice: 300000 },
+  { code: 'SVC-OCT-POST',        name: 'OCT bán phần sau (RNFL + macula + ONH)',          category: 'imaging',    station: 'oct',              role: 'ktv',         devices: ['Optopol Revo'],                             basePrice: 400000, inPackagePrice: 300000 },
+  { code: 'SVC-FUNDUS',          name: 'Chụp đáy mắt',                                    category: 'imaging',    station: 'fundus',           role: 'ktv',         devices: ['DRS Plus (Trung Kính)', 'Vietcan {model TBD} (Kim Giang)'], basePrice: 300000 },
+  { code: 'SVC-DRYEYE',          name: 'Đánh giá khô mắt (khám nghiệm)',                  category: 'imaging',    station: 'dry-eye',          role: 'ktv',         devices: ['IDRA', 'Medmont Meridia'],                  basePrice: 100000 },
+  { code: 'SVC-BIOMETRY',        name: 'Sinh trắc nhãn cầu (IOL biometry)',               category: 'imaging',    station: 'biometry',         role: 'ktv',         devices: ['MediWorks AB800', 'Syseye', 'Optopol Revo'], basePrice: 250000, note: 'Sheet không có giá — placeholder' },
+  { code: 'SVC-CL-FIT',          name: 'Thử kính tiếp xúc (gộp chốt đơn) — soft / RGP / ortho-K', category: 'cl',         station: 'cl-fit',           role: 'bs-cl',       devices: ['Trial CL kit', 'Slit lamp'],                basePrice: 200000 },
   { code: 'SVC-MYOPIA-CONSULT',  name: 'Tư vấn kiểm soát cận thị (placeholder, chưa bill riêng)', category: 'cl',         station: 'consult',          role: 'bs',          devices: [],                                           basePrice: 0 },
-  { code: 'SVC-FB-REMOVE',       name: 'Lấy dị vật kết / giác mạc',                       category: 'thuthuat',   station: 'procedure',        role: 'bs',          devices: ['Slit lamp', 'Sterile needle'],              basePrice: 200000 },
+  { code: 'SVC-FB-REMOVE',       name: 'Lấy dị vật kết / giác mạc',                       category: 'thuthuat',   station: 'procedure',        role: 'bs',          devices: ['Slit lamp', 'Sterile needle'],              basePrice: 100000 },
 ]
 
 const PACKAGES = [
@@ -115,6 +118,65 @@ const PACKAGES = [
     ],
     activatesEntitlement: null,
   },
+  {
+    code: 'PKG-2A',
+    name: 'Khám mắt trẻ em có Cyclogyl 1%',
+    description: 'Pediatric variant: basic + cyclo (no TG2M). Sheet 2026-05-01.',
+    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-CYCLO'],
+    basePrice: 350000,
+    pricingTiers: [],
+    pricingRules: [],
+    activatesEntitlement: null,
+  },
+  {
+    code: 'PKG-2B',
+    name: 'Khám mắt trẻ em + Thị giác hai mắt',
+    description: 'Pediatric variant: basic + TG2M (no cyclo). Sheet 2026-05-01.',
+    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-TG2M', 'SVC-IOP', 'SVC-SLIT'],
+    basePrice: 350000,
+    pricingTiers: [],
+    pricingRules: [],
+    activatesEntitlement: null,
+  },
+  {
+    code: 'PKG-OK-RECHECK',
+    name: 'Khám định kỳ OrthoK',
+    description: 'Tái khám định kỳ cho BN đang đeo ortho-K. Giá 300k flat (sheet 2026-05-01) — khác với PKG-4 dynamic pricing. Cần consolidate sau.',
+    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-SLIT', 'SVC-TOPO'],
+    basePrice: 300000,
+    pricingTiers: [],
+    pricingRules: [],
+    activatesEntitlement: null,
+  },
+  {
+    code: 'PKG-RECHECK',
+    name: 'Phí tái khám mắt',
+    description: 'Tái khám sau visit gần nhất. Giá 150k flat. Bundle services TBD — placeholder.',
+    bundledServices: ['SVC-REFRACT', 'SVC-SLIT'],
+    basePrice: 150000,
+    pricingTiers: [],
+    pricingRules: [],
+    activatesEntitlement: null,
+  },
+  {
+    code: 'PKG-ATROPIN',
+    name: 'Gói khám Atropin (kiểm soát cận thị)',
+    description: 'Atropine myopia control program 1.5M. Bundle services placeholder — cần refine với MAEC: services bundled, follow-up schedule, entitlement length.',
+    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-TOPO', 'SVC-OCT-ANT', 'SVC-MYOPIA-CONSULT'],
+    basePrice: 1500000,
+    pricingTiers: [],
+    pricingRules: [],
+    activatesEntitlement: {
+      durationMonths: 12,
+      coveredServices: [
+        { serviceCode: 'SVC-AUTOREF',         maxUses: null },
+        { serviceCode: 'SVC-REFRACT',         maxUses: null },
+        { serviceCode: 'SVC-SLIT',            maxUses: null },
+        { serviceCode: 'SVC-TOPO',            maxUses: null },
+        { serviceCode: 'SVC-MYOPIA-CONSULT',  maxUses: null },
+      ],
+    },
+  },
 ]
 
 async function seed() {
@@ -131,8 +193,9 @@ async function seed() {
     role: s.role,
     devices: s.devices,
     basePrice: s.basePrice ?? 0,
+    inPackagePrice: s.inPackagePrice ?? null,
     unit: 'lần',
-    description: '',
+    description: s.note || '',
     status: 'active',
     createdAt: now(),
     updatedAt: now(),

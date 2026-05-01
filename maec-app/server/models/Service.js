@@ -9,6 +9,7 @@ const serviceSchema = new mongoose.Schema({
   role: String,
   devices: { type: [String], default: [] },
   basePrice: { type: Number, default: 0 },
+  inPackagePrice: { type: Number, default: null },
   unit: { type: String, default: 'lần' },
   description: String,
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
