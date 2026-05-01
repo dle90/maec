@@ -4,12 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import PL from './pages/PL'
-import CF from './pages/CF'
-import BalanceSheet from './pages/BalanceSheet'
-import Breakeven from './pages/Breakeven'
 import SiteList from './pages/SiteList'
-import Actuals from './pages/Actuals'
 import Workflow from './pages/Workflow'
 import RIS from './pages/RIS'
 import Kham from './pages/Kham'
@@ -32,7 +27,6 @@ import RadiologyReports from './pages/RadiologyReports'
 import TodayDashboard from './pages/TodayDashboard'
 import DashboardClinical from './pages/DashboardClinical'
 import DashboardOps from './pages/DashboardOps'
-import DashboardFinance from './pages/DashboardFinance'
 import CriticalFindings from './pages/CriticalFindings'
 import AuditLog from './pages/AuditLog'
 import ReportTemplates from './pages/ReportTemplates'
@@ -52,7 +46,6 @@ function AuthenticatedRoutes() {
         <Layout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            {auth.role === 'admin' && <Route path="/actuals" element={<Actuals />} />}
             {isWorkflowUser && <Route path="/workflow" element={<Workflow />} />}
             {isRISUser && <Route path="/ris" element={<RIS />} />}
             {isWorkflowUser && <Route path="/kham" element={<Kham />} />}
@@ -66,7 +59,7 @@ function AuthenticatedRoutes() {
             {isWorkflowUser && <Route path="/reports" element={<Reports />} />}
             {isWorkflowUser && <Route path="/reports/:reportKey" element={<Reports />} />}
             {/* R1 2026-04-24: Báo cáo consolidated — old /rad-reports/* and
-                 /dashboard/{clinical,ops,finance} redirect into the new tree.
+                 /dashboard/{clinical,ops} redirect into the new tree.
                  The 15 legacy rad/business report sub-keys map to the two
                  unified reports; users arriving from bookmarks land on the
                  right group and can pick their dimension from the in-page
@@ -75,7 +68,6 @@ function AuthenticatedRoutes() {
             {isWorkflowUser && <Route path="/rad-reports/:reportKey" element={<Navigate to="/reports/ca-chup-doc" replace />} />}
             {isWorkflowUser && <Route path="/dashboard/clinical" element={<Navigate to="/reports/lam-sang-overview" replace />} />}
             {isWorkflowUser && <Route path="/dashboard/ops" element={<Navigate to="/reports/van-hanh-overview" replace />} />}
-            {(auth.role === 'admin' || auth.role === 'giamdoc') && <Route path="/dashboard/finance" element={<Navigate to="/reports/tai-chinh-overview" replace />} />}
             {isWorkflowUser && <Route path="/today" element={<TodayDashboard />} />}
             {/* MWL + Critical findings now live as tabs inside /ris.
                 Old standalone routes redirect for backward compatibility (search/links). */}
@@ -85,10 +77,6 @@ function AuthenticatedRoutes() {
             {isRISUser && <Route path="/report-templates" element={<ReportTemplates />} />}
             {auth.role === 'admin' && <Route path="/hr" element={<HRManagement />} />}
             {auth.role === 'admin' && <Route path="/hr/:hrKey" element={<HRManagement />} />}
-            <Route path="/pl" element={<PL />} />
-            <Route path="/cf" element={<CF />} />
-            <Route path="/bs" element={<BalanceSheet />} />
-            <Route path="/breakeven" element={<Breakeven />} />
             <Route path="/sites" element={<SiteList />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/kpi-sales" element={<KPISales />} />

@@ -33,11 +33,8 @@ export const REPORT_GROUPS = [
     key: 'tai-chinh',
     label: 'Tài Chính',
     items: [
-      { key: 'tai-chinh-overview', label: 'Tổng quan', icon: '💼' },
-      { key: 'doanh-thu',          label: 'Doanh thu', icon: '💰' },
+      { key: 'doanh-thu', label: 'Doanh thu', icon: '💰' },
     ],
-    // Landing + Doanh thu are visible to anyone with reports.view; the
-    // finance page itself is gated further by financials.view (legacy).
   },
 ]
 

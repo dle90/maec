@@ -78,15 +78,14 @@ Common station modules: Tiếp đón → Chụp khúc xạ tự động → Đo 
 P0 + most of P1 was completed 2026-05-01. See [FOLLOWUPS.md](FOLLOWUPS.md) for the full done/deferred list. Top remaining items:
 
 ### P0 — User action required
-- [ ] **MongoDB Atlas** — provision cluster + DB, set `MONGODB_URI` in Railway. Cannot be done by Claude Code.
-- [ ] **Verify first deploy** — push to GitHub master; confirm Railway build succeeds; visit URL; log in.
-- [ ] **sites.json** — fill in real district names + investment data for the 2 clinic locations (currently placeholders).
+- _Atlas provisioning + first Railway deploy: done. sites.json financials: shelved — not needed for now. Financials module: deleted 2026-05-01, rebuild from scratch later (see FOLLOWUPS)._
 
 ### P1 — Deferred until workflow walkthrough is complete
 - [ ] **Encounter form** (replaces the radiology ReportEditor in RIS.jsx) — composable from station modules; needs walkthrough alignment first
 - [ ] **Eye-specific report template seed content** — populate templates for each `examType`
 - [ ] **Cycloplegic 45-min wait** UX (timer/queue) — required by 2 of the 4 documented workflows
 - [ ] **Deep field renames** on `Encounter` (`studyDate` → `encounterDate`, `radiologist` → `doctor`, `studyUID` → sub-array `imagingStudies[]`)
+- [ ] **Financials module rebuild** (deleted 2026-05-01) — design fresh on the 2-site model when economics conversation happens
 
 ### P2 — Imaging
 - [ ] Provision Orthanc + OHIF Railway services + Cloudflare R2 bucket (defer until first device is wired)

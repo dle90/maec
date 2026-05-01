@@ -24,10 +24,6 @@ const PAGE_LINKS = [
   { label: 'CRM',                      link: '/crm' },
   { label: 'KPI Sales',                link: '/kpi-sales' },
   { label: 'Marketing',                link: '/marketing' },
-  { label: 'P&L',                      link: '/pl' },
-  { label: 'Cash Flow',                link: '/cf' },
-  { label: 'Balance Sheet',            link: '/bs' },
-  { label: 'Breakeven',                link: '/breakeven' },
 ]
 
 const SECTION_META = {

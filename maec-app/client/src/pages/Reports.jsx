@@ -5,7 +5,6 @@ import api, { getDashboardToday, getDashboardExtras } from '../api'
 import { useAuth } from '../context/AuthContext'
 import DashboardClinical from './DashboardClinical'
 import DashboardOps from './DashboardOps'
-import DashboardFinance from './DashboardFinance'
 import {
   CasesByMachineReport, CasesByMachineGroupReport, CasesByRadiologistReport,
   CasesByRadiologistModalityReport, CasesByTimeReport, ServicesDetailReport,
@@ -1534,30 +1533,6 @@ function TongQuan() {
         />
       </PersonaRow>
 
-      {/* TÀI CHÍNH — R2a stays honest with today-level data; MTD / MoM / LNST
-          tiles will join once /api/reports/overview-kpis lands in a later pass. */}
-      <PersonaRow label="Tài Chính" detailKey="tai-chinh-overview" detailLabel="Tài Chính">
-        <KpiTile
-          label="Phiếu thu hôm nay"
-          value={fmtCount(s.invoiceCountToday)}
-          sub={fmtVND(s.revenueToday) + ' doanh thu'}
-          onClick={() => nav('/reports/doanh-thu')}
-        />
-        <KpiTile
-          label="Phiếu chưa thanh toán"
-          value={fmtCount(extras.unpaidInvoices?.count)}
-          sub={extras.unpaidInvoices?.amount ? fmtVND(extras.unpaidInvoices.amount) + ' chưa thu' : 'Không có công nợ'}
-          invertDelta
-          onClick={() => nav('/billing')}
-        />
-        <KpiTile
-          label="MTD · YTD · EBITDA"
-          value="→"
-          sub="Xem Tổng quan Tài chính"
-          onClick={() => nav('/reports/tai-chinh-overview')}
-        />
-      </PersonaRow>
-
       <div className="text-xs text-gray-400 text-right">
         Dữ liệu cập nhật {new Date(today.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
       </div>
@@ -1835,7 +1810,6 @@ export default function Reports() {
     if (activeKey === TOP_LEVEL.key)        return <TongQuan />
     if (activeKey === 'lam-sang-overview')  return <DashboardClinical />
     if (activeKey === 'van-hanh-overview')  return <DashboardOps />
-    if (activeKey === 'tai-chinh-overview') return <DashboardFinance />
     if (activeKey === 'ca-chup-doc')        return <CaChupReport />
     if (activeKey === 'doanh-thu')          return <DoanhThuReport />
     if (activeKey === 'so-kho')             return <SoKhoReport />

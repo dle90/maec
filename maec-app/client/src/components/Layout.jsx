@@ -76,17 +76,6 @@ const NAV = [
         group: 'Phân hệ phụ trợ',
         children: [
           {
-            group: 'Tài chính',
-            perm: 'financials.view',
-            items: [
-              { path: '/actuals',   label: 'Nhập số liệu',          icon: '✏️', perm: 'financials.manage' },
-              { path: '/pl',        label: 'Kết quả kinh doanh',    icon: '📋', perm: 'financials.view' },
-              { path: '/cf',        label: 'Dòng tiền',             icon: '💰', perm: 'financials.view' },
-              { path: '/bs',        label: 'Bảng cân đối kế toán',  icon: '⚖️', perm: 'financials.view' },
-              { path: '/breakeven', label: 'Điểm hòa vốn',          icon: '📈', perm: 'financials.view' },
-            ]
-          },
-          {
             group: 'CRM',
             items: [
               { path: '/crm',       label: 'Phân tích KH', icon: '👥' },
@@ -351,7 +340,23 @@ export default function Layout({ children }) {
   // Legacy flags kept as fallback for items that haven't migrated to `perm` yet.
   const isFinancialsUser = hasPerm('financials.view') || auth?.role === 'giamdoc'
   const isWorkflowUser = auth?.role && auth.role !== 'guest'
-  const [sidebarOpen, setSidebarOpen] = React.useState(true)
+  // Sidebar default: open on desktop (≥lg, 1024px+), closed on mobile so it
+  // doesn't eat 60% of a 375px viewport.
+  const [sidebarOpen, setSidebarOpen] = React.useState(() =>
+    typeof window === 'undefined' ? true : window.innerWidth >= 1024
+  )
+  const closeOnMobile = React.useCallback(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) setSidebarOpen(false)
+  }, [])
+  // Auto-close mobile drawer on route change. Covers sub-tree NavLinks (Catalog
+  // / Báo cáo) without plumbing closeOnMobile through every nested component.
+  // Skip the first render so the desktop sidebar isn't closed on mount.
+  const location = useLocation()
+  const isFirstNav = React.useRef(true)
+  React.useEffect(() => {
+    if (isFirstNav.current) { isFirstNav.current = false; return }
+    closeOnMobile()
+  }, [location.pathname, closeOnMobile])
   const [collapsed, setCollapsed] = React.useState(() => {
     const init = {}
     const walk = (nodes, parentKey) => {
@@ -380,6 +385,7 @@ export default function Layout({ children }) {
           href={item.path}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={closeOnMobile}
           className="flex items-center pr-4 py-2 text-sm transition-colors duration-150 text-blue-200 hover:bg-blue-800 hover:text-white"
           style={{ paddingLeft: `${16 + depth * 14}px` }}
         >
@@ -394,6 +400,7 @@ export default function Layout({ children }) {
         key={item.path}
         to={item.path}
         end={item.path === '/'}
+        onClick={closeOnMobile}
         className={({ isActive }) =>
           `flex items-center pr-4 py-2 text-sm transition-colors duration-150 ${
             isActive
@@ -470,8 +477,21 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-200`} style={{ backgroundColor: '#1e3a5f' }}>
+      {/* Mobile backdrop — only visible when drawer is open on <lg viewports.
+          Tapping it dismisses the drawer. */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar — fixed-position drawer on mobile, in-flow column on desktop. */}
+      <aside
+        className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-200 fixed inset-y-0 left-0 z-40 shadow-2xl lg:static lg:z-auto lg:shadow-none`}
+        style={{ backgroundColor: '#1e3a5f' }}
+      >
         {/* Logo */}
         <div className="px-4 py-4 border-b border-blue-800">
           <div className="text-white font-bold text-base tracking-wide leading-tight">Minh Anh<br /><span className="text-blue-300 font-medium text-xs">Eye Clinic</span></div>
@@ -507,33 +527,38 @@ export default function Layout({ children }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex items-center justify-between gap-3 shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <button
               onClick={() => setSidebarOpen(prev => !prev)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
               title={sidebarOpen ? 'Ẩn menu' : 'Hiện menu'}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-gray-800">Phòng khám Mắt Minh Anh</h1>
+            <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate min-w-0">
+              <span className="hidden lg:inline">Phòng khám Mắt Minh Anh</span>
+              <span className="lg:hidden">MAEC</span>
+            </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <button
               onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-              className="text-xs flex items-center gap-2 px-2.5 py-1 rounded border border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
+              className="text-xs flex items-center gap-2 px-2 sm:px-2.5 py-1 rounded border border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
               title="Tìm kiếm (Ctrl+K)"
             >
-              🔍 <span>Tìm kiếm</span> <kbd className="bg-gray-100 px-1 rounded text-[10px]">Ctrl+K</kbd>
+              <span>🔍</span>
+              <span className="hidden md:inline">Tìm kiếm</span>
+              <kbd className="hidden md:inline bg-gray-100 px-1 rounded text-[10px]">Ctrl+K</kbd>
             </button>
             <NotificationBell />
             {!isAdmin && (
-              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">Chế độ xem</span>
+              <span className="hidden lg:inline-flex text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">Chế độ xem</span>
             )}
-            <span className="text-sm text-gray-500">Đơn vị: VND triệu</span>
-            <div className="w-2 h-2 rounded-full bg-green-500" title="Server online"></div>
+            <span className="hidden xl:inline text-sm text-gray-500">Đơn vị: VND triệu</span>
+            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" title="Server online"></div>
           </div>
         </header>
 
@@ -541,7 +566,7 @@ export default function Layout({ children }) {
         <GlobalSearch />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4">
+        <main className="flex-1 overflow-y-auto p-2 sm:p-4">
           {children}
         </main>
       </div>

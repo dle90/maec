@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-// Generic key-value store for blob data (sites, pl, cf, bs, breakeven, actuals)
+// Generic key-value store for blob data (currently: sites)
 const kvSchema = new mongoose.Schema({
   _id: String,
   data: mongoose.Schema.Types.Mixed,

@@ -1,5 +1,6 @@
 /**
  * Seed Thuốc + Kính catalogs from MAEC's 2026-05-01 price sheet.
+ * Reconciled with "PK MA_Danh Sách Giá.xlsx" (Thuốc 31.12.2025 tab) on 2026-05-01.
  *
  * Run: railway run node scripts/seed-maec-thuoc-kinh.js
  */
@@ -10,7 +11,7 @@ const Kinh = require('../models/Kinh')
 
 const now = () => new Date().toISOString()
 
-// Thuốc: 38 drops + 5 oral + 5 accessory = 48 items
+// Thuốc: 48 prior + 7 added 2026-05-01 from sheet = 55 items
 const THUOC = [
   { code: 'TH-001', name: 'Thuốc uống Kid Visio',                 category: 'oral',     importPrice: 346000, sellPrice: 500000 },
   { code: 'TH-002', name: 'Myatro XL không chất bảo quản (0.05%)', category: 'drops',    importPrice: 122000, sellPrice: 240000, brand: 'Myatro' },
@@ -60,9 +61,17 @@ const THUOC = [
   { code: 'TH-046', name: 'Nước muối dạng tép',                    category: 'drops',    importPrice: 120000, sellPrice: 140000 },
   { code: 'TH-047', name: 'Bịt mắt Nexcare size nhỏ',              category: 'accessory', importPrice:      0, sellPrice: 150000, brand: 'Nexcare' },
   { code: 'TH-048', name: 'Bịt mắt Nexcare size lớn',              category: 'accessory', importPrice:      0, sellPrice: 180000, brand: 'Nexcare' },
+  // Added 2026-05-01 from sheet "Thuốc (31.12.2025)"
+  { code: 'TH-049', name: 'Cravit 1.5',                            category: 'drops',    importPrice:      0, sellPrice:      0, brand: 'Cravit' },
+  { code: 'TH-050', name: 'Ocudry',                                category: 'drops',    importPrice:      0, sellPrice: 280000 },
+  { code: 'TH-051', name: 'Intense Relief',                        category: 'drops',    importPrice: 252000, sellPrice: 490000 },
+  { code: 'TH-052', name: 'Lumix 0.3',                             category: 'drops',    importPrice:  80000, sellPrice: 170000 },
+  { code: 'TH-053', name: 'Atropin 0.025% (không chất bảo quản)',  category: 'drops',    importPrice: 120000, sellPrice: 250000, brand: 'Atropin' },
+  { code: 'TH-054', name: 'Atropin 0.5% (liệt điều tiết)',         category: 'drops',    importPrice:  40000, sellPrice: 100000, brand: 'Atropin' },
+  { code: 'TH-055', name: 'Eyemed',                                category: 'drops',    importPrice: 120000, sellPrice: 280000 },
 ]
 
-// Kính: 14 phụ-kiện + 1 KTX = 15 items
+// Kính: 15 prior + 2 added 2026-05-01 from sheet = 17 items
 const KINH = [
   { code: 'KN-001', name: 'Comfort Shield SD',                category: 'phu-kien', importPrice: 168000, sellPrice: 250000 },
   { code: 'KN-002', name: 'Avizor Lacrifresh Comfort',        category: 'phu-kien', importPrice: 120000, sellPrice: 200000, brand: 'Avizor' },
@@ -76,9 +85,12 @@ const KINH = [
   { code: 'KN-010', name: 'Nước rửa kính AOSept Plus',        category: 'phu-kien', importPrice:      0, sellPrice: 450000, brand: 'AOSept' },
   { code: 'KN-011', name: 'Nước rửa kính GP 450ml',           category: 'phu-kien', importPrice: 220000, sellPrice: 350000, spec: '450ml' },
   { code: 'KN-012', name: 'Nước rửa kính Menicare 250ml',     category: 'phu-kien', importPrice: 275000, sellPrice: 350000, brand: 'Menicare', spec: '250ml' },
-  { code: 'KN-013', name: 'Nước rửa kính mềm',                category: 'phu-kien', importPrice: 125000, sellPrice: 200000 },
+  { code: 'KN-013', name: 'Nước rửa kính mềm to',             category: 'phu-kien', importPrice: 125000, sellPrice: 200000 },
   { code: 'KN-014', name: 'Vệ sinh kính',                     category: 'phu-kien', importPrice:  60000, sellPrice: 150000 },
   { code: 'KN-015', name: 'Kính tiếp xúc 2 tuần',             category: 'ktx',      importPrice:  70000, sellPrice: 100000, spec: '2 tuần' },
+  // Added 2026-05-01 from sheet "Thuốc (31.12.2025)"
+  { code: 'KN-016', name: 'Avizor Lacrifresh tép',            category: 'phu-kien', importPrice:      0, sellPrice: 180000, brand: 'Avizor' },
+  { code: 'KN-017', name: 'Nước rửa kính mềm nhỏ',            category: 'phu-kien', importPrice:      0, sellPrice: 100000 },
 ]
 
 async function seed() {
@@ -102,7 +114,9 @@ async function seed() {
   })))
   console.log(`  ✓ Thuốc: ${THUOC.length} (drops/oral/accessory)`)
 
-  await Kinh.deleteMany({})
+  // Only manage legacy KN-NNN codes here; KN-G-* (frames) and KN-T-* / KN-A-*
+  // (lenses + new accessories) are owned by seed-maec-gong.js / seed-maec-trong.js.
+  await Kinh.deleteMany({ code: /^KN-\d{3}$/ })
   await Kinh.insertMany(KINH.map(k => ({
     _id: k.code,
     code: k.code,

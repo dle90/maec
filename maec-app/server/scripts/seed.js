@@ -44,14 +44,7 @@ async function seed() {
 
   // KV Store entries
   const kvEntries = [
-    { _id: 'sites',         data: read('sites.json') },
-    { _id: 'annual-pl',     data: read('annual-pl.json') },
-    { _id: 'monthly-pl',    data: read('monthly-pl.json') },
-    { _id: 'annual-cf',     data: read('annual-cf.json') },
-    { _id: 'monthly-cf',    data: read('monthly-cf.json') },
-    { _id: 'balance-sheet', data: read('balance-sheet.json') },
-    { _id: 'breakeven',     data: read('breakeven.json') },
-    { _id: 'actuals',       data: read('actuals.json') },
+    { _id: 'sites', data: read('sites.json') },
   ]
   await KVStore.deleteMany({})
   await KVStore.insertMany(kvEntries)

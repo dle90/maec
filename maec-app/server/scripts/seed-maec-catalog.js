@@ -1,6 +1,6 @@
 /**
- * Seed MAEC catalog: 19 services + 5 packages.
- * Replaces any prior radiology-era service rows.
+ * Seed MAEC catalog: 22 services + 8 packages.
+ * Reconciled with "PK MA_Danh Sách Giá.xlsx" (Giá DV khám tab) on 2026-05-01.
  *
  * Run: railway run node scripts/seed-maec-catalog.js
  *      (or: MONGODB_URI=... node scripts/seed-maec-catalog.js)
@@ -31,8 +31,11 @@ const SERVICES = [
   { code: 'SVC-OCT-POST',        name: 'OCT bán phần sau (RNFL + macula + ONH)',          category: 'imaging',    station: 'oct',              role: 'ktv',         devices: ['Optopol Revo'],                             basePrice: 400000, inPackagePrice: 300000 },
   { code: 'SVC-FUNDUS',          name: 'Chụp đáy mắt',                                    category: 'imaging',    station: 'fundus',           role: 'ktv',         devices: ['DRS Plus (Trung Kính)', 'Vietcan {model TBD} (Kim Giang)'], basePrice: 300000 },
   { code: 'SVC-DRYEYE',          name: 'Đánh giá khô mắt (khám nghiệm)',                  category: 'imaging',    station: 'dry-eye',          role: 'ktv',         devices: ['IDRA', 'Medmont Meridia'],                  basePrice: 100000 },
-  { code: 'SVC-BIOMETRY',        name: 'Sinh trắc nhãn cầu (IOL biometry)',               category: 'imaging',    station: 'biometry',         role: 'ktv',         devices: ['MediWorks AB800', 'Syseye', 'Optopol Revo'], basePrice: 250000, note: 'Sheet không có giá — placeholder' },
-  { code: 'SVC-CL-FIT',          name: 'Thử kính tiếp xúc (gộp chốt đơn) — soft / RGP / ortho-K', category: 'cl',         station: 'cl-fit',           role: 'bs-cl',       devices: ['Trial CL kit', 'Slit lamp'],                basePrice: 200000 },
+  { code: 'SVC-BIOMETRY',        name: 'Sinh trắc nhãn cầu (IOL biometry)',               category: 'imaging',    station: 'biometry',         role: 'ktv',         devices: ['MediWorks AB800', 'Syseye', 'Optopol Revo'], basePrice: 400000 },
+  { code: 'SVC-OCT-FULL',        name: 'OCT tổng (bán phần trước + sau)',                 category: 'imaging',    station: 'oct',              role: 'ktv',         devices: ['Optopol Revo'],                             basePrice: 800000, inPackagePrice: 600000, note: 'Sheet 2026-05-01: standalone 800k, in-package 600k. Distinct billable code from selecting OCT-ANT + OCT-POST separately.' },
+  { code: 'SVC-CL-FIT-SOFT',     name: 'Thử kính tiếp xúc mềm',                           category: 'cl',         station: 'cl-fit',           role: 'bs-cl',       devices: ['Trial CL kit (soft)', 'Slit lamp'],         basePrice: 100000 },
+  { code: 'SVC-CL-FIT-RGP',      name: 'Thử kính tiếp xúc cứng (RGP / ortho-K)',          category: 'cl',         station: 'cl-fit',           role: 'bs-cl',       devices: ['Trial CL kit (RGP)', 'Slit lamp'],          basePrice: 200000 },
+  { code: 'SVC-CL-FIT-SCLERAL',  name: 'Thử kính tiếp xúc củng mạc',                      category: 'cl',         station: 'cl-fit',           role: 'bs-cl',       devices: ['Trial CL kit (scleral)', 'Slit lamp'],      basePrice: 250000 },
   { code: 'SVC-MYOPIA-CONSULT',  name: 'Tư vấn kiểm soát cận thị (placeholder, chưa bill riêng)', category: 'cl',         station: 'consult',          role: 'bs',          devices: [],                                           basePrice: 0 },
   { code: 'SVC-FB-REMOVE',       name: 'Lấy dị vật kết / giác mạc',                       category: 'thuthuat',   station: 'procedure',        role: 'bs',          devices: ['Slit lamp', 'Sterile needle'],              basePrice: 100000 },
 ]
@@ -49,20 +52,10 @@ const PACKAGES = [
     activatesEntitlement: null,
   },
   {
-    code: 'PKG-2',
-    name: 'Khám khúc xạ + thị giác hai mắt',
-    description: 'Bao gồm gói cơ bản + TG2M + cyclo refraction (45-min wait + wet SBĐT).',
-    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-TG2M', 'SVC-IOP', 'SVC-SLIT', 'SVC-CYCLO'],
-    basePrice: 350000,
-    pricingTiers: [],
-    pricingRules: [],
-    activatesEntitlement: null,
-  },
-  {
     code: 'PKG-3A',
     name: 'Khám CL Ortho-K (không OCT)',
     description: 'Khám fit ortho-K + 1 đôi lens. 3 tier theo lens. Activates entitlement 1 năm cho 5 services free unlimited.',
-    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-TOPO', 'SVC-CL-FIT'],
+    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-TOPO', 'SVC-CL-FIT-RGP'],
     basePrice: 0,
     pricingTiers: [
       { code: 'standard',   name: 'Standard',   extraServices: [], extraProductSku: 'OK-LENS-STD',  totalPrice: 15500000 },
@@ -76,8 +69,8 @@ const PACKAGES = [
         { serviceCode: 'SVC-AUTOREF', maxUses: null },
         { serviceCode: 'SVC-REFRACT', maxUses: null },
         { serviceCode: 'SVC-SLIT',    maxUses: null },
-        { serviceCode: 'SVC-TOPO',    maxUses: null },
-        { serviceCode: 'SVC-CL-FIT',  maxUses: null },
+        { serviceCode: 'SVC-TOPO',         maxUses: null },
+        { serviceCode: 'SVC-CL-FIT-RGP',   maxUses: null },
       ],
     },
   },
@@ -85,7 +78,7 @@ const PACKAGES = [
     code: 'PKG-3B',
     name: 'Khám CL Ortho-K (có OCT trước + sau)',
     description: 'Như PKG-3A + OCT bán phần trước + OCT bán phần sau. +600k khám phí so với PKG-3A.',
-    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-TOPO', 'SVC-CL-FIT', 'SVC-OCT-ANT', 'SVC-OCT-POST'],
+    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-TOPO', 'SVC-CL-FIT-RGP', 'SVC-OCT-ANT', 'SVC-OCT-POST'],
     basePrice: 0,
     pricingTiers: [
       { code: 'standard',   name: 'Standard',   extraServices: [], extraProductSku: 'OK-LENS-STD',  totalPrice: 16100000 },
@@ -99,24 +92,10 @@ const PACKAGES = [
         { serviceCode: 'SVC-AUTOREF', maxUses: null },
         { serviceCode: 'SVC-REFRACT', maxUses: null },
         { serviceCode: 'SVC-SLIT',    maxUses: null },
-        { serviceCode: 'SVC-TOPO',    maxUses: null },
-        { serviceCode: 'SVC-CL-FIT',  maxUses: null },
+        { serviceCode: 'SVC-TOPO',         maxUses: null },
+        { serviceCode: 'SVC-CL-FIT-RGP',   maxUses: null },
       ],
     },
-  },
-  {
-    code: 'PKG-4',
-    name: 'Tái khám CL (ortho-K + soft CL)',
-    description: 'Tái khám sau fit. Giá tự động theo lịch sử BN: free khi entitlement còn, 350k nếu đã hết hạn, 600k nếu chưa từng có PKG-3.',
-    bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-SLIT', 'SVC-TOPO'],
-    basePrice: 600000,
-    pricingTiers: [],
-    pricingRules: [
-      { condition: 'has-active-entitlement', sourcePackages: ['PKG-3A', 'PKG-3B'], price: 0 },
-      { condition: 'has-expired-entitlement', sourcePackages: ['PKG-3A', 'PKG-3B'], price: 350000 },
-      { condition: 'no-history',             sourcePackages: ['PKG-3A', 'PKG-3B'], price: 600000 },
-    ],
-    activatesEntitlement: null,
   },
   {
     code: 'PKG-2A',
@@ -141,7 +120,7 @@ const PACKAGES = [
   {
     code: 'PKG-OK-RECHECK',
     name: 'Khám định kỳ OrthoK',
-    description: 'Tái khám định kỳ cho BN đang đeo ortho-K. Giá 300k flat (sheet 2026-05-01) — khác với PKG-4 dynamic pricing. Cần consolidate sau.',
+    description: 'Tái khám định kỳ cho BN đang đeo ortho-K. Giá 300k flat (sheet 2026-05-01).',
     bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-SLIT', 'SVC-TOPO'],
     basePrice: 300000,
     pricingTiers: [],

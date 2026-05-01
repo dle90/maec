@@ -8,11 +8,6 @@ require('./db') // Connect to MongoDB
 
 const { router: authRouter } = require('./routes/auth')
 const sitesRouter = require('./routes/sites')
-const plRouter = require('./routes/pl')
-const cfRouter = require('./routes/cf')
-const bsRouter = require('./routes/bs')
-const breakevenRouter = require('./routes/breakeven')
-const actualsRouter = require('./routes/actuals')
 const tasksRouter = require('./routes/tasks')
 const risRouter = require('./routes/ris')
 const encountersRouter = require('./routes/encounters')
@@ -54,11 +49,6 @@ const guardWrites = (req, res, next) => {
 }
 
 app.use('/api/sites', guardWrites, sitesRouter)
-app.use('/api/pl', guardWrites, plRouter)
-app.use('/api/cf', guardWrites, cfRouter)
-app.use('/api/bs', guardWrites, bsRouter)
-app.use('/api/breakeven', guardWrites, breakevenRouter)
-app.use('/api/actuals', guardWrites, actualsRouter)
 // Tasks: auth handled inside the router per endpoint
 app.use('/api/tasks', tasksRouter)
 // RIS: auth handled inside the router per endpoint

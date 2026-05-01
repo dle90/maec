@@ -271,28 +271,28 @@ function HeaderStepper({ active, userName, date }) {
     { n: 3, label: 'In phiếu' },
   ]
   return (
-    <div className="flex items-center gap-6 px-4 py-2 border-b bg-white">
-      <div className="flex items-baseline gap-2">
-        <div className="text-lg font-semibold text-gray-800">Đăng ký</div>
-        <div className="text-xs text-gray-400 font-mono">/tiếp đón</div>
+    <div className="flex items-center gap-3 sm:gap-6 px-3 sm:px-4 py-2 border-b bg-white flex-wrap">
+      <div className="flex items-baseline gap-2 flex-shrink-0">
+        <div className="text-base sm:text-lg font-semibold text-gray-800">Đăng ký</div>
+        <div className="hidden sm:block text-xs text-gray-400 font-mono">/tiếp đón</div>
       </div>
-      <div className="flex-1 flex items-center justify-center gap-3">
+      <div className="flex-1 flex items-center justify-start sm:justify-center gap-2 sm:gap-3 min-w-0 overflow-x-auto">
         {steps.map((s, i) => (
           <React.Fragment key={s.n}>
-            <div className={`flex items-center gap-2 ${s.n <= active ? '' : 'opacity-40'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold
+            <div className={`flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ${s.n <= active ? '' : 'opacity-40'}`}>
+              <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0
                 ${s.n < active ? 'bg-gray-800 text-white'
                   : s.n === active ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-500 border border-gray-300'}`}>
                 {s.n < active ? '✓' : s.n}
               </div>
-              <div className="text-sm font-medium text-gray-700">{s.label}</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">{s.label}</div>
             </div>
-            {i < steps.length - 1 && <div className="w-8 border-t border-dashed border-gray-300" />}
+            {i < steps.length - 1 && <div className="w-4 sm:w-8 border-t border-dashed border-gray-300 flex-shrink-0" />}
           </React.Fragment>
         ))}
       </div>
-      <div className="flex gap-2 text-xs text-gray-500">
+      <div className="hidden md:flex gap-2 text-xs text-gray-500 flex-shrink-0">
         {userName && <span className="px-2 py-1 bg-gray-100 rounded-md">👤 {userName}</span>}
         <span className="px-2 py-1 bg-gray-100 rounded-md">{fmtDate(date)}</span>
       </div>
@@ -346,7 +346,7 @@ function TodayRail({ patients, pendingReferrals, partnerPhones, filter, onFilter
   const patientCount = list.length - pendingCount
 
   return (
-    <div className="w-80 flex-shrink-0 flex flex-col bg-white border-r border-gray-200">
+    <div className="w-full lg:w-80 flex-shrink-0 flex flex-col bg-white border-b lg:border-b-0 lg:border-r border-gray-200 max-h-60 lg:max-h-none">
       <div className="px-3 py-2 border-b border-gray-200">
         <div className="flex items-center justify-between mb-1">
           <div className="text-base font-semibold text-gray-800">
@@ -516,11 +516,11 @@ function SearchView({ query, onQueryChange, results, loading, onPick, onCreateNe
     <div className="flex flex-col">
       {/* Header band — mirrors TodayRail's padding + line rhythm exactly so
           the bottom border lines up with the rail's and there's no kink. */}
-      <div className="px-6 py-2 border-b border-gray-200 bg-white">
+      <div className="px-3 sm:px-6 py-2 border-b border-gray-200 bg-white">
         <div className="text-base font-semibold text-gray-800 mb-1">Tìm hoặc tạo bệnh nhân</div>
         <div className="text-xs text-gray-500">Gõ ≥ 1 ký tự để bắt đầu · ưu tiên SĐT, fallback tên · Esc để huỷ</div>
       </div>
-      <div className="px-6 pt-2 pb-6">
+      <div className="px-3 sm:px-6 pt-2 pb-6">
         <SearchBar
           query={query}
           onQueryChange={onQueryChange}
@@ -533,7 +533,7 @@ function SearchView({ query, onQueryChange, results, loading, onPick, onCreateNe
           onBlur={() => setFocused(false)}
         />
         {!query && (
-          <div className="mt-12 text-center text-sm text-gray-400">
+          <div className="mt-8 sm:mt-12 text-center text-sm text-gray-400 px-2">
             ↑ bắt đầu bằng cách gõ SĐT hoặc tên bệnh nhân
           </div>
         )}
@@ -1277,13 +1277,13 @@ export default function Registration() {
   const active = view === 'services' ? 2 : 1
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] -m-4 bg-gray-50">
+    <div className="flex flex-col h-[calc(100vh-4rem)] -m-2 sm:-m-4 bg-gray-50">
       <HeaderStepper
         active={active}
         userName={auth?.name || auth?.username}
         date={todayISO()}
       />
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         <TodayRail
           patients={todayList}
           pendingReferrals={pendingReferrals}
