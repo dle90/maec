@@ -4,7 +4,11 @@ const Encounter = require('../models/Encounter')
 const Package = require('../models/Package')
 const Service = require('../models/Service')
 const Entitlement = require('../models/Entitlement')
+const Warehouse = require('../models/Warehouse')
+const Supply = require('../models/Supply')
+const InventoryTransaction = require('../models/InventoryTransaction')
 const { requireAuth } = require('../middleware/auth')
+const { fifoDeduct, stockCheck } = require('../lib/fifoDeduct')
 const SERVICE_OUTPUT_FIELDS = require('../config/serviceOutputFields')
 
 const now = () => new Date().toISOString()
@@ -227,17 +231,122 @@ router.post('/:id/bill-items', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// POST /encounters/:id/checkout — mark as paid (Thu ngân confirms bill)
+// GET /encounters/:id/checkout-preview — dry-run stock check for thuoc/kinh items
+// before Thu Ngân commits the checkout. Returns per-item availability + which
+// lots would be consumed (FIFO by expiry).
+router.get('/:id/checkout-preview', requireAuth, async (req, res) => {
+  try {
+    const enc = await Encounter.findById(req.params.id).lean()
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    const wh = await Warehouse.findOne({ site: enc.site, status: 'active' }).lean()
+    if (!wh) return res.json({ warehouse: null, items: [], hasStockIssues: false, warning: `Không có kho cho cơ sở "${enc.site}"` })
+
+    const stockItems = (enc.billItems || []).filter(b => b.kind === 'thuoc' || b.kind === 'kinh')
+    const items = []
+    for (const b of stockItems) {
+      if (!b.code) {
+        items.push({ ...b.toObject?.() || b, satisfied: true, plan: [], note: 'Mục freeform — không trừ kho' })
+        continue
+      }
+      const supplyExists = await Supply.exists({ _id: b.code })
+      if (!supplyExists) {
+        items.push({ kind: b.kind, code: b.code, name: b.name, qty: b.qty, satisfied: false, shortfall: b.qty, note: 'Không có trong Inventory' })
+        continue
+      }
+      const r = await stockCheck({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
+      items.push({
+        kind: b.kind, code: b.code, name: b.name, qty: b.qty,
+        satisfied: r.satisfied, shortfall: r.shortfall, plan: r.plan, totalAvailable: r.totalAvailable,
+      })
+    }
+    res.json({
+      warehouse: { _id: wh._id, name: wh.name },
+      items,
+      hasStockIssues: items.some(i => i.satisfied === false),
+    })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// POST /encounters/:id/checkout — Thu Ngân confirms bill.
+// Auto-deducts inventory (FIFO) for thuoc/kinh bill items, creates one
+// auto_deduct transaction, then marks encounter paid. Stock shortfall
+// blocks checkout entirely (rollback any partial deductions).
 router.post('/:id/checkout', requireAuth, async (req, res) => {
   try {
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
     if (enc.status === 'paid') return res.status(400).json({ error: 'Lượt khám đã được thanh toán' })
+
+    const stockItems = (enc.billItems || []).filter(b => (b.kind === 'thuoc' || b.kind === 'kinh') && b.code)
+    let txId = null
+
+    if (stockItems.length > 0) {
+      const wh = await Warehouse.findOne({ site: enc.site, status: 'active' }).lean()
+      if (!wh) return res.status(400).json({ error: `Không có kho cho cơ sở "${enc.site}". Tạo Warehouse trước khi thanh toán.` })
+
+      // Pre-flight stock check (no mutations) so we fail before deducting anything.
+      const preChecks = []
+      for (const b of stockItems) {
+        const exists = await Supply.exists({ _id: b.code })
+        if (!exists) return res.status(400).json({ error: `"${b.name}" không có trong Inventory — tạo Supply trước.` })
+        const r = await stockCheck({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
+        if (!r.satisfied) {
+          return res.status(400).json({ error: `Không đủ tồn kho cho "${b.name}" tại ${wh.name} — cần ${b.qty}, còn ${r.totalAvailable}. Nhập kho thêm hoặc bỏ mục khỏi bill.` })
+        }
+        preChecks.push({ b, plan: r.plan })
+      }
+
+      // Commit FIFO deduction for each item.
+      const txItems = []
+      for (const { b } of preChecks) {
+        const result = await fifoDeduct({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
+        const supply = await Supply.findById(b.code).lean()
+        for (const c of result.consumed) {
+          txItems.push({
+            supplyId: b.code,
+            supplyName: b.name,
+            supplyCode: b.code,
+            unit: supply?.unit || 'cái',
+            packagingSpec: supply?.packagingSpec || '',
+            lotId: c.lotId,
+            lotNumber: c.lotNumber,
+            expiryDate: c.expiryDate || '',
+            quantity: c.quantity,
+            unitPrice: b.unitPrice,
+            amount: c.quantity * b.unitPrice,
+          })
+        }
+      }
+
+      txId = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+      await new InventoryTransaction({
+        _id: txId,
+        transactionNumber: txId,
+        type: 'auto_deduct',
+        warehouseId: wh._id,
+        warehouseName: wh.name,
+        warehouseCode: wh.code,
+        site: wh.site,
+        items: txItems,
+        totalAmount: txItems.reduce((s, i) => s + (i.amount || 0), 0),
+        relatedVisitId: enc._id,
+        notes: `Thu ngân ${req.user.displayName || req.user.username} — ${enc.patientName}`,
+        status: 'confirmed',
+        confirmedBy: req.user.username,
+        confirmedAt: now(),
+        createdBy: req.user.username,
+        createdAt: now(),
+        updatedAt: now(),
+      }).save()
+    }
+
     enc.status = 'paid'
     enc.paidAt = now()
     enc.paidBy = req.user.username
     enc.paidByName = req.user.displayName || req.user.username
     enc.paidAmount = enc.billTotal
+    if (txId) enc.consumablesTransactionId = txId
+    enc.consumablesDeductedAt = now()
     enc.updatedAt = now()
     await enc.save()
     res.json(enc.toObject())

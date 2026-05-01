@@ -110,6 +110,7 @@ export default function ThuNgan() {
 
 function PaymentDrawer({ id, onClose }) {
   const [enc, setEnc] = useState(null)
+  const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('cash')
@@ -117,8 +118,12 @@ function PaymentDrawer({ id, onClose }) {
   const load = async () => {
     setLoading(true)
     try {
-      const r = await api.get(`/encounters/${id}`)
-      setEnc(r.data)
+      const [encRes, prevRes] = await Promise.all([
+        api.get(`/encounters/${id}`),
+        api.get(`/encounters/${id}/checkout-preview`).catch(() => ({ data: null })),
+      ])
+      setEnc(encRes.data)
+      setPreview(prevRes.data)
     } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [id])
@@ -168,6 +173,46 @@ function PaymentDrawer({ id, onClose }) {
             <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm">
               <div className="font-semibold text-purple-900">{enc.packageName} {enc.packageTier && <span className="text-xs font-normal text-purple-700">— {enc.packageTier}</span>}</div>
             </div>
+          )}
+
+          {!isPaid && preview && preview.items.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                Trừ kho — {preview.warehouse?.name || '(không có kho)'}
+              </h3>
+              {preview.hasStockIssues && (
+                <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                  ⚠ Một số mục không đủ tồn kho — không thể thanh toán cho đến khi xử lý.
+                </div>
+              )}
+              <div className="space-y-1.5">
+                {preview.items.map((it, i) => (
+                  <div key={i} className={`border rounded px-3 py-2 ${it.satisfied === false ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-gray-400">{it.code || '—'}</span>
+                      <span className="text-sm font-medium flex-1">{it.name}</span>
+                      <span className="text-xs text-gray-500">SL: {it.qty}</span>
+                    </div>
+                    {it.satisfied === false ? (
+                      <div className="text-xs text-red-700 mt-1">
+                        Thiếu {it.shortfall} (còn {it.totalAvailable ?? 0}). {it.note || 'Nhập kho thêm hoặc bỏ mục khỏi bill.'}
+                      </div>
+                    ) : it.note ? (
+                      <div className="text-xs text-gray-500 mt-1">{it.note}</div>
+                    ) : it.plan?.length ? (
+                      <div className="text-xs text-gray-600 mt-1 space-y-0.5">
+                        {it.plan.map((p, j) => (
+                          <div key={j}>
+                            → Lot <span className="font-mono">{p.lotNumber || p.lotId.slice(-6)}</span> ×{p.quantity}
+                            {p.expiryDate && <span className="text-gray-400 ml-1">(HSD {p.expiryDate})</span>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
 
           <section>
@@ -222,9 +267,11 @@ function PaymentDrawer({ id, onClose }) {
                 ))}
               </div>
             </div>
-            <button onClick={checkout} disabled={paying}
+            <button onClick={checkout} disabled={paying || (preview?.hasStockIssues)}
               className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg text-base disabled:opacity-50">
-              {paying ? 'Đang xử lý...' : `Xác nhận thu ${fmtMoney(enc.billTotal)} đ`}
+              {paying ? 'Đang xử lý...'
+                : preview?.hasStockIssues ? 'Không đủ tồn kho — xử lý trước'
+                : `Xác nhận thu ${fmtMoney(enc.billTotal)} đ`}
             </button>
           </div>
         )}
