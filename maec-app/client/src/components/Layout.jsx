@@ -23,6 +23,14 @@ const NAV = [
     items: [{ path: '/thu-ngan', label: 'Thu ngân', icon: '💵', workflowOnly: true }]
   },
   {
+    group: 'Danh mục',
+    items: [
+      { path: '/catalogs/services', label: 'Dịch vụ khám', icon: '📄', workflowOnly: true },
+      { path: '/catalogs/kinh',     label: 'Kính',         icon: '👓', workflowOnly: true },
+      { path: '/catalogs/thuoc',    label: 'Thuốc',        icon: '💊', workflowOnly: true },
+    ]
+  },
+  {
     group: 'Khác',
     defaultCollapsed: true,
     children: [

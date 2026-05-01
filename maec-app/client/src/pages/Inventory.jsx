@@ -354,6 +354,7 @@ function StockTab({ whParam }) {
   const [drawerSupplyId, setDrawerSupplyId] = useState(null)
   const [categories, setCategories] = useState([])
   const [categoryId, setCategoryId] = useState('')
+  const [productKind, setProductKind] = useState('')  // '' / thuoc / kinh / supply
 
   useEffect(() => { api.get('/inventory/categories').then(({ data }) => setCategories(data || [])) }, [])
 
@@ -364,19 +365,35 @@ function StockTab({ whParam }) {
     if (q) qs.set('q', q)
     if (belowMin) qs.set('belowMin', 'true')
     if (categoryId) qs.set('categoryId', categoryId)
+    if (productKind) qs.set('productKind', productKind)
     api.get(`/inventory/stock?${qs}`).then(({ data }) => {
       setRows(data.rows || []); setLoading(false)
     }).catch(() => setLoading(false))
-  }, [whParam, q, belowMin, categoryId])
+  }, [whParam, q, belowMin, categoryId, productKind])
 
   useEffect(() => { load() }, [load])
 
+  const KIND_TABS = [
+    { k: '',       label: 'Tất cả' },
+    { k: 'thuoc',  label: 'Thuốc 💊' },
+    { k: 'kinh',   label: 'Kính 👓' },
+    { k: 'supply', label: 'Vật tư' },
+  ]
+
   return (
     <div className="space-y-3">
+      <div className="flex gap-1 flex-wrap">
+        {KIND_TABS.map(t => (
+          <button key={t.k} onClick={() => setProductKind(t.k)}
+            className={`px-3 py-1.5 text-sm rounded-lg font-semibold ${productKind === t.k ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
       <Card className="p-3 flex items-center gap-2 flex-wrap">
         <input
           className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Tìm vật tư theo tên hoặc mã..."
+          placeholder="Tìm theo tên hoặc mã..."
           value={q} onChange={e => setQ(e.target.value)}
         />
         <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white" value={categoryId} onChange={e => setCategoryId(e.target.value)}>

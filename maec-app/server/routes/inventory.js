@@ -118,6 +118,7 @@ router.get('/supplies', requireAuth, async (req, res) => {
     const filter = {}
     if (req.query.categoryId) filter.categoryId = req.query.categoryId
     if (req.query.status) filter.status = req.query.status
+    if (req.query.productKind) filter.productKind = req.query.productKind
     if (req.query.q) {
       filter.$or = [
         { name: { $regex: req.query.q, $options: 'i' } },
@@ -184,11 +185,13 @@ router.get('/stock', requireAuth, withWarehouseScope(), async (req, res) => {
     const bySupplyId = {}
     agg.forEach(row => { bySupplyId[row._id] = row })
 
-    const supplies = await Supply.find({ status: 'active' }).lean()
+    const supplyFilter = { status: 'active' }
+    if (req.query.productKind) supplyFilter.productKind = req.query.productKind
+    const supplies = await Supply.find(supplyFilter).lean()
     const rows = supplies.map(s => {
       const a = bySupplyId[s._id] || { qty: 0, nearestExpiry: null, lotCount: 0 }
       return {
-        supply: { _id: s._id, code: s.code, name: s.name, unit: s.unit, categoryId: s.categoryId, minimumStock: s.minimumStock },
+        supply: { _id: s._id, code: s.code, name: s.name, unit: s.unit, categoryId: s.categoryId, minimumStock: s.minimumStock, productKind: s.productKind || 'supply', packagingSpec: s.packagingSpec },
         qty: a.qty,
         nearestExpiry: a.nearestExpiry,
         lotCount: a.lotCount,

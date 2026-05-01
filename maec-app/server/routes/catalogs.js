@@ -87,9 +87,90 @@ function catalogCRUD(Model, prefix, nameField = 'name', writePerm = null) {
 catalogCRUD(ServiceType, 'service-types')
 catalogCRUD(Service, 'services')
 catalogCRUD(Package, 'packages')
-catalogCRUD(Thuoc, 'thuoc')
-catalogCRUD(Kinh, 'kinh')
 catalogCRUD(Specialty, 'specialties')
+
+// ── Linked CRUD for Thuốc / Kính (auto-syncs to Supply for inventory) ─────
+// Difference from generic catalogCRUD:
+// - _id = code (not auto-generated) — keeps Catalog.code == Supply.code
+// - On create/update: upserts a mirror Supply with productKind/productCode set
+// - On delete: marks Supply inactive (preserves any inventory tx history)
+
+async function syncSupplyFromCatalog(item, productKind) {
+  const t = now()
+  const set = {
+    code: item.code,
+    name: item.name,
+    productKind,
+    productCode: item.code,
+    packagingSpec: item.spec || '',
+    status: item.status || 'active',
+    updatedAt: t,
+  }
+  await Supply.findByIdAndUpdate(
+    item.code,
+    {
+      $set: set,
+      $setOnInsert: {
+        _id: item.code,
+        unit: 'cái',
+        currentStock: 0,
+        conversionRate: 1,
+        minimumStock: 0,
+        createdAt: t,
+      },
+    },
+    { upsert: true, new: true }
+  )
+}
+
+function linkedCatalogCRUD(Model, prefix, productKind) {
+  router.get(`/${prefix}`, requireAuth, async (req, res) => {
+    try {
+      const filter = {}
+      if (req.query.status) filter.status = req.query.status
+      if (req.query.q) filter.name = { $regex: req.query.q, $options: 'i' }
+      if (req.query.category) filter.category = req.query.category
+      const items = await Model.find(filter).sort({ name: 1 }).limit(+(req.query.limit || 500)).lean()
+      res.json(items)
+    } catch (err) { res.status(500).json({ error: err.message }) }
+  })
+
+  router.post(`/${prefix}`, requireAdmin, async (req, res) => {
+    try {
+      const code = (req.body.code || '').trim()
+      if (!code) return res.status(400).json({ error: 'code là bắt buộc' })
+      const data = { ...req.body, _id: code, code, createdAt: now(), updatedAt: now() }
+      if (!data.status) data.status = 'active'
+      const item = new Model(data)
+      await item.save()
+      await syncSupplyFromCatalog(item.toObject(), productKind)
+      res.status(201).json(item)
+    } catch (err) { res.status(500).json({ error: err.message }) }
+  })
+
+  router.put(`/${prefix}/:id`, requireAdmin, async (req, res) => {
+    try {
+      const update = { ...req.body, updatedAt: now() }
+      delete update._id
+      const item = await Model.findByIdAndUpdate(req.params.id, update, { new: true }).lean()
+      if (!item) return res.status(404).json({ error: 'Không tìm thấy' })
+      await syncSupplyFromCatalog(item, productKind)
+      res.json(item)
+    } catch (err) { res.status(500).json({ error: err.message }) }
+  })
+
+  router.delete(`/${prefix}/:id`, requireAdmin, async (req, res) => {
+    try {
+      await Model.findByIdAndDelete(req.params.id)
+      // Keep Supply for tx history; just inactivate so it stops appearing in pickers.
+      await Supply.findByIdAndUpdate(req.params.id, { status: 'inactive', updatedAt: now() })
+      res.json({ ok: true })
+    } catch (err) { res.status(500).json({ error: err.message }) }
+  })
+}
+
+linkedCatalogCRUD(Thuoc, 'thuoc', 'thuoc')
+linkedCatalogCRUD(Kinh,  'kinh',  'kinh')
 catalogCRUD(ReferralDoctor, 'referral-doctors', 'name', 'partners.manage')
 catalogCRUD(PartnerFacility, 'partner-facilities', 'name', 'partners.manage')
 catalogCRUD(CommissionGroup, 'commission-groups', 'name', 'partners.manage')

@@ -15,9 +15,17 @@ const supplySchema = new mongoose.Schema({
   minimumStock: { type: Number, default: 0 },  // default reorder threshold per warehouse
   currentStock: { type: Number, default: 0 },  // DEPRECATED — do not trust, will be removed
   supplierId: String,
+  // Product origin link. 'supply' = legacy radiology vật tư; 'thuoc' / 'kinh'
+  // = mirror of MAEC catalog entry. productCode == catalog code (e.g. TH-001,
+  // KN-005). Inventory tabs filter on productKind. Editing the catalog auto-
+  // syncs name/unit/packagingSpec onto the Supply mirror.
+  productKind: { type: String, enum: ['supply', 'thuoc', 'kinh'], default: 'supply' },
+  productCode: String,
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   createdAt: String,
   updatedAt: String,
 }, { _id: false })
+
+supplySchema.index({ productKind: 1, status: 1 })
 
 module.exports = mongoose.model('Supply', supplySchema)
