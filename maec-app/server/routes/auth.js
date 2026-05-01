@@ -4,7 +4,7 @@ const User = require('../models/User')
 const RolePermission = require('../models/RolePermission')
 
 const router = express.Router()
-const SECRET = process.env.SESSION_SECRET || 'linkrad-secret-2024'
+const SECRET = process.env.SESSION_SECRET || 'maec-secret-2026'
 
 // Stateless HMAC-signed tokens — survive server restarts
 const sign = (payload) => {

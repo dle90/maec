@@ -5,7 +5,7 @@ const api = axios.create({ baseURL: '/api' })
 // Attach auth token to every request
 api.interceptors.request.use(config => {
   try {
-    const stored = localStorage.getItem('linkrad_auth')
+    const stored = localStorage.getItem('maec_auth')
     if (stored) {
       const { token } = JSON.parse(stored)
       config.headers['Authorization'] = `Bearer ${token}`
@@ -19,7 +19,7 @@ api.interceptors.response.use(
   r => r,
   err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('linkrad_auth')
+      localStorage.removeItem('maec_auth')
       window.location.reload()
     }
     return Promise.reject(err)

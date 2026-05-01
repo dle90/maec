@@ -95,7 +95,7 @@ export default function SiteList() {
     const newId = Math.max(...sites.map(s => s.id), 0) + 1
     const newSite = {
       id: newId, name: '', location: '', startMonth: '',
-      totalInvestment: 0, linkradShare: 0, linkradInvestment: 0,
+      totalInvestment: 0, maecShare: 0, maecInvestment: 0,
       bankLoan: 0, bank: '', note: ''
     }
     const updated = [...sites, newSite]
@@ -112,7 +112,7 @@ export default function SiteList() {
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-500">Đang tải...</div>
 
   const totalInv = sites.reduce((s, site) => s + (Number(site.totalInvestment) || 0), 0)
-  const totalLinkrad = sites.reduce((s, site) => s + (Number(site.linkradInvestment) || 0), 0)
+  const totalMaec = sites.reduce((s, site) => s + (Number(site.maecInvestment) || 0), 0)
   const totalBank = sites.reduce((s, site) => s + (Number(site.bankLoan) || 0), 0)
 
   return (
@@ -144,8 +144,8 @@ export default function SiteList() {
                 <th className="px-3 py-2 text-white text-left font-medium" style={{ minWidth: '110px' }}>Địa phương</th>
                 <th className="px-3 py-2 text-white text-center font-medium" style={{ minWidth: '100px' }}>Tháng bắt đầu</th>
                 <th className="px-3 py-2 text-white text-right font-medium" style={{ minWidth: '110px' }}>Tổng ĐT (tr.)</th>
-                <th className="px-3 py-2 text-white text-right font-medium" style={{ minWidth: '110px' }}>Tỷ lệ SH LR (%)</th>
-                <th className="px-3 py-2 text-white text-right font-medium" style={{ minWidth: '110px' }}>ĐT LinkRad (tr.)</th>
+                <th className="px-3 py-2 text-white text-right font-medium" style={{ minWidth: '110px' }}>Tỷ lệ SH MAEC (%)</th>
+                <th className="px-3 py-2 text-white text-right font-medium" style={{ minWidth: '110px' }}>ĐT MAEC (tr.)</th>
                 <th className="px-3 py-2 text-white text-right font-medium" style={{ minWidth: '110px' }}>Vay NH (tr.)</th>
                 <th className="px-3 py-2 text-white text-left font-medium" style={{ minWidth: '90px' }}>Ngân hàng</th>
                 <th className="px-3 py-2 text-white text-left font-medium" style={{ minWidth: '200px' }}>Ghi chú</th>
@@ -163,13 +163,13 @@ export default function SiteList() {
                   <td
                     className="px-2 py-1.5 text-right text-sm cursor-pointer hover:bg-yellow-50"
                     onClick={() => {
-                      const newVal = prompt('Nhập tỷ lệ sở hữu (0-1):', site.linkradShare)
-                      if (newVal !== null) updateCell(site.id, 'linkradShare', parseFloat(newVal) || 0)
+                      const newVal = prompt('Nhập tỷ lệ sở hữu (0-1):', site.maecShare)
+                      if (newVal !== null) updateCell(site.id, 'maecShare', parseFloat(newVal) || 0)
                     }}
                   >
-                    {((site.linkradShare || 0) * 100).toFixed(1)}%
+                    {((site.maecShare || 0) * 100).toFixed(1)}%
                   </td>
-                  <EditableTextCell value={site.linkradInvestment} readOnly={!canEdit} onChange={(v) => updateCell(site.id, 'linkradInvestment', v)} align="right" type="number" />
+                  <EditableTextCell value={site.maecInvestment} readOnly={!canEdit} onChange={(v) => updateCell(site.id, 'maecInvestment', v)} align="right" type="number" />
                   <EditableTextCell value={site.bankLoan} readOnly={!canEdit} onChange={(v) => updateCell(site.id, 'bankLoan', v)} align="right" type="number" />
                   <EditableTextCell value={site.bank} readOnly={!canEdit} onChange={(v) => updateCell(site.id, 'bank', v)} />
                   <EditableTextCell value={site.note} readOnly={!canEdit} onChange={(v) => updateCell(site.id, 'note', v)} />
@@ -192,7 +192,7 @@ export default function SiteList() {
                 <td colSpan={4} className="px-3 py-2 text-blue-800">Tổng cộng</td>
                 <td className="px-3 py-2 text-right text-blue-800">{fmt(totalInv)}</td>
                 <td className="px-3 py-2"></td>
-                <td className="px-3 py-2 text-right text-blue-800">{fmt(totalLinkrad)}</td>
+                <td className="px-3 py-2 text-right text-blue-800">{fmt(totalMaec)}</td>
                 <td className="px-3 py-2 text-right text-blue-800">{fmt(totalBank)}</td>
                 <td colSpan={3}></td>
               </tr>

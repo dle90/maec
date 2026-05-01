@@ -22,10 +22,10 @@ async function seed() {
   // WAREHOUSES
   // ═══════════════════════════════════════════════════════
   const warehouses = [
-    { _id: 'WH-1', code: 'KH-001', name: 'Kho chính Hải Phòng', site: 'LinkRad Hai Phong', manager: 'Nguyễn Thị Dung', phone: '0901234001', address: 'Tầng 1, Tòa A' },
-    { _id: 'WH-2', code: 'KH-002', name: 'Kho hóa chất', site: 'LinkRad Hai Phong', manager: 'Trần Văn Hùng', phone: '0901234002', address: 'Phòng B2, Tầng hầm' },
-    { _id: 'WH-3', code: 'KH-003', name: 'Kho vật tư tiêu hao', site: 'LinkRad Hai Phong', manager: 'Lê Thị Mai', phone: '0901234003', address: 'Phòng C1, Tầng 2' },
-    { _id: 'WH-4', code: 'KH-004', name: 'Kho Hà Nội', site: 'LinkRad Ha Noi', manager: 'Phạm Đức Anh', phone: '0901234004', address: '12 Trần Hưng Đạo' },
+    { _id: 'WH-1', code: 'KH-001', name: 'Kho chính Hải Phòng', site: 'Minh Anh — Cơ sở 1', manager: 'Nguyễn Thị Dung', phone: '0901234001', address: 'Tầng 1, Tòa A' },
+    { _id: 'WH-2', code: 'KH-002', name: 'Kho hóa chất', site: 'Minh Anh — Cơ sở 1', manager: 'Trần Văn Hùng', phone: '0901234002', address: 'Phòng B2, Tầng hầm' },
+    { _id: 'WH-3', code: 'KH-003', name: 'Kho vật tư tiêu hao', site: 'Minh Anh — Cơ sở 1', manager: 'Lê Thị Mai', phone: '0901234003', address: 'Phòng C1, Tầng 2' },
+    { _id: 'WH-4', code: 'KH-004', name: 'Kho Hà Nội', site: 'Minh Anh — Cơ sở 2', manager: 'Phạm Đức Anh', phone: '0901234004', address: '12 Trần Hưng Đạo' },
   ]
   for (const wh of warehouses) {
     await Warehouse.findByIdAndUpdate(wh._id, { ...wh, description: '', status: 'active', createdAt: now(), updatedAt: now() }, { upsert: true })
@@ -90,7 +90,7 @@ async function seed() {
 
   const importTxs = [
     {
-      _id: 'TX-IMP-1', transactionNumber: `NK-${d}-001`, type: 'import', site: 'LinkRad Hai Phong',
+      _id: 'TX-IMP-1', transactionNumber: `NK-${d}-001`, type: 'import', site: 'Minh Anh — Cơ sở 1',
       warehouseId: 'WH-1', warehouseName: 'Kho chính Hải Phòng', warehouseCode: 'KH-001',
       accountingPeriod: '04/2026',
       supplierId: 'SUP-1', supplierName: 'Công ty TNHH Thiết bị Y tế Phương Đông',
@@ -111,7 +111,7 @@ async function seed() {
       status: 'confirmed', confirmedBy: 'admin', confirmedAt: now(), createdBy: 'admin',
     },
     {
-      _id: 'TX-IMP-2', transactionNumber: `NK-${d}-002`, type: 'import', site: 'LinkRad Hai Phong',
+      _id: 'TX-IMP-2', transactionNumber: `NK-${d}-002`, type: 'import', site: 'Minh Anh — Cơ sở 1',
       warehouseId: 'WH-2', warehouseName: 'Kho hóa chất', warehouseCode: 'KH-002',
       accountingPeriod: '04/2026',
       supplierId: 'SUP-2', supplierName: 'Công ty CP Vật tư Y tế Hải Phòng',
@@ -132,7 +132,7 @@ async function seed() {
       status: 'confirmed', confirmedBy: 'admin', confirmedAt: now(), createdBy: 'admin',
     },
     {
-      _id: 'TX-IMP-3', transactionNumber: `NK-${d}-003`, type: 'import', site: 'LinkRad Hai Phong',
+      _id: 'TX-IMP-3', transactionNumber: `NK-${d}-003`, type: 'import', site: 'Minh Anh — Cơ sở 1',
       warehouseId: 'WH-3', warehouseName: 'Kho vật tư tiêu hao', warehouseCode: 'KH-003',
       accountingPeriod: '04/2026',
       supplierId: 'SUP-3', supplierName: 'Đại lý Film & Hóa chất Siemens',
@@ -172,7 +172,7 @@ async function seed() {
   // ═══════════════════════════════════════════════════════
   const exportTxs = [
     {
-      _id: 'TX-EXP-1', transactionNumber: `XK-${d}-001`, type: 'export', site: 'LinkRad Hai Phong',
+      _id: 'TX-EXP-1', transactionNumber: `XK-${d}-001`, type: 'export', site: 'Minh Anh — Cơ sở 1',
       warehouseId: 'WH-1', warehouseName: 'Kho chính Hải Phòng', warehouseCode: 'KH-001',
       accountingPeriod: '04/2026',
       reason: 'Xuất cho phòng chụp CT', notes: '',
@@ -190,7 +190,7 @@ async function seed() {
       status: 'confirmed', confirmedBy: 'admin', confirmedAt: now(), createdBy: 'admin',
     },
     {
-      _id: 'TX-EXP-2', transactionNumber: `XK-${d}-002`, type: 'export', site: 'LinkRad Hai Phong',
+      _id: 'TX-EXP-2', transactionNumber: `XK-${d}-002`, type: 'export', site: 'Minh Anh — Cơ sở 1',
       warehouseId: 'WH-2', warehouseName: 'Kho hóa chất', warehouseCode: 'KH-002',
       accountingPeriod: '04/2026',
       reason: 'Xuất cho phòng siêu âm', notes: '',
@@ -204,7 +204,7 @@ async function seed() {
       status: 'confirmed', confirmedBy: 'admin', confirmedAt: now(), createdBy: 'admin',
     },
     {
-      _id: 'TX-EXP-3', transactionNumber: `XK-${d}-003`, type: 'export', site: 'LinkRad Hai Phong',
+      _id: 'TX-EXP-3', transactionNumber: `XK-${d}-003`, type: 'export', site: 'Minh Anh — Cơ sở 1',
       warehouseId: 'WH-3', warehouseName: 'Kho vật tư tiêu hao', warehouseCode: 'KH-003',
       accountingPeriod: '04/2026',
       reason: 'Xuất khẩu trang cho nhân viên', notes: '',
@@ -227,7 +227,7 @@ async function seed() {
   // Add an extra lot with near-expiry for testing
   await InventoryLot.findByIdAndUpdate('LOT-EXPIRING-1', {
     _id: 'LOT-EXPIRING-1',
-    supplyId: 'SPL-1', site: 'LinkRad Hai Phong', warehouseId: 'WH-1',
+    supplyId: 'SPL-1', site: 'Minh Anh — Cơ sở 1', warehouseId: 'WH-1',
     lotNumber: 'L-ULT-2025-OLD', manufacturingDate: '2025-04-01',
     expiryDate: '2026-05-01', importTransactionId: 'TX-OLD', importDate: '2025-10-01',
     initialQuantity: 10, currentQuantity: 3, unitPrice: 320000, status: 'available', createdAt: now(),

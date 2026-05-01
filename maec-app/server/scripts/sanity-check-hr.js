@@ -42,14 +42,14 @@ async function run() {
 
   // ── Admin login ───────────────────────────────────────
   console.log('1. LOGIN (enhanced token)')
-  const login = await request('POST', '/api/auth/login', { username: 'admin', password: 'linkrad2025' })
+  const login = await request('POST', '/api/auth/login', { username: 'admin', password: 'maec2026' })
   check('Login returns 200', login.status === 200)
   check('Token has permissions', Array.isArray(login.data.permissions))
   check('Admin has system.admin perm', (login.data.permissions || []).includes('system.admin'))
   TOKEN = login.data.token
 
   // Test non-admin login has permissions too
-  const nvLogin = await request('POST', '/api/auth/login', { username: 'nv_hd1', password: 'linkrad2025' })
+  const nvLogin = await request('POST', '/api/auth/login', { username: 'nv_hd1', password: 'maec2026' })
   check('Nhanvien login has permissions', Array.isArray(nvLogin.data.permissions))
   check('Nhanvien has ris.view', (nvLogin.data.permissions || []).includes('ris.view'))
   check('Nhanvien lacks system.admin', !(nvLogin.data.permissions || []).includes('system.admin'))

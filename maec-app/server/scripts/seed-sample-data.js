@@ -126,14 +126,14 @@ async function seed() {
   // SUPPLIES
   // ═══════════════════════════════════════════════════════
   const supplies = [
-    { _id: 'SPL-1', code: 'VT-001', name: 'Thuốc cản quang Ultravist 370', categoryId: 'SCAT-1', unit: 'chai', minimumStock: 20, currentStock: 45, site: 'LinkRad Hai Phong' },
-    { _id: 'SPL-2', code: 'VT-002', name: 'Gel siêu âm 250ml', categoryId: 'SCAT-1', unit: 'chai', minimumStock: 30, currentStock: 60, site: 'LinkRad Hai Phong' },
-    { _id: 'SPL-3', code: 'VT-003', name: 'Film X-Quang 35x43cm', categoryId: 'SCAT-2', unit: 'tờ', minimumStock: 100, currentStock: 250, site: 'LinkRad Hai Phong' },
-    { _id: 'SPL-4', code: 'VT-004', name: 'Kim tiêm 22G', categoryId: 'SCAT-3', unit: 'cái', minimumStock: 200, currentStock: 500, site: 'LinkRad Hai Phong' },
-    { _id: 'SPL-5', code: 'VT-005', name: 'Bơm tiêm 20ml', categoryId: 'SCAT-3', unit: 'cái', minimumStock: 100, currentStock: 80, site: 'LinkRad Hai Phong' },
-    { _id: 'SPL-6', code: 'VT-006', name: 'Găng tay y tế (hộp 100)', categoryId: 'SCAT-5', unit: 'hộp', minimumStock: 10, currentStock: 25, site: 'LinkRad Hai Phong' },
-    { _id: 'SPL-7', code: 'VT-007', name: 'Khẩu trang y tế (hộp 50)', categoryId: 'SCAT-5', unit: 'hộp', minimumStock: 5, currentStock: 3, site: 'LinkRad Hai Phong' },
-    { _id: 'SPL-8', code: 'VT-008', name: 'Giấy in kết quả A4', categoryId: 'SCAT-4', unit: 'ram', minimumStock: 10, currentStock: 15, site: 'LinkRad Hai Phong' },
+    { _id: 'SPL-1', code: 'VT-001', name: 'Thuốc cản quang Ultravist 370', categoryId: 'SCAT-1', unit: 'chai', minimumStock: 20, currentStock: 45, site: 'Minh Anh — Cơ sở 1' },
+    { _id: 'SPL-2', code: 'VT-002', name: 'Gel siêu âm 250ml', categoryId: 'SCAT-1', unit: 'chai', minimumStock: 30, currentStock: 60, site: 'Minh Anh — Cơ sở 1' },
+    { _id: 'SPL-3', code: 'VT-003', name: 'Film X-Quang 35x43cm', categoryId: 'SCAT-2', unit: 'tờ', minimumStock: 100, currentStock: 250, site: 'Minh Anh — Cơ sở 1' },
+    { _id: 'SPL-4', code: 'VT-004', name: 'Kim tiêm 22G', categoryId: 'SCAT-3', unit: 'cái', minimumStock: 200, currentStock: 500, site: 'Minh Anh — Cơ sở 1' },
+    { _id: 'SPL-5', code: 'VT-005', name: 'Bơm tiêm 20ml', categoryId: 'SCAT-3', unit: 'cái', minimumStock: 100, currentStock: 80, site: 'Minh Anh — Cơ sở 1' },
+    { _id: 'SPL-6', code: 'VT-006', name: 'Găng tay y tế (hộp 100)', categoryId: 'SCAT-5', unit: 'hộp', minimumStock: 10, currentStock: 25, site: 'Minh Anh — Cơ sở 1' },
+    { _id: 'SPL-7', code: 'VT-007', name: 'Khẩu trang y tế (hộp 50)', categoryId: 'SCAT-5', unit: 'hộp', minimumStock: 5, currentStock: 3, site: 'Minh Anh — Cơ sở 1' },
+    { _id: 'SPL-8', code: 'VT-008', name: 'Giấy in kết quả A4', categoryId: 'SCAT-4', unit: 'ram', minimumStock: 10, currentStock: 15, site: 'Minh Anh — Cơ sở 1' },
   ]
   for (const spl of supplies) {
     await Supply.findByIdAndUpdate(spl._id, {
@@ -149,7 +149,7 @@ async function seed() {
   const sampleInvoices = [
     {
       _id: 'INV-SAMPLE-1', invoiceNumber: `HD-${d}-0001`,
-      patientName: 'Nguyễn Văn Minh', phone: '0901111111', site: 'LinkRad Hai Phong',
+      patientName: 'Nguyễn Văn Minh', phone: '0901111111', site: 'Minh Anh — Cơ sở 1',
       items: [
         { serviceCode: 'CT001', serviceName: 'Chụp CT sọ não', unitPrice: 800000, quantity: 1, amount: 800000 },
         { serviceCode: 'XN001', serviceName: 'Xét nghiệm máu tổng quát', unitPrice: 200000, quantity: 1, amount: 200000 },
@@ -159,7 +159,7 @@ async function seed() {
     },
     {
       _id: 'INV-SAMPLE-2', invoiceNumber: `HD-${d}-0002`,
-      patientName: 'Trần Thị Hoa', phone: '0902222222', site: 'LinkRad Hai Phong',
+      patientName: 'Trần Thị Hoa', phone: '0902222222', site: 'Minh Anh — Cơ sở 1',
       items: [
         { serviceCode: 'MRI01', serviceName: 'Chụp MRI sọ não', unitPrice: 1500000, quantity: 1, amount: 1500000 },
       ],
@@ -168,7 +168,7 @@ async function seed() {
     },
     {
       _id: 'INV-SAMPLE-3', invoiceNumber: `HD-${d}-0003`,
-      patientName: 'Lê Hoàng Nam', phone: '0903333333', site: 'LinkRad Hai Phong',
+      patientName: 'Lê Hoàng Nam', phone: '0903333333', site: 'Minh Anh — Cơ sở 1',
       items: [
         { serviceCode: 'SA020', serviceName: 'Siêu âm ổ bụng', unitPrice: 150000, quantity: 1, amount: 150000 },
         { serviceCode: 'XQ001', serviceName: 'X-Quang ngực thẳng', unitPrice: 100000, quantity: 1, amount: 100000 },
@@ -180,7 +180,7 @@ async function seed() {
     },
     {
       _id: 'INV-SAMPLE-4', invoiceNumber: `HD-${d}-0004`,
-      patientName: 'Phạm Thị Lan', phone: '0904444444', site: 'LinkRad Hai Phong',
+      patientName: 'Phạm Thị Lan', phone: '0904444444', site: 'Minh Anh — Cơ sở 1',
       items: [
         { serviceCode: 'CT002', serviceName: 'Chụp CT ngực', unitPrice: 900000, quantity: 1, amount: 900000 },
         { serviceCode: 'ECG01', serviceName: 'Điện tâm đồ', unitPrice: 100000, quantity: 1, amount: 100000 },
@@ -191,7 +191,7 @@ async function seed() {
     },
     {
       _id: 'INV-SAMPLE-5', invoiceNumber: `HD-${d}-0005`,
-      patientName: 'Vũ Đức Thắng', phone: '0905555555', site: 'LinkRad Hai Phong',
+      patientName: 'Vũ Đức Thắng', phone: '0905555555', site: 'Minh Anh — Cơ sở 1',
       items: [
         { serviceCode: 'KH001', serviceName: 'Khám tổng quát', unitPrice: 200000, quantity: 1, amount: 200000 },
       ],
@@ -242,7 +242,7 @@ async function seed() {
 
   // PROMO CODES
   const promoCodes = [
-    { _id: 'PC-1', code: 'LINKRAD10', promotionId: 'PROMO-1', promotionName: 'Khai trương giảm 10%', maxUsage: 10, usedCount: 2 },
+    { _id: 'PC-1', code: 'MAEC10', promotionId: 'PROMO-1', promotionName: 'Khai trương giảm 10%', maxUsage: 10, usedCount: 2 },
     { _id: 'PC-2', code: 'WELCOME2026', promotionId: 'PROMO-1', promotionName: 'Khai trương giảm 10%', maxUsage: 5, usedCount: 0 },
     { _id: 'PC-3', code: 'MRI50K', promotionId: 'PROMO-2', promotionName: 'Giảm 50K dịch vụ MRI', maxUsage: 50, usedCount: 8 },
     { _id: 'PC-4', code: 'COMBO15', promotionId: 'PROMO-3', promotionName: 'Combo khám + CĐHA giảm 15%', maxUsage: 1, usedCount: 0 },
@@ -253,10 +253,10 @@ async function seed() {
       ...pc, status: 'active', assignedToPatientId: null, createdAt: now(), updatedAt: now(),
     }, { upsert: true })
   }
-  console.log(`✓ ${promoCodes.length} mã giảm giá (LINKRAD10, WELCOME2026, MRI50K, COMBO15, VIP2026)`)
+  console.log(`✓ ${promoCodes.length} mã giảm giá (MAEC10, WELCOME2026, MRI50K, COMBO15, VIP2026)`)
 
   console.log('\n✅ Seed hoàn tất! Dữ liệu mẫu đã được tạo.')
-  console.log('\nMã giảm giá để test: LINKRAD10 (10%), MRI50K (50K), COMBO15 (15% cho đơn ≥500K)')
+  console.log('\nMã giảm giá để test: MAEC10 (10%), MRI50K (50K), COMBO15 (15% cho đơn ≥500K)')
   process.exit(0)
 }
 

@@ -11,7 +11,7 @@ window.config = {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'dicomweb',
       configuration: {
-        friendlyName: 'LinkRad Orthanc',
+        friendlyName: 'MAEC Orthanc',
         name: 'orthanc',
         wadoUriRoot: window.location.origin + '/wado',
         qidoRoot: window.location.origin + '/wado',

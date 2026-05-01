@@ -40,7 +40,7 @@ async function run() {
   console.log('═══════════════════════════════════════\n')
 
   // Login
-  const login = await request('POST', '/api/auth/login', { username: 'admin', password: 'linkrad2025' })
+  const login = await request('POST', '/api/auth/login', { username: 'admin', password: 'maec2026' })
   check('Login OK', login.status === 200)
   TOKEN = login.data.token
 

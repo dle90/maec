@@ -35,12 +35,12 @@ function check(label, condition) {
 
 async function run() {
   console.log('═══════════════════════════════════════')
-  console.log('  SANITY CHECK — LinkRad Phase 1')
+  console.log('  SANITY CHECK — MAEC Phase 1')
   console.log('═══════════════════════════════════════\n')
 
   // ── Auth ───────────────────────────────────────────────
   console.log('1. AUTH')
-  const login = await request('POST', '/api/auth/login', { username: 'admin', password: 'linkrad2025' })
+  const login = await request('POST', '/api/auth/login', { username: 'admin', password: 'maec2026' })
   check('Login returns 200', login.status === 200)
   check('Login returns token', !!login.data.token)
   TOKEN = login.data.token
@@ -187,7 +187,7 @@ async function run() {
   check('GET /promotions/active returns 200', activePromos.status === 200)
 
   // Validate promo code
-  const validate = await request('POST', '/api/promotions/validate', { code: 'LINKRAD10', totalAmount: 1000000 })
+  const validate = await request('POST', '/api/promotions/validate', { code: 'MAEC10', totalAmount: 1000000 })
   check('POST validate promo code returns 200', validate.status === 200)
   check('Promo code is valid', validate.data.valid === true)
   check('Discount amount calculated', validate.data.discountAmount > 0)
@@ -213,13 +213,13 @@ async function run() {
   const bkSites = await request('GET', '/api/booking/sites')
   check('GET /booking/sites (no auth) returns 200', bkSites.status === 200)
 
-  const bkSlots = await request('GET', '/api/booking/slots?site=LinkRad%20Hai%20Phong&date=2026-04-20')
+  const bkSlots = await request('GET', '/api/booking/slots?site=MAEC%20Hai%20Phong&date=2026-04-20')
   check('GET /booking/slots returns 200', bkSlots.status === 200)
   check('Has available slots', bkSlots.data.length > 0)
 
   const bkSubmit = await request('POST', '/api/booking/submit', {
     name: 'Test Booking Patient', phone: '0888888888', dob: '1990-01-01', gender: 'M',
-    site: 'LinkRad Hai Phong', scheduledDate: '2026-04-20', scheduledTime: '09:00',
+    site: 'MAEC Hai Phong', scheduledDate: '2026-04-20', scheduledTime: '09:00',
     serviceName: 'CT sọ não',
   })
   check('POST /booking/submit returns 201', bkSubmit.status === 201)

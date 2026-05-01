@@ -1,21 +1,4 @@
 [
-  {"id":1,"name":"Hải Dương","location":"Hải Dương","startMonth":"01/2023","totalInvestment":40000,"linkradShare":0.87,"linkradInvestment":34800,"bankLoan":0,"bank":"","note":""},
-  {"id":2,"name":"Cà Mau","location":"Cà Mau","startMonth":"09/2023","totalInvestment":10000,"linkradShare":0.55,"linkradInvestment":5500,"bankLoan":7265,"bank":"Vietin","note":"Trả gốc vay theo tỷ lệ sở hữu"},
-  {"id":3,"name":"Thanh Hóa","location":"Thanh Hóa","startMonth":"01/2024","totalInvestment":26000,"linkradShare":0.6,"linkradInvestment":15600,"bankLoan":9027,"bank":"BIDV","note":""},
-  {"id":4,"name":"Thái Nguyên","location":"Thái Nguyên","startMonth":"08/2024","totalInvestment":21411,"linkradShare":0.9533,"linkradInvestment":20411,"bankLoan":9137.5,"bank":"Vietin","note":"Có thể gọi vốn"},
-  {"id":5,"name":"Thái Bình","location":"Thái Bình","startMonth":"03/2025","totalInvestment":21762,"linkradShare":0.7247,"linkradInvestment":15771,"bankLoan":9162,"bank":"Vietin","note":""},
-  {"id":6,"name":"Yết Kiêu","location":"Hà Nội","startMonth":"06/2024","totalInvestment":29184,"linkradShare":1.0,"linkradInvestment":29184,"bankLoan":12264,"bank":"Vietin","note":"Có thể gọi vốn"},
-  {"id":7,"name":"Nha Trang","location":"Hà Nội","startMonth":"06/2024","totalInvestment":27639,"linkradShare":1.0,"linkradInvestment":27639,"bankLoan":12184,"bank":"Vietin","note":"Có thể gọi vốn"},
-  {"id":8,"name":"Thạch Thất","location":"Hà Nội","startMonth":"06/2025","totalInvestment":4168,"linkradShare":1.0,"linkradInvestment":4168,"bankLoan":0,"bank":"Radtech","note":""},
-  {"id":9,"name":"Sóc Sơn","location":"Hà Nội","startMonth":"08/2025","totalInvestment":9100,"linkradShare":0.6374,"linkradInvestment":5800,"bankLoan":0,"bank":"Radtech","note":""},
-  {"id":10,"name":"Hà Tĩnh","location":"Hà Tĩnh","startMonth":"02/2026","totalInvestment":28860,"linkradShare":0.6708,"linkradInvestment":19359,"bankLoan":0,"bank":"Vietin","note":"Đang lắp máy"},
-  {"id":11,"name":"HM","location":"Sài Gòn","startMonth":"02/2026","totalInvestment":0,"linkradShare":0.603,"linkradInvestment":0,"bankLoan":0,"bank":"","note":""},
-  {"id":12,"name":"Cty CP Y tế Phúc Sơn (Thái Bình)","location":"Thái Bình","startMonth":"01/2022","totalInvestment":15288,"linkradShare":0.23,"linkradInvestment":3516,"bankLoan":0,"bank":"","note":"Chỉ gửi báo cáo và đối chiếu KQKD"},
-  {"id":13,"name":"PK Trí Đức (Hà Giang)","location":"Hà Giang","startMonth":"01/2023","totalInvestment":1600,"linkradShare":0.375,"linkradInvestment":600,"bankLoan":0,"bank":"","note":"Chỉ gửi báo cáo và đối chiếu KQKD"},
-  {"id":14,"name":"PK Hoàng Việt (Tuyên Quang)","location":"Tuyên Quang","startMonth":"07/2023","totalInvestment":25100,"linkradShare":0.2,"linkradInvestment":5020,"bankLoan":0,"bank":"","note":"Chỉ gửi báo cáo theo quý"},
-  {"id":15,"name":"PK Mạnh Hưng (Sơn Tây)","location":"Hà Nội","startMonth":"10/2023","totalInvestment":1657,"linkradShare":0.5,"linkradInvestment":829,"bankLoan":0,"bank":"","note":"Chỉ gửi báo cáo và đối chiếu KQKD"},
-  {"id":16,"name":"PK An Việt (Thanh Hóa)","location":"Thanh Hóa","startMonth":"09/2023","totalInvestment":4732,"linkradShare":0.5,"linkradInvestment":2366,"bankLoan":0,"bank":"","note":"Chỉ gửi báo cáo theo quý"},
-  {"id":17,"name":"PK Thiện Đức (Ninh Bình)","location":"Ninh Bình","startMonth":"01/2022","totalInvestment":770,"linkradShare":0.7,"linkradInvestment":539,"bankLoan":0,"bank":"","note":"Chỉ gửi báo cáo và đối chiếu KQKD"},
-  {"id":18,"name":"Thành An Tân Triều (Ninh Bình)","location":"Ninh Bình","startMonth":"07/2023","totalInvestment":5500,"linkradShare":0.15,"linkradInvestment":825,"bankLoan":0,"bank":"","note":"Chỉ gửi báo cáo và đối chiếu KQKD"},
-  {"id":19,"name":"Quy Nhơn","location":"Quy Nhơn","startMonth":"","totalInvestment":22000,"linkradShare":0.2,"linkradInvestment":4400,"bankLoan":0,"bank":"","note":""}
+  {"id":1,"name":"Cơ sở 1","location":"TP. Hồ Chí Minh","startMonth":"01/2023","totalInvestment":40000,"maecShare":1.0,"maecInvestment":40000,"bankLoan":0,"bank":"","note":"Placeholder — fill in real district/address"},
+  {"id":2,"name":"Cơ sở 2","location":"TP. Hồ Chí Minh","startMonth":"01/2024","totalInvestment":26000,"maecShare":1.0,"maecInvestment":26000,"bankLoan":0,"bank":"","note":"Placeholder — fill in real district/address"}
 ]

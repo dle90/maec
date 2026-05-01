@@ -26,7 +26,7 @@ router.get('/sites', async (req, res) => {
     const sites = await Appointment.distinct('site')
     // Fallback: if no appointments yet, return default sites
     if (sites.length === 0) {
-      return res.json(['LinkRad Hai Phong', 'LinkRad Ha Noi'])
+      return res.json(['Minh Anh — Cơ sở 1', 'Minh Anh — Cơ sở 2'])
     }
     res.json(sites.filter(Boolean))
   } catch (err) { res.status(500).json({ error: err.message }) }

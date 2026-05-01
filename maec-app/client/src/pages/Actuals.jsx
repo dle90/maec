@@ -47,7 +47,7 @@ function downloadTemplate(sites) {
   ]
 
   XLSX.utils.book_append_sheet(wb, ws, 'Số liệu thực tế')
-  XLSX.writeFile(wb, 'LinkRad_Actuals_Template.xlsx')
+  XLSX.writeFile(wb, 'MAEC_Actuals_Template.xlsx')
 }
 
 export default function Actuals() {

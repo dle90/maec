@@ -44,7 +44,7 @@ async function run() {
 
   // ── Admin login (for partner-admin tests) ─────────────
   console.log('0. ADMIN LOGIN')
-  const adminLogin = await request('POST', '/api/auth/login', { username: 'admin', password: 'linkrad2025' })
+  const adminLogin = await request('POST', '/api/auth/login', { username: 'admin', password: 'maec2026' })
   check('Admin login returns 200', adminLogin.status === 200)
   ADMIN_TOKEN = adminLogin.data.token
 

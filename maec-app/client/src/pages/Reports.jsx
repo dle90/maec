@@ -16,7 +16,7 @@ import {
   CA_CHUP_DIMENSIONS, DOANH_THU_DIMENSIONS,
 } from '../config/reportGroups'
 
-const LAST_REPORT_KEY = 'linkrad_last_report'
+const LAST_REPORT_KEY = 'maec_last_report'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 const fmtDate = (d) => {

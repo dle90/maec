@@ -27,8 +27,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-8">
         <div className="text-center mb-8">
-          <div className="text-3xl font-bold text-blue-900 tracking-wide">LinkRad</div>
-          <div className="text-gray-500 text-sm mt-1">Financial Model 2025–2026</div>
+          <div className="text-3xl font-bold text-blue-900 tracking-wide">Phòng khám Mắt Minh Anh</div>
+          <div className="text-gray-500 text-sm mt-1">Đăng nhập hệ thống MAEC</div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

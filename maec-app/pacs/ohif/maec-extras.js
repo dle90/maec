@@ -1,5 +1,5 @@
-// LinkRad PACS — runtime extras for OHIF
-// Loaded after app-config.js. Adds Vietnamese i18n, LINKRAD branding,
+// MAEC PACS — runtime extras for OHIF
+// Loaded after app-config.js. Adds Vietnamese i18n, MAEC branding,
 // and bridges custom toolbar buttons to bundled Cornerstone3D tools.
 (function () {
   'use strict';
@@ -94,13 +94,13 @@
     }
   }, 200);
 
-  // ---- LINKRAD branding overlay ----
+  // ---- MAEC branding overlay ----
   // Adds a small fixed badge in the top-right corner of the viewer
   function addBrandingBadge() {
-    if (document.getElementById('linkrad-brand-badge')) return;
+    if (document.getElementById('maec-brand-badge')) return;
     var badge = document.createElement('div');
-    badge.id = 'linkrad-brand-badge';
-    badge.textContent = 'LINKRAD PACS';
+    badge.id = 'maec-brand-badge';
+    badge.textContent = 'Minh Anh Eye Clinic';
     badge.style.cssText = [
       'position: fixed',
       'top: 4px',
@@ -188,7 +188,7 @@
     if (!cst || !cst.addTool || !cst.ToolGroupManager) return false;
 
     // Subclass existing tools so we keep all the click/drag/render plumbing.
-    if (!cst._linkradToolsRegistered) {
+    if (!cst._maecToolsRegistered) {
       try {
         var Bidi  = cst.BidirectionalTool;
         var Arrow = cst.ArrowAnnotateTool;
@@ -207,11 +207,11 @@
         cst.addTool(CTR);
         cst.addTool(SL);
         cst.addTool(SB);
-        cst._linkradToolsRegistered = true;
+        cst._maecToolsRegistered = true;
         // eslint-disable-next-line no-console
-        console.log('[LinkRad] Custom tools registered: CardiothoracicRatio, SpineLabeling, SpineBalance');
+        console.log('[MAEC] Custom tools registered: CardiothoracicRatio, SpineLabeling, SpineBalance');
       } catch (e) {
-        console.warn('[LinkRad] Failed to register custom tools:', e);
+        console.warn('[MAEC] Failed to register custom tools:', e);
         return false;
       }
     }
@@ -220,11 +220,11 @@
     var groups = [];
     try { groups = cst.ToolGroupManager.getAllToolGroups() || []; } catch (e) {}
     groups.forEach(function (tg) {
-      if (!tg || tg._linkradToolsAdded) return;
+      if (!tg || tg._maecToolsAdded) return;
       try { tg.addTool('CardiothoracicRatio', { getTextLines: ctrTextLines }); } catch (e) {}
       try { tg.addTool('SpineLabeling',       { getTextCallback: getSpineLabelCallback(tg.id) }); } catch (e) {}
       try { tg.addTool('SpineBalance',        { getTextLines: svaTextLines }); } catch (e) {}
-      tg._linkradToolsAdded = true;
+      tg._maecToolsAdded = true;
     });
     return true;
   }
@@ -259,8 +259,8 @@
         },
         context: 'CORNERSTONE',
       });
-      console.log('[LinkRad] Pseudo color →', colormap);
-    } catch (e) { console.warn('[LinkRad] cyclePseudoColor failed', e); }
+      console.log('[MAEC] Pseudo color →', colormap);
+    } catch (e) { console.warn('[MAEC] cyclePseudoColor failed', e); }
   }
 
   // ----- Image alignment across viewports -----
@@ -302,28 +302,28 @@
           }
         } catch (e) {}
       });
-      console.log('[LinkRad] Aligned viewports →', mode);
+      console.log('[MAEC] Aligned viewports →', mode);
       // Lock variants: re-run on stack/image change
       if (mode === 'lockLeft' || mode === 'lockRight') {
-        window._linkradAlignLock = mode;
+        window._maecAlignLock = mode;
       } else {
-        window._linkradAlignLock = null;
+        window._maecAlignLock = null;
       }
-    } catch (e) { console.warn('[LinkRad] alignImages failed', e); }
+    } catch (e) { console.warn('[MAEC] alignImages failed', e); }
   }
 
   function registerCustomCommands() {
     var cm = window.commandsManager;
     if (!cm || !cm.registerCommand) return false;
-    if (cm._linkradCommandsRegistered) return true;
+    if (cm._maecCommandsRegistered) return true;
     try {
       cm.registerCommand('CORNERSTONE', 'cyclePseudoColor', { commandFn: cyclePseudoColor });
       cm.registerCommand('CORNERSTONE', 'alignImages',      { commandFn: alignImages });
-      cm._linkradCommandsRegistered = true;
-      console.log('[LinkRad] Custom commands registered: cyclePseudoColor, alignImages');
+      cm._maecCommandsRegistered = true;
+      console.log('[MAEC] Custom commands registered: cyclePseudoColor, alignImages');
       return true;
     } catch (e) {
-      console.warn('[LinkRad] Failed to register commands:', e);
+      console.warn('[MAEC] Failed to register commands:', e);
       return false;
     }
   }
@@ -332,7 +332,7 @@
   // Floating "Prior Studies" timeline panel
   // Pulls from /wado QIDO-RS, shows other studies for the current patient.
   // ===========================================================================
-  var TIMELINE_ID = 'linkrad-timeline-panel';
+  var TIMELINE_ID = 'maec-timeline-panel';
 
   function buildTimelinePanel() {
     if (document.getElementById(TIMELINE_ID)) return;
@@ -358,11 +358,11 @@
     p.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
       '  <strong style="color:#5acce6;font-size:11px;letter-spacing:0.5px;">CA CHỤP CŨ</strong>' +
-      '  <button id="linkrad-timeline-close" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;line-height:1;">×</button>' +
+      '  <button id="maec-timeline-close" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;line-height:1;">×</button>' +
       '</div>' +
-      '<div id="linkrad-timeline-body" style="font-size:11px;">Đang tải...</div>';
+      '<div id="maec-timeline-body" style="font-size:11px;">Đang tải...</div>';
     document.body.appendChild(p);
-    document.getElementById('linkrad-timeline-close').onclick = function () {
+    document.getElementById('maec-timeline-close').onclick = function () {
       p.style.display = 'none';
     };
   }
@@ -383,7 +383,7 @@
   }
 
   function refreshTimeline() {
-    var body = document.getElementById('linkrad-timeline-body');
+    var body = document.getElementById('maec-timeline-body');
     if (!body) return;
     var pid = getCurrentPatientID();
     if (!pid) { body.textContent = 'Chưa có ca chụp.'; return; }

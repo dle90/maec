@@ -3,14 +3,14 @@ version: "3.8"
 services:
   orthanc:
     image: orthancteam/orthanc:latest
-    container_name: linkrad-orthanc
+    container_name: maec-orthanc
     ports:
       - "8042:8042"
       - "4242:4242"
     volumes:
       - orthanc-data:/var/lib/orthanc/db
     environment:
-      ORTHANC__NAME: "LinkRad PACS"
+      ORTHANC__NAME: "MAEC PACS"
       ORTHANC__REMOTE_ACCESS_ALLOWED: "true"
       ORTHANC__AUTHENTICATION_ENABLED: "false"
       ORTHANC__HTTP_CROSS_ORIGIN_ENABLED: "true"
@@ -25,7 +25,7 @@ services:
     build:
       context: ./ohif
       dockerfile: Dockerfile
-    container_name: linkrad-ohif
+    container_name: maec-ohif
     ports:
       - "3000:80"
     environment:

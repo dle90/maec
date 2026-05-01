@@ -1,8 +1,8 @@
 {
-  "Name": "LinkRad PACS",
+  "Name": "MAEC PACS",
   "HttpPort": 8042,
   "DicomPort": 4242,
-  "DicomAet": "LINKRAD",
+  "DicomAet": "MAEC",
   "RemoteAccessAllowed": true,
   "AuthenticationEnabled": false,
   "HttpCrossOriginEnabled": true,

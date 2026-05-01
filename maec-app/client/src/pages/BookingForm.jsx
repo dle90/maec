@@ -67,8 +67,8 @@ export default function BookingForm() {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
         {/* Header */}
         <div className="px-6 py-5" style={{ background: 'linear-gradient(135deg, #0f2c6b, #1e3a5f)' }}>
-          <h1 className="text-xl font-bold text-white">LinkRad</h1>
-          <p className="text-blue-200 text-sm mt-1">Dat lich kham & chup chieu truc tuyen</p>
+          <h1 className="text-xl font-bold text-white">Đặt lịch khám — Phòng khám Mắt Minh Anh</h1>
+          <p className="text-blue-200 text-sm mt-1">Dat lich kham truc tuyen</p>
         </div>
 
         {/* Progress */}
@@ -262,7 +262,7 @@ export default function BookingForm() {
 
         {/* Footer */}
         <div className="px-6 py-3 bg-gray-50 border-t text-center">
-          <p className="text-xs text-gray-400">LinkRad - He thong quan ly CDHA</p>
+          <p className="text-xs text-gray-400">Minh Anh Eye Clinic - He thong quan ly phong kham</p>
         </div>
       </div>
     </div>

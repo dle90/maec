@@ -146,7 +146,7 @@ function printOrderSlip(patient, invoice) {
 
 <div class="header">
   <div>
-    <div class="clinic">LINKRAD${invoice.site ? ' — ' + esc(String(invoice.site).toUpperCase()) : ''}</div>
+    <div class="clinic">PHÒNG KHÁM MẮT MINH ANH${invoice.site ? ' — ' + esc(String(invoice.site).toUpperCase()) : ''}</div>
     <div class="clinic-sub">Trung tâm Chẩn đoán Hình ảnh</div>
   </div>
   <div class="meta">
@@ -219,7 +219,7 @@ function printOrderSlip(patient, invoice) {
   </div>
 </div>
 
-<div class="footer">LinkRad · ${esc(dateStr)} · Phiếu số ${esc(invoice.invoiceNumber || '')}</div>
+<div class="footer">Minh Anh Eye Clinic · ${esc(dateStr)} · Phiếu số ${esc(invoice.invoiceNumber || '')}</div>
 
 <script>
   window.onload = () => {

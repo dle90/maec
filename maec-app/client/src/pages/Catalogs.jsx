@@ -6,7 +6,7 @@ import { EmployeeSection, DepartmentSection, PermissionMatrix } from './HRManage
 import ReportTemplates from './ReportTemplates'
 import { CATALOG_TO_GROUP, DEFAULT_CATALOG_KEY } from '../config/catalogGroups'
 
-const LAST_CATALOG_KEY = 'linkrad_last_catalog'
+const LAST_CATALOG_KEY = 'maec_last_catalog'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 

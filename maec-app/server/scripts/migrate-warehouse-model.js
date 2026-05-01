@@ -9,8 +9,8 @@
 //   3. Leaves Supply.site + Supply.currentStock in place. Supply.site is no
 //      longer read; currentStock is treated as a deprecated cache.
 //
-// Run:    node linkrad-app/server/scripts/migrate-warehouse-model.js
-// Dry:    node linkrad-app/server/scripts/migrate-warehouse-model.js --dry
+// Run:    node maec-app/server/scripts/migrate-warehouse-model.js
+// Dry:    node maec-app/server/scripts/migrate-warehouse-model.js --dry
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') })
 const mongoose = require('mongoose')

@@ -279,7 +279,7 @@ function CriticalConfirmModal({ study, form, onCancel, onConfirm, saving }) {
           <div>
             <div className="text-[10px] uppercase tracking-wide text-gray-500 font-medium mb-1">Nội dung thông báo</div>
             <div className="bg-gray-50 border border-gray-200 rounded-md p-2.5 text-[11px] text-gray-700 leading-snug">
-              [LinkRad] BN <b>{study.patientName}</b> ({study.patientId}) — {study.modality} {study.bodyPart || ''}.
+              [MAEC] BN <b>{study.patientName}</b> ({study.patientId}) — {study.modality} {study.bodyPart || ''}.
               Phát hiện nghiêm trọng.
               {form.criticalNote && <> Ghi chú: "{form.criticalNote}".</>}
               {' '}Vui lòng xử lý khẩn.
@@ -359,7 +359,7 @@ function openPrintWindow(study, report, autoPrint = false) {
 </style></head><body>
   <div class="header">
     <div>
-      <div class="clinic">LINKRAD PACS — ${(study.site || '').toUpperCase()}</div>
+      <div class="clinic">MINH ANH EYE CLINIC — ${(study.site || '').toUpperCase()}</div>
       <div class="subtitle">Trung tâm Chẩn đoán Hình ảnh</div>
     </div>
     <div style="text-align:right;font-size:11px">
@@ -393,7 +393,7 @@ function openPrintWindow(study, report, autoPrint = false) {
       ${sig(report?.radiologistSignatureUrl, report?.radiologistName, report?.finalizedAt)}
     </div>
   </div>
-  <div class="footer">LinkRad PACS · In ngày ${date}</div>
+  <div class="footer">Minh Anh Eye Clinic · In ngày ${date}</div>
   <script>${autoPrint ? 'window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}' : ''}</script>
 </body></html>`
   w.document.write(html)

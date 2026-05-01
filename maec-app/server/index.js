@@ -101,5 +101,5 @@ app.get('*', (req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`LinkRad server running on http://localhost:${PORT}`)
+  console.log(`MAEC server running on http://localhost:${PORT}`)
 })

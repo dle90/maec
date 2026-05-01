@@ -1,4 +1,4 @@
-// LinkRad PACS — OHIF Viewer config
+// MAEC PACS — OHIF Viewer config
 // Customizations: W/L presets, hotkeys, color LUTs, branding
 window.config = {
   routerBasename: '/',
@@ -12,23 +12,23 @@ window.config = {
   strictZSpacingForVolumeViewport: true,
   defaultDataSourceName: 'dicomweb',
 
-  // LinkRad branding (consumed by linkrad-extras.js)
+  // MAEC branding (consumed by maec-extras.js)
   whiteLabeling: {
     createLogoComponentFn: function (React) {
       return React.createElement('span', {
         className: 'text-primary-active text-base font-bold ml-2',
         style: { letterSpacing: '0.5px' },
-      }, 'LINKRAD PACS')
+      }, 'Minh Anh Eye Clinic')
     },
   },
 
-  // Default UI language (Vietnamese added at runtime in linkrad-extras.js)
+  // Default UI language (Vietnamese added at runtime in maec-extras.js)
   i18n: {
     lng: 'vi',
     fallbackLng: 'en-US',
   },
 
-  // Override built-in W/L presets to match LinkRad legacy viewer
+  // Override built-in W/L presets to match MAEC legacy viewer
   // Keys 2-6 in the hotkeys array map to presets 1-5 below
   customizationService: [
     {
@@ -100,7 +100,7 @@ window.config = {
     { commandName: 'setToolActive', commandOptions: { toolName: 'CalibrationLine' },    label: 'Calibration',          keys: ['shift+k'], isEditable: true },
     { commandName: 'setToolActive', commandOptions: { toolName: 'UltrasoundDirectional' }, label: 'US Directional',     keys: ['shift+u'], isEditable: true },
 
-    // Custom tools (registered at runtime by linkrad-extras.js)
+    // Custom tools (registered at runtime by maec-extras.js)
     { commandName: 'setToolActive', commandOptions: { toolName: 'CardiothoracicRatio' }, label: 'Cardiothoracic Ratio', keys: ['shift+t'], isEditable: true },
     { commandName: 'setToolActive', commandOptions: { toolName: 'SpineLabeling' },       label: 'Spine Labeling',       keys: ['shift+v'], isEditable: true },
     { commandName: 'setToolActive', commandOptions: { toolName: 'SpineBalance' },        label: 'Spine Balance',        keys: ['shift+b'], isEditable: true },
@@ -127,7 +127,7 @@ window.config = {
       namespace: '@ohif/extension-default.dataSourcesModule.dicomweb',
       sourceName: 'dicomweb',
       configuration: {
-        friendlyName: 'LinkRad PACS',
+        friendlyName: 'MAEC PACS',
         name: 'orthanc',
         wadoUriRoot: '/wado',
         qidoRoot: '/wado',

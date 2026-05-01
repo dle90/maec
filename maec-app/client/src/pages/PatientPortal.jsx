@@ -14,7 +14,7 @@ const fmtDateTime = (s) => {
 }
 
 function createApi() {
-  const auth = JSON.parse(localStorage.getItem('linkrad_patient_auth') || '{}')
+  const auth = JSON.parse(localStorage.getItem('maec_patient_auth') || '{}')
   const instance = axios.create({ baseURL: '/api/patient-portal' })
   instance.interceptors.request.use(cfg => {
     if (auth.token) cfg.headers.Authorization = `Bearer ${auth.token}`
@@ -22,7 +22,7 @@ function createApi() {
   })
   instance.interceptors.response.use(r => r, err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('linkrad_patient_auth')
+      localStorage.removeItem('maec_patient_auth')
       window.location.href = '/patient-login'
     }
     return Promise.reject(err)
@@ -216,7 +216,7 @@ function VisitCard({ visit, api, onFeedbackSaved }) {
 
 // ── Main Portal Page ────────────────────────────────────
 export default function PatientPortal() {
-  const [auth] = useState(() => JSON.parse(localStorage.getItem('linkrad_patient_auth') || '{}'))
+  const [auth] = useState(() => JSON.parse(localStorage.getItem('maec_patient_auth') || '{}'))
   const [api] = useState(() => createApi())
   const [tab, setTab] = useState('visits')
   const [visits, setVisits] = useState([])
@@ -232,7 +232,7 @@ export default function PatientPortal() {
   }, [])
 
   const logout = () => {
-    localStorage.removeItem('linkrad_patient_auth')
+    localStorage.removeItem('maec_patient_auth')
     window.location.href = '/patient-login'
   }
 
@@ -244,8 +244,7 @@ export default function PatientPortal() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold text-blue-900">LinkRad</span>
-            <span className="text-green-600 text-sm font-medium">Cổng bệnh nhân</span>
+            <span className="text-xl font-bold text-blue-900">Cổng bệnh nhân — Phòng khám Mắt Minh Anh</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-600">{auth.patientName}</span>

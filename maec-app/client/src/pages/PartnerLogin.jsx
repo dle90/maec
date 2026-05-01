@@ -20,7 +20,7 @@ export default function PartnerLogin() {
     setLoading(true)
     try {
       const { data } = await api.post('/partner-portal/login', { username, password })
-      localStorage.setItem('linkrad_partner_auth', JSON.stringify(data))
+      localStorage.setItem('maec_partner_auth', JSON.stringify(data))
       window.location.href = '/partner-portal'
     } catch (err) {
       setError(err.response?.data?.error || 'Đăng nhập thất bại')
@@ -33,7 +33,7 @@ export default function PartnerLogin() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-orange-50">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-8">
         <div className="text-center mb-8">
-          <div className="text-3xl font-bold text-blue-900 tracking-wide">LinkRad</div>
+          <div className="text-3xl font-bold text-blue-900 tracking-wide">Phòng khám Mắt Minh Anh</div>
           <div className="text-orange-600 text-sm font-medium mt-1">Cổng đối tác</div>
         </div>
 

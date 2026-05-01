@@ -11,8 +11,8 @@
  * easy to identify and remove via the companion cleanup script if needed.
  *
  * Run:
- *   node linkrad-app/server/scripts/seed-consumables-mock.js          # write
- *   node linkrad-app/server/scripts/seed-consumables-mock.js --dry    # preview
+ *   node maec-app/server/scripts/seed-consumables-mock.js          # write
+ *   node maec-app/server/scripts/seed-consumables-mock.js --dry    # preview
  */
 
 const path = require('path')
