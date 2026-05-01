@@ -15,7 +15,7 @@ const CommissionGroup = require('../models/CommissionGroup')
 const CommissionRule = require('../models/CommissionRule')
 const Appointment = require('../models/Appointment')
 const Invoice = require('../models/Invoice')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 
 const now = () => new Date().toISOString()
 

@@ -2,10 +2,19 @@ import React, { useState, useEffect } from 'react'
 import api from '../api'
 import { useAuth } from '../context/AuthContext'
 
-const MODALITIES = ['', 'CT', 'MRI', 'XR', 'US']
+// Loại khám (Encounter.examType). Maps to the clinic's documented workflows.
+// Add more here as new workflows get formalised (cataract pre-op, glaucoma, etc.).
+const EXAM_TYPES = [
+  '',
+  'Khám mắt cơ bản',
+  'Khám khúc xạ + thị giác hai mắt',
+  'Khám kính tiếp xúc (mới)',
+  'Tái khám kính tiếp xúc',
+  'Khác',
+]
 
 const blank = {
-  name: '', modality: '', bodyPart: '',
+  name: '', examType: '', modality: '', bodyPart: '',
   technique: '', clinicalInfo: '', findings: '', impression: '', recommendation: '',
   isShared: false,
 }
@@ -15,17 +24,17 @@ export default function ReportTemplates() {
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)
-  const [filter, setFilter] = useState({ modality: '', q: '' })
+  const [filter, setFilter] = useState({ examType: '', q: '' })
 
   const load = async () => {
     setLoading(true)
     try {
-      const r = await api.get('/templates', { params: filter.modality ? { modality: filter.modality } : {} })
+      const r = await api.get('/templates', { params: filter.examType ? { examType: filter.examType } : {} })
       setTemplates(r.data || [])
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [filter.modality])
+  useEffect(() => { load() }, [filter.examType])
 
   const save = async () => {
     if (!editing.name.trim()) { alert('Tên mẫu là bắt buộc'); return }
@@ -60,8 +69,8 @@ export default function ReportTemplates() {
       </div>
 
       <div className="flex items-center gap-2 mb-3">
-        <select value={filter.modality} onChange={e => setFilter(f => ({ ...f, modality: e.target.value }))} className="border rounded px-2 py-1.5 text-sm">
-          {MODALITIES.map(m => <option key={m} value={m}>{m || 'Tất cả modality'}</option>)}
+        <select value={filter.examType} onChange={e => setFilter(f => ({ ...f, examType: e.target.value }))} className="border rounded px-2 py-1.5 text-sm">
+          {EXAM_TYPES.map(m => <option key={m} value={m}>{m || 'Tất cả loại khám'}</option>)}
         </select>
         <input value={filter.q} onChange={e => setFilter(f => ({ ...f, q: e.target.value }))} placeholder="Tìm theo tên hoặc bộ phận..." className="border rounded px-2 py-1.5 text-sm flex-1 max-w-md" />
         <span className="ml-auto text-xs text-gray-500">{filtered.length} mẫu</span>
@@ -72,8 +81,8 @@ export default function ReportTemplates() {
           <thead className="bg-gray-50 text-gray-600 text-left text-xs uppercase">
             <tr>
               <th className="px-3 py-2">Tên mẫu</th>
-              <th className="px-3 py-2">Modality</th>
-              <th className="px-3 py-2">Bộ phận</th>
+              <th className="px-3 py-2">Loại khám</th>
+              <th className="px-3 py-2">Mắt / Bộ phận</th>
               <th className="px-3 py-2">Loại</th>
               <th className="px-3 py-2">Sở hữu</th>
               <th className="px-3 py-2 text-right">Sử dụng</th>
@@ -88,7 +97,7 @@ export default function ReportTemplates() {
             ) : filtered.map(t => (
               <tr key={t._id} className="border-t hover:bg-blue-50/30">
                 <td className="px-3 py-2 font-medium text-gray-800">{t.name}</td>
-                <td className="px-3 py-2 font-mono text-xs">{t.modality || '-'}</td>
+                <td className="px-3 py-2 text-xs text-gray-700">{t.examType || '-'}</td>
                 <td className="px-3 py-2 text-gray-600">{t.bodyPart || '-'}</td>
                 <td className="px-3 py-2"><span className={`text-xs px-2 py-0.5 rounded ${t.isShared ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{t.isShared ? 'Chia sẻ' : 'Cá nhân'}</span></td>
                 <td className="px-3 py-2 text-xs text-gray-500">{t.ownerId || '(global)'}</td>
@@ -116,18 +125,18 @@ export default function ReportTemplates() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Tên mẫu *</label>
-                  <input value={editing.name} onChange={e => setEditing(t => ({ ...t, name: e.target.value }))} className="w-full border rounded px-3 py-2 text-sm" placeholder="Ví dụ: MRI cột sống thắt lưng — bình thường" />
+                  <input value={editing.name} onChange={e => setEditing(t => ({ ...t, name: e.target.value }))} className="w-full border rounded px-3 py-2 text-sm" placeholder="Ví dụ: Khám mắt cơ bản — bình thường, người lớn" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Modality</label>
-                  <select value={editing.modality} onChange={e => setEditing(t => ({ ...t, modality: e.target.value }))} className="w-full border rounded px-3 py-2 text-sm">
-                    {MODALITIES.map(m => <option key={m} value={m}>{m || '(bất kỳ)'}</option>)}
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Loại khám</label>
+                  <select value={editing.examType} onChange={e => setEditing(t => ({ ...t, examType: e.target.value }))} className="w-full border rounded px-3 py-2 text-sm">
+                    {EXAM_TYPES.map(m => <option key={m} value={m}>{m || '(bất kỳ)'}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Bộ phận / Body part</label>
-                <input value={editing.bodyPart} onChange={e => setEditing(t => ({ ...t, bodyPart: e.target.value }))} className="w-full border rounded px-3 py-2 text-sm" placeholder="Ví dụ: Cột sống thắt lưng" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Mắt / Bộ phận (OD / OS / OU hoặc khác)</label>
+                <input value={editing.bodyPart} onChange={e => setEditing(t => ({ ...t, bodyPart: e.target.value }))} className="w-full border rounded px-3 py-2 text-sm" placeholder="Ví dụ: OD, OS, OU, hoặc để trống" />
               </div>
               {['technique', 'clinicalInfo', 'findings', 'impression', 'recommendation'].map(k => (
                 <div key={k}>

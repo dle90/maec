@@ -8,8 +8,6 @@ const PAGE_LINKS = [
   { label: 'Dashboard',                link: '/' },
   { label: 'Today (Bảng điều khiển hôm nay)', link: '/today' },
   { label: 'Ca chụp (RIS Worklist)',   link: '/ris' },
-  { label: 'Ca đọc (Teleradiology)',   link: '/teleradiology' },
-  { label: 'Ca đọc — Của tôi',         link: '/telerad-reading' },
   { label: 'Đăng ký bệnh nhân',         link: '/registration' },
   { label: 'Phiếu thu (Billing)',      link: '/billing' },
   { label: 'Quản lý kho',              link: '/inventory' },

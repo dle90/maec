@@ -2,77 +2,98 @@
 
 Living doc of deferred work / known limits. Append before finishing any feature; check before starting one.
 
-## Initial clone from LinkRad (2026-05-01)
+## Done in 2026-05-01 P0/P1 pass
 
-This repo was cloned from `dle90/linkrad` with infrastructure-level renames only. The radiology-specific application code is still in place and needs progressive replacement.
+### P0
+- **Branding sweep**: ~190+ "LinkRad"/"linkrad"/"LINKRAD" replacements across server, client, PACS, scripts, configs. Brand strings are now "Minh Anh Eye Clinic" (full / user-facing) or "MAEC" (short / code/internals). Vietnamese-first UI: "Phòng khám Mắt Minh Anh" used in app header.
+- localStorage keys (`linkrad_auth`, `linkrad_catalog_*`, `linkrad_report_*`) renamed to `maec_*`.
+- Demo passwords `linkrad2025` → `maec2026`. Promo code `LINKRAD10` → `MAEC10`. SESSION_SECRET fallback updated.
+- DICOM AE Title in `pacs/orthanc.json`: `LINKRAD` → `MAEC`. Orthanc & OHIF container names + `friendlyName` updated.
+- Sidebar logo: "LinkRad" → "Minh Anh Eye Clinic" (two-line mark). App header: "LinkRad ERP" → "Phòng khám Mắt Minh Anh".
 
-### Infrastructure renames done
-- `package.json` names: linkrad → maec (root, app, server, client)
-- DB name in [maec-app/server/db.js](maec-app/server/db.js): `mongodb://localhost:27017/maec`
-- Build paths: `linkrad-app/` → `maec-app/` in [nixpacks.toml](nixpacks.toml), [railway.json](railway.json), root [package.json](package.json)
-- OHIF extras file: `linkrad-extras.js` → `maec-extras.js` (file renamed, [Dockerfile](maec-app/pacs/ohif/Dockerfile) updated; **internal references inside maec-extras.js not yet renamed**)
-- [start.bat](maec-app/start.bat) window titles
-- Stripped: `server/.env` (secrets), `client/dist/` (stale build), `server/test-flow1/` (radiology workflow tests)
+### P1 — Domain rename (partial — see deferred list)
+- **Telerad pages dropped**: `Teleradiology.jsx`, `TeleradReading.jsx`, `TeleradAdmin.jsx`, `context/TeleradTabsContext.jsx` deleted. `App.jsx` cleaned (imports + routes + `<TeleradTabsProvider>` unwrap). `Layout.jsx` cleaned (whole `Chẩn đoán hình ảnh` group removed; `Inactive` section's telerad entries removed). `GlobalSearch.jsx` palette entries removed.
+- **Sidebar group rename**: "RIS-PACS" → "Khám bệnh"; item label "Ca chụp" 🩻 → "Lượt khám" 👁️. URL `/ris` kept (slug, internal — revisit when redesigning the page).
+- **Study model → Encounter**: `models/Study.js` renamed to `models/Encounter.js`. Mongoose model name `'Study'` → `'Encounter'` (collection becomes `encounters` — fine since no production data). Schema variable, all 11 server importers (7 routes + 4 scripts), and all `Study.find/Study.create/...` class references updated. **Field names kept as-is** — see deferred work.
+- **`examType` field added** to `Encounter` and `ReportTemplate`. `modality` enum (`['CT','MRI','XR','US']`) dropped — now free-form String. Index on ReportTemplate updated to include `examType`.
+- **Report Templates UI**: filter and form now use `examType` with the 4 documented workflows (Khám mắt cơ bản / Khám khúc xạ + thị giác hai mắt / Khám kính tiếp xúc (mới) / Tái khám kính tiếp xúc) + "Khác". `bodyPart` placeholder updated to OD/OS/OU.
+- **OHIF extras**: all `linkrad*` identifiers (`_linkradToolsRegistered`, `_linkradAlignLock`, `linkrad-brand-badge`, `linkrad-timeline-panel`, etc.) renamed to `maec*` equivalents. Visible badge "LINKRAD PACS" → "Minh Anh Eye Clinic".
 
-### Branding pass — NOT done
-~50 files still contain "LinkRad" / "linkrad" strings — UI titles, demo text, comments, log messages. Grep `linkrad|LinkRad` to enumerate. Plan a single rename pass once the eye-clinic branding is decided (logo, product name — "MAEC" placeholder for now).
+## Action required from user (P0)
 
-### Radiology → ophthalmology domain rename — NOT done
-Significant model/route/page renames pending. See [docs below](#domain-rename-plan).
+### MongoDB Atlas — provision (cannot be done by Claude Code)
+Pre-deploy blocker. Steps:
+1. Log into MongoDB Atlas. Either create a new project "MAEC" or use existing org cluster.
+2. Create database user (read/write on `maec` db).
+3. Whitelist Railway egress IPs OR set Network Access to `0.0.0.0/0` (less secure but simpler — fine for early-stage).
+4. Copy connection string. Format: `mongodb+srv://USER:PASSWORD@cluster.mongodb.net/maec?retryWrites=true&w=majority`.
+5. Set `MONGODB_URI` env var in Railway dashboard for the `maec` service.
 
-## Domain rename plan
+### Railway — verify first deploy
+1. Push current branch to GitHub `dle90/maec` master.
+2. Railway auto-deploys (build steps in [nixpacks.toml](nixpacks.toml), start in [railway.json](railway.json)).
+3. Watch build logs. Common failures: missing env var, build path mismatch.
+4. Visit Railway-assigned URL. Confirm app loads, login screen shows "Phòng khám Mắt Minh Anh".
+5. Try logging in with a demo user from [users.json](maec-app/server/data/users.json). New password: `maec2026`.
 
-### Models to repurpose (schema mostly transfers, terminology changes)
-- `Study` → `Encounter` — an eye visit covers multiple sub-tests in one record
-- `Report` + `ReportTemplate` — keep engine, replace radiology templates with eye templates (general exam, dry-eye, pre-cataract, glaucoma follow-up, retina)
-- `KeyImage`, `StudyAnnotation` — repurpose for meibography compare and fundus markup
+### sites.json — fill in real clinic data
+[maec-app/server/data/sites.json](maec-app/server/data/sites.json) was rewritten from 19 LinkRad investment-tracking entries down to 2 placeholder MAEC sites:
+- `Cơ sở 1` and `Cơ sở 2`, both `location: "TP. Hồ Chí Minh"`, both `note: "Placeholder — fill in real district/address"`.
+- User must supply: actual district names (e.g. "Quận 1", "Tân Bình"), real start dates, investment figures, ownership share, bank/loan info.
 
-### Routes to adapt
-- [routes/ris.js](maec-app/server/routes/ris.js) → ophthalmology exam workflow (intake → sub-tests → sign-off)
+## Deferred — Domain rename (round 2)
 
-### Pages to rename / replace
-- `RIS.jsx` → ophthalmology patient flow
-- `RadiologyReports.jsx` → ophthalmology reports
-- `CriticalFindings.jsx` → eye-specific critical findings (suspected retinal detachment, acute glaucoma, etc.)
+`Encounter` schema kept all `Study`-era field names to limit blast radius. The right shape after the workflow walkthrough is probably:
+- `examType` (already added) replaces "modality" as the per-encounter category; populate from the 4 workflows.
+- `studyDate` → `encounterDate` (when the eye visit happened).
+- `studyUID` → likely move into a sub-array `imagingStudies: [{ studyUID, modality, ... }]` because one encounter can have multiple DICOM studies attached (fundus + OCT + topo).
+- `radiologist` / `radiologistName` → `doctor` / `doctorName`. (Routes also expose `/ris/radiologists` — endpoint name should follow.)
+- `bodyPart` → keep, but in eye context populate with OD / OS / OU.
+- `modality` enum dropping was step 1; once `imagingStudies` sub-array exists, the top-level `modality` field can be removed entirely.
 
-### Pages to drop
-- `Teleradiology.jsx`, `TeleradReading.jsx`, `TeleradAdmin.jsx` — eye clinics read in-clinic
-  - Salvage the multi-site ops view pattern from `TeleradAdmin` for the 2-location dashboard before deleting
+Comments mentioning "Study"/"RIS Study" in routes (registration.js, reports.js, ris.js, patient-portal.js, lib/warehouseScope.js) were left — update opportunistically.
 
-## New work to scope
+## Deferred — UI / pages (post-workflow-walkthrough)
 
-### Ophthalmology exam form
-Replaces radiology "study reading" view. Tabbed:
-- Refraction OD/OS (sphere, cylinder, axis, add)
-- IOP (Goldmann / iCare / NCT)
-- Slit lamp findings
-- Fundus exam findings
-- OCT / topography summary
+### Encounter form (replaces RIS.jsx ReportEditor for eye exams)
+The 4 workflow diagrams from 2026-05-01 give us the exact tabs/modules. Before building, decide with user:
+- **Composable modules vs. fixed forms**: 4 distinct workflow forms vs. 1 composable form picking from station modules (Auto-refraction / VA + manual refraction / IOP / slit lamp / corneal topography / OCT / fundus / visual field / cycloplegic refraction / binocular vision / contact-lens trial / final consult).
+- **Cycloplegic 45-min wait** (flows #2 and #3): system-level timer/queue, not just a manual reminder. UX needed.
+- **Slit-lamp = anchor**: patient returns to slit lamp after add-ons. Form should make "return to slit lamp" an explicit step.
+- **Workflow catalog**: 4 documented; likely more exist (cataract pre-op, glaucoma follow-up, dry-eye, retina, post-op). Ask user.
+
+### Eye-specific report templates (seed content)
+With `examType` field in place + the dropdown wired, the seed templates need content. Per CLAUDE.md, planned templates: general exam, dry-eye, pre-cataract, glaucoma follow-up, retina. Validate this list against the 4 documented workflows + ask what else clinic uses.
+
+### Page renames (low priority — file names are internal)
+File names `RIS.jsx`, `RadiologyReports.jsx`, `CriticalFindings.jsx` are internal. URLs `/ris`, `/critical-findings`, `/report-templates` are slugs — users see Vietnamese labels. Defer file renames to whenever those pages get redesigned. `RadiologyReports.jsx` is currently unused (route map redirects elsewhere) — candidate for deletion after confirming no inbound bookmarks.
+
+### Multi-site ops dashboard (salvage from old TeleradAdmin)
+Before deletion, `TeleradAdmin.jsx` had a useful pattern: sidebar of doctor workload + tabbed "pool / in-progress / done" case list with reassignment. For 2-location MAEC ops, an equivalent could show: per-clinic patient queue, per-station bottleneck, per-doctor workload. Build when ops needs it; pattern is documented here.
+
+## Imaging integration (P2)
 
 ### Imaging device adapters (Minh Anh hardware)
 | Device | Path | Status |
 |---|---|---|
-| DRS Plus fundus camera | DICOM into existing PACS | Plug-and-play, verify |
-| Optopol Revo OCT | DICOM into existing PACS | **Verify DICOM module licensing on the unit** |
+| DRS Plus fundus camera | DICOM into PACS | Plug-and-play, verify |
+| Optopol Revo OCT | DICOM into PACS | **Verify DICOM module licensing on the unit** |
 | Medmont topographer | Document attachment (PDF) | Build watched-folder ingestor |
 | MediWorks AB800 biometer | Structured data + PDF | **Confirm export options (PDF only or CSV/XML)** |
-| SBM Sistemi IDRA | Document attachment (PDF) + structured measurements | Build watched-folder ingestor |
+| SBM Sistemi IDRA | PDF + structured measurements | Build watched-folder ingestor |
 
 ### IOL calculation workflow
-Pulls AB800 biometry → applies formula → attaches surgical plan to encounter. Important for cataract pipeline.
+AB800 biometry → formula → surgical plan attached to encounter. Important for cataract pipeline. Wait for AB800 export format confirmation.
 
 ### Compare-over-time view
-Same component reused for: meibography progression, fundus side-by-side, OCT thickness change. Design once.
+Same component reused for: meibography progression, fundus side-by-side, OCT thickness change. Design once, reuse.
 
-### Mobile staff app (Expo / React Native)
-Net-new build, talks to the same backend. v1 scope:
+## Mobile staff app (P3 — not yet scaffolded)
+
+Net-new Expo / React Native build. v1 scope:
 - Today's schedule
 - Patient intake
-- Exam capture (refraction / IOP / slit lamp findings)
+- Exam capture (refraction / IOP / slit lamp findings) — **portable IOP device "follows the patient" per workflow diagrams; mobile UX should reflect this**
 - Phone camera capture for ad-hoc images
 - Encounter sign-off
 - Billing
-
-## Deployment
-- New Railway project needed (do not point at LinkRad's). Update [reference_railway memory](../../.claude/projects/d--work-LinkRad/memory/project_railway.md) once MAEC's Railway project + URLs are set.
-- New MongoDB database. Local dev currently points at `mongodb://localhost:27017/maec` per [.env.example](.env.example) — production Atlas DB needs to be provisioned separately from LinkRad's.

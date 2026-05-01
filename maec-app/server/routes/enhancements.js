@@ -9,7 +9,7 @@ const express = require('express')
 const router = express.Router()
 const { requireAuth, requirePermission } = require('../middleware/auth')
 
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 const Report = require('../models/Report')
 const ReportTemplate = require('../models/ReportTemplate')
 const AuditLog = require('../models/AuditLog')
@@ -187,10 +187,10 @@ router.get('/dashboard/today', requireAuth, async (req, res) => {
       todayInvoices,
       lowStockCount,
     ] = await Promise.all([
-      Study.find({ ...studyFilter, studyDate: { $gte: today } }).lean(),
-      Study.find({ ...studyFilter, studyDate: { $gte: startOfYesterday, $lt: today } }).lean(),
-      Study.find({ ...studyFilter, studyDate: { $gte: startOfWeekAgo } }).lean(),
-      Study.find({ ...studyFilter, status: { $in: ['scheduled', 'in_progress', 'pending_read', 'reading'] } }).lean(),
+      Encounter.find({ ...studyFilter, studyDate: { $gte: today } }).lean(),
+      Encounter.find({ ...studyFilter, studyDate: { $gte: startOfYesterday, $lt: today } }).lean(),
+      Encounter.find({ ...studyFilter, studyDate: { $gte: startOfWeekAgo } }).lean(),
+      Encounter.find({ ...studyFilter, status: { $in: ['scheduled', 'in_progress', 'pending_read', 'reading'] } }).lean(),
       Report.find({ criticalFinding: true, criticalAckedBy: { $in: ['', null] } }).limit(20).lean(),
       Invoice.find({ createdAt: { $gte: startOfToday } }).lean().catch(() => []),
       // Inventory low-stock check: skip if model isn't loaded
@@ -293,8 +293,8 @@ router.get('/dashboard/extras', requireAuth, async (req, res) => {
     if (req.user.role === 'bacsi') studyFilter.radiologist = req.user.username
 
     const [weekStudies, todayStudies, criticalReports7d, unpaidInvoices, expiringLots] = await Promise.all([
-      Study.find({ ...studyFilter, studyDate: { $gte: startOfWeekAgo } }).lean(),
-      Study.find({ ...studyFilter, studyDate: { $gte: todayStr } }).lean(),
+      Encounter.find({ ...studyFilter, studyDate: { $gte: startOfWeekAgo } }).lean(),
+      Encounter.find({ ...studyFilter, studyDate: { $gte: todayStr } }).lean(),
       Report.find({ criticalFinding: true, finalizedAt: { $gte: startOfWeekAgo } }).sort({ finalizedAt: -1 }).limit(20).lean(),
       Invoice.find({ status: { $in: ['issued', 'partially_paid'] } }).lean().catch(() => []),
       (async () => {
@@ -374,7 +374,7 @@ router.get('/search', requireAuth, async (req, res) => {
 
     const [patients, studies, services, employees, referralDoctors] = await Promise.all([
       Patient.find({ $or: [{ name: re }, { phone: re }, { patientId: re }, { _id: re }] }).limit(8).lean(),
-      Study.find({ $or: [{ patientName: re }, { patientId: re }, { studyUID: re }, { _id: re }] }).limit(8).lean(),
+      Encounter.find({ $or: [{ patientName: re }, { patientId: re }, { studyUID: re }, { _id: re }] }).limit(8).lean(),
       Service.find({ $or: [{ name: re }, { code: re }] }).limit(6).lean(),
       User.find({ $or: [{ displayName: re }, { _id: re }, { phone: re }] }).select('-password').limit(6).lean(),
       ReferralDoctor.find({ $or: [{ name: re }, { code: re }, { phone: re }, { workplace: re }] }).limit(6).lean(),
@@ -393,7 +393,7 @@ router.get('/search', requireAuth, async (req, res) => {
 //  MODALITY WORKLIST (MWL) preview + manual sync trigger
 //  This route exposes the data Orthanc's worklist plugin would serve.
 //  Full DICOM C-FIND requires the Orthanc worklist plugin to read .wl
-//  files from a shared volume — see linkrad-app/pacs/orthanc.json.
+//  files from a shared volume — see maec-app/pacs/orthanc.json.
 // ═══════════════════════════════════════════════════════════════════
 router.get('/mwl', requireAuth, async (req, res) => {
   try {
@@ -402,7 +402,7 @@ router.get('/mwl', requireAuth, async (req, res) => {
     if (req.query.modality) filter.modality = req.query.modality
     if (req.query.site) filter.site = req.query.site
 
-    const studies = await Study.find(filter).sort({ scheduledDate: 1 }).limit(200).lean()
+    const studies = await Encounter.find(filter).sort({ scheduledDate: 1 }).limit(200).lean()
     const items = studies.map(s => ({
       // DICOM tag mapping (informational — these names are what scanners expect)
       AccessionNumber:                       s._id || '',
@@ -413,12 +413,12 @@ router.get('/mwl', requireAuth, async (req, res) => {
       StudyInstanceUID:                      s.studyUID || '',
       RequestedProcedureID:                  s._id,
       RequestedProcedureDescription:         s.bodyPart || '',
-      ScheduledStationAETitle:               s.site ? `LINKRAD_${(s.site || '').toUpperCase().replace(/\s+/g, '_').slice(0, 12)}` : 'LINKRAD',
+      ScheduledStationAETitle:               s.site ? `MAEC_${(s.site || '').toUpperCase().replace(/\s+/g, '_').slice(0, 12)}` : 'MAEC',
       ScheduledProcedureStepStartDate:       (s.scheduledDate || '').slice(0, 10).replace(/-/g, ''),
       ScheduledProcedureStepStartTime:       (s.scheduledDate || '').slice(11, 19).replace(/:/g, ''),
       Modality:                              s.modality || '',
       ScheduledPerformingPhysicianName:      s.technicianName || '',
-      // Internal LinkRad fields
+      // Internal MAEC fields
       _internal: {
         studyDbId: s._id,
         priority: s.priority,
@@ -436,7 +436,7 @@ router.get('/mwl', requireAuth, async (req, res) => {
 })
 
 // POST /api/mwl/sync — admin only, marks worklist items as "pushed"
-// Real sync requires writing .wl files; this endpoint stamps Study.mwlSyncedAt
+// Real sync requires writing .wl files; this endpoint stamps Encounter.mwlSyncedAt
 router.post('/mwl/sync', requireAuth, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'truongphong') {
@@ -445,7 +445,7 @@ router.post('/mwl/sync', requireAuth, async (req, res) => {
     const ids = Array.isArray(req.body.studyIds) ? req.body.studyIds : null
     const filter = { status: { $in: ['scheduled', 'in_progress'] } }
     if (ids) filter._id = { $in: ids }
-    const result = await Study.updateMany(filter, { $set: { mwlSyncedAt: new Date().toISOString() } })
+    const result = await Encounter.updateMany(filter, { $set: { mwlSyncedAt: new Date().toISOString() } })
     res.json({ ok: true, syncedCount: result.modifiedCount || result.nModified || 0 })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -528,7 +528,7 @@ router.post('/users/:username/signature', requireAuth, async (req, res) => {
 router.get('/exam-history/:patientId', requireAuth, async (req, res) => {
   try {
     const Report = require('../models/Report')
-    const studies = await Study.find({ patientId: req.params.patientId })
+    const studies = await Encounter.find({ patientId: req.params.patientId })
       .sort({ studyDate: -1 })
       .lean()
     const studyIds = studies.map(s => s._id)

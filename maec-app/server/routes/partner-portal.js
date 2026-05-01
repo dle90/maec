@@ -9,7 +9,7 @@ const PartnerReferral = require('../models/PartnerReferral')
 const CommissionRule = require('../models/CommissionRule')
 const Invoice = require('../models/Invoice')
 const Appointment = require('../models/Appointment')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 const Service = require('../models/Service')
 
 const now = () => new Date().toISOString()
@@ -68,7 +68,7 @@ router.get('/services', requirePartner, async (req, res) => {
 router.get('/sites', requirePartner, async (req, res) => {
   try {
     const sites = await Appointment.distinct('site')
-    if (sites.length === 0) return res.json(['LinkRad Hai Phong', 'LinkRad Ha Noi'])
+    if (sites.length === 0) return res.json(['Minh Anh — Cơ sở 1', 'Minh Anh — Cơ sở 2'])
     res.json(sites.filter(Boolean))
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -120,7 +120,7 @@ router.get('/referrals', requirePartner, async (req, res) => {
     const studyIds = referrals.map(r => r.studyId).filter(Boolean)
     const [apts, studies] = await Promise.all([
       Appointment.find({ _id: { $in: aptIds } }).lean(),
-      Study.find({ _id: { $in: studyIds } }).lean(),
+      Encounter.find({ _id: { $in: studyIds } }).lean(),
     ])
     const aptMap = {}; for (const a of apts) aptMap[a._id] = a
     const studyMap = {}; for (const s of studies) studyMap[s._id] = s

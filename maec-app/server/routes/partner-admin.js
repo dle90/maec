@@ -8,7 +8,7 @@ const PartnerFacility = require('../models/PartnerFacility')
 const PartnerReferral = require('../models/PartnerReferral')
 const Patient = require('../models/Patient')
 const Appointment = require('../models/Appointment')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 
 const now = () => new Date().toISOString()
 

@@ -3,7 +3,7 @@ const crypto = require('crypto')
 const router = express.Router()
 const Patient = require('../models/Patient')
 const Appointment = require('../models/Appointment')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 const Invoice = require('../models/Invoice')
 const Service = require('../models/Service')
 const { requireAuth } = require('../middleware/auth')
@@ -193,7 +193,7 @@ router.put('/appointments/:id', requireAuth, async (req, res) => {
       const appt = await Appointment.findById(req.params.id).lean()
       if (appt && !appt.studyId) {
         const studyId = `std-${Date.now()}`
-        const study = new Study({
+        const study = new Encounter({
           _id: studyId,
           patientName: appt.patientName,
           patientId: appt.patientId || '',
@@ -272,7 +272,7 @@ router.post('/check-in', requireAuth, async (req, res) => {
     // services (LAB/TDCN/KH) still go on the invoice as line items but
     // don't create a Ca chụp worklist row — that's a different workflow.
     const IMAGING_MODALITIES = ['CT', 'MRI', 'XR', 'US']
-    // Study.gender is enum: M | F only, so fold 'other'/empty to 'M'.
+    // Encounter.gender is enum: M | F only, so fold 'other'/empty to 'M'.
     const studyGender = ['M', 'F'].includes(patient.gender) ? patient.gender : 'M'
 
     // Pre-fetch bodyPart from Service catalog for the codes we'll need.
@@ -293,7 +293,7 @@ router.post('/check-in', requireAuth, async (req, res) => {
         const apptId = genAppointmentId()
         const bodyPart = bodyPartByCode[s.code] || ''
 
-        const study = await new Study({
+        const study = await new Encounter({
           _id: studyId,
           patientName: patient.name,
           patientId: patient.patientId || patient._id,
@@ -388,7 +388,7 @@ router.post('/check-in', requireAuth, async (req, res) => {
     } catch (inner) {
       // Best-effort rollback — no Mongo transactions in use elsewhere in this codebase
       await Promise.all([
-        ...created.studies.map(s => Study.deleteOne({ _id: s._id }).catch(() => {})),
+        ...created.studies.map(s => Encounter.deleteOne({ _id: s._id }).catch(() => {})),
         ...created.appointments.map(a => Appointment.deleteOne({ _id: a._id }).catch(() => {})),
       ])
       throw inner

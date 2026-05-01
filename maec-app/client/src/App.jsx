@@ -1,7 +1,6 @@
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { TeleradTabsProvider } from './context/TeleradTabsContext'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -17,9 +16,6 @@ import Registration from './pages/Registration'
 import CRM from './pages/CRM'
 import KPISales from './pages/KPISales'
 import Marketing from './pages/Marketing'
-import Teleradiology from './pages/Teleradiology'
-import TeleradAdmin from './pages/TeleradAdmin'
-import TeleradReading from './pages/TeleradReading'
 import Billing from './pages/Billing'
 import Inventory from './pages/Inventory'
 import Catalogs from './pages/Catalogs'
@@ -58,9 +54,6 @@ function AuthenticatedRoutes() {
             {isWorkflowUser && <Route path="/workflow" element={<Workflow />} />}
             {isRISUser && <Route path="/ris" element={<RIS />} />}
             {isWorkflowUser && <Route path="/registration" element={<Registration />} />}
-            {isWorkflowUser && <Route path="/teleradiology" element={<Teleradiology />} />}
-            {auth.role === 'admin' && <Route path="/telerad-admin" element={<TeleradAdmin />} />}
-            {isWorkflowUser && <Route path="/telerad-reading" element={<TeleradReading />} />}
             {isWorkflowUser && <Route path="/billing" element={<Billing />} />}
 
             {isWorkflowUser && <Route path="/inventory" element={<Inventory />} />}
@@ -121,9 +114,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <TeleradTabsProvider>
-        <AppRoutes />
-      </TeleradTabsProvider>
+      <AppRoutes />
     </AuthProvider>
   )
 }

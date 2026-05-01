@@ -35,15 +35,9 @@ const NAV = [
     ]
   },
   {
-    group: 'RIS-PACS',
+    group: 'Khám bệnh',
     items: [
-      { path: '/ris', label: 'Ca chụp', icon: '🩻', workflowOnly: true },
-    ]
-  },
-  {
-    group: 'Chẩn đoán hình ảnh',
-    items: [
-      { path: '/teleradiology', label: 'Ca đọc', icon: '🖥️', workflowOnly: true },
+      { path: '/ris', label: 'Lượt khám', icon: '👁️', workflowOnly: true },
     ]
   },
   {
@@ -83,8 +77,6 @@ const NAV = [
     defaultCollapsed: true,
     items: [
       { path: '/workflow',        label: 'Công việc',          icon: '✅', workflowOnly: true },
-      { path: '/telerad-reading', label: 'Ca đọc — Của tôi',   icon: '🔬', workflowOnly: true },
-      { path: '/telerad-admin',   label: 'Ca đọc — Phân công', icon: '📋', adminOnly: true },
       { path: '/today',           label: 'Hôm nay (live)',     icon: '📡', workflowOnly: true },
       { path: '/',                label: 'Dashboard',          icon: '📊' },
       { path: '/sites',           label: 'Danh sách Site',     icon: '📍' },
@@ -110,7 +102,7 @@ const ROLE_LABELS = {
 // survives refreshes, and the group containing the active catalog auto-expands
 // so a deep-link arrival always shows its own node highlighted in context.
 
-const CATALOG_TREE_LS_KEY = 'linkrad_catalog_tree_expanded'
+const CATALOG_TREE_LS_KEY = 'maec_catalog_tree_expanded'
 const CATALOG_COUNTS_TTL_MS = 60_000
 
 // Counts source is the /api/catalogs/summary endpoint. We wrap it in a module-
@@ -124,7 +116,7 @@ function useCatalogCounts() {
       if (cancelled) return
       const c = r.data?.counts || {}
       setCounts(c)
-      try { localStorage.setItem('linkrad_catalog_counts', JSON.stringify({ t: Date.now(), c })) } catch {}
+      try { localStorage.setItem('maec_catalog_counts', JSON.stringify({ t: Date.now(), c })) } catch {}
     }).catch(() => {})
     return () => { cancelled = true }
   }, [])
@@ -132,7 +124,7 @@ function useCatalogCounts() {
 }
 function loadCachedCounts() {
   try {
-    const raw = localStorage.getItem('linkrad_catalog_counts')
+    const raw = localStorage.getItem('maec_catalog_counts')
     if (!raw) return {}
     const { t, c } = JSON.parse(raw)
     if (Date.now() - t > CATALOG_COUNTS_TTL_MS) return c || {}
@@ -230,7 +222,7 @@ function CatalogTree({ hasPerm, indent = 0 }) {
 // in localStorage and auto-opens the group containing the active report.
 // Same shape as CatalogTree — factored only because report data shape
 // differs enough (has a leaf at top level) that sharing was awkward.
-const REPORT_TREE_LS_KEY = 'linkrad_report_tree_expanded'
+const REPORT_TREE_LS_KEY = 'maec_report_tree_expanded'
 
 function ReportTree({ hasPerm, isFinancialsUser, indent = 0 }) {
   const location = useLocation()
@@ -441,7 +433,7 @@ export default function Layout({ children }) {
       <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-200`} style={{ backgroundColor: '#1e3a5f' }}>
         {/* Logo */}
         <div className="px-4 py-4 border-b border-blue-800">
-          <div className="text-white font-bold text-lg tracking-wide">LinkRad</div>
+          <div className="text-white font-bold text-base tracking-wide leading-tight">Minh Anh<br /><span className="text-blue-300 font-medium text-xs">Eye Clinic</span></div>
         </div>
 
         {/* Navigation */}
@@ -485,7 +477,7 @@ export default function Layout({ children }) {
                 <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <h1 className="text-lg font-semibold text-gray-800">LinkRad ERP</h1>
+            <h1 className="text-lg font-semibold text-gray-800">Phòng khám Mắt Minh Anh</h1>
           </div>
           <div className="flex items-center gap-3">
             <button

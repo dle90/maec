@@ -1,13 +1,14 @@
 const mongoose = require('mongoose')
 
-const studySchema = new mongoose.Schema({
+const encounterSchema = new mongoose.Schema({
   _id: String,
   studyUID: String,
   patientName: String,
   patientId: String,
   dob: String,
   gender: { type: String, enum: ['M', 'F'] },
-  modality: { type: String, enum: ['CT', 'MRI', 'XR', 'US'] },
+  examType: String,
+  modality: String,
   bodyPart: String,
   clinicalInfo: String,
   site: String,
@@ -56,4 +57,4 @@ const studySchema = new mongoose.Schema({
   updatedAt: String,
 }, { _id: false })
 
-module.exports = mongoose.model('Study', studySchema)
+module.exports = mongoose.model('Encounter', encounterSchema)

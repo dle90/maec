@@ -11,7 +11,7 @@ const mongoose = require('mongoose')
 const User = require('../models/User')
 const Task = require('../models/Task')
 const KVStore = require('../models/KVStore')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 
 const DATA = path.join(__dirname, '../data')
 const read = (file) => JSON.parse(fs.readFileSync(path.join(DATA, file), 'utf8'))
@@ -113,8 +113,8 @@ async function seed() {
     { _id: 'std-040', studyUID: '1.2.840.10008.5.1.4.1.1.2.1741700040.40040', patientName: 'Đỗ Văn Hiếu', patientId: 'BN040', dob: '1977-02-22', gender: 'M', modality: 'CT', bodyPart: 'Ngực và bụng', clinicalInfo: 'Lymphoma theo dõi', site: 'Đồng Nai', scheduledDate: '2026-03-12T08:00:00', studyDate: '2026-03-12T08:50:00', status: 'pending_read', priority: 'urgent', technician: 'nv_dn2', technicianName: 'Dương Thị Minh', radiologist: '', radiologistName: '', reportText: '', createdAt: '2026-03-11T14:00:00', updatedAt: '2026-03-12T08:50:00' },
   ]
 
-  await Study.deleteMany({})
-  await Study.insertMany(studies)
+  await Encounter.deleteMany({})
+  await Encounter.insertMany(studies)
   console.log(`✓ Studies: ${studies.length}`)
 
   console.log('Seed complete.')

@@ -1,7 +1,7 @@
 const express = require('express')
 const crypto = require('crypto')
 const router = express.Router()
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 const Report = require('../models/Report')
 const User = require('../models/User')
 const StudyAnnotation = require('../models/StudyAnnotation')
@@ -207,7 +207,7 @@ router.get('/studies', requireAuth, async (req, res) => {
       filter.studyDate = { $regex: `^${req.query.date}` }
     }
 
-    const studies = await Study.find(filter).sort({ scheduledDate: -1 })
+    const studies = await Encounter.find(filter).sort({ scheduledDate: -1 })
     res.json(studies)
   } catch (err) {
     console.error('GET /studies error:', err)
@@ -223,7 +223,7 @@ router.get('/stats', requireAuth, async (req, res) => {
     }
 
     const baseFilter = buildSiteFilter(req.user)
-    const studies = await Study.find(baseFilter)
+    const studies = await Encounter.find(baseFilter)
 
     const today = new Date().toISOString().slice(0, 10) // "YYYY-MM-DD"
 
@@ -297,7 +297,7 @@ router.post('/studies', requireAuth, async (req, res) => {
     const now = new Date().toISOString()
 
     const uid = genStudyUID()
-    const study = new Study({
+    const study = new Encounter({
       _id: uid,
       studyUID: uid,
       patientName,
@@ -327,7 +327,7 @@ router.post('/studies', requireAuth, async (req, res) => {
 // PUT /studies/:id
 router.put('/studies/:id', requireAuth, async (req, res) => {
   try {
-    const study = await Study.findById(req.params.id)
+    const study = await Encounter.findById(req.params.id)
     if (!study) {
       return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
     }
@@ -390,7 +390,7 @@ router.put('/studies/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Không có quyền cập nhật ca chụp' })
     }
 
-    const updated = await Study.findByIdAndUpdate(
+    const updated = await Encounter.findByIdAndUpdate(
       req.params.id,
       { $set: updates },
       { new: true }
@@ -422,7 +422,7 @@ router.put('/studies/:id', requireAuth, async (req, res) => {
 // GET /studies/:id/consumables-standard — return định mức aggregated from SupplyServiceMapping
 router.get('/studies/:id/consumables-standard', requireAuth, async (req, res) => {
   try {
-    const study = await Study.findById(req.params.id).lean()
+    const study = await Encounter.findById(req.params.id).lean()
     if (!study) return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
     const standard = await computeStandardConsumables(study)
     res.json(standard)
@@ -439,7 +439,7 @@ router.put('/studies/:id/consumables', requireAuth, requirePermission('consumabl
     if (!['nhanvien', 'admin'].includes(role)) {
       return res.status(403).json({ error: 'Chỉ KTV hoặc admin được cập nhật vật tư' })
     }
-    const study = await Study.findById(req.params.id)
+    const study = await Encounter.findById(req.params.id)
     if (!study) return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
     if (study.consumablesDeductedAt) {
       return res.status(400).json({ error: 'Đã xuất kho — không thể chỉnh sửa' })
@@ -484,7 +484,7 @@ router.post('/studies/:id/pick', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Chỉ bác sĩ mới được nhận ca' })
     }
     const now = new Date().toISOString()
-    const updated = await Study.findOneAndUpdate(
+    const updated = await Encounter.findOneAndUpdate(
       {
         _id: req.params.id,
         status: 'pending_read',
@@ -503,7 +503,7 @@ router.post('/studies/:id/pick', requireAuth, async (req, res) => {
     )
     if (updated) return res.json(updated)
     // Diagnose why the atomic claim failed
-    const study = await Study.findById(req.params.id).lean()
+    const study = await Encounter.findById(req.params.id).lean()
     if (!study) return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
     if (study.status !== 'pending_read') {
       return res.status(409).json({ error: 'Ca chụp không ở trạng thái chờ đọc', study })
@@ -520,7 +520,7 @@ router.post('/studies/:id/pick', requireAuth, async (req, res) => {
 // report has been saved yet (report.status !== 'final').
 router.delete('/studies/:id/pick', requireAuth, async (req, res) => {
   try {
-    const study = await Study.findById(req.params.id)
+    const study = await Encounter.findById(req.params.id)
     if (!study) return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
     const mine = study.radiologist && study.radiologist === req.user.username
     const isAdmin = req.user.role === 'admin'
@@ -556,7 +556,7 @@ router.post('/studies/:id/assign', requireAuth, async (req, res) => {
     const { radiologistId, radiologistName } = req.body
     if (!radiologistId) return res.status(400).json({ error: 'radiologistId required' })
     const now = new Date().toISOString()
-    const updated = await Study.findByIdAndUpdate(
+    const updated = await Encounter.findByIdAndUpdate(
       req.params.id,
       {
         $set: {
@@ -599,7 +599,7 @@ router.post('/reports', requireAuth, async (req, res) => {
     // Soft-lock enforcement: only the claiming radiologist can write. Admin /
     // truongphong can override for supervisor corrections. Prevents two bacsi
     // from clobbering each other's drafts.
-    const studyForLock = await Study.findById(studyId).lean()
+    const studyForLock = await Encounter.findById(studyId).lean()
     if (!studyForLock) return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
     const isOwner = studyForLock.radiologist && studyForLock.radiologist === req.user.username
     const canOverride = role === 'admin' || role === 'truongphong'
@@ -648,7 +648,7 @@ router.post('/reports', requireAuth, async (req, res) => {
     if (report.criticalFinding && !wasCritical) {
       try {
         const Notification = require('../models/Notification')
-        const studyForNotif = await Study.findById(studyId).lean()
+        const studyForNotif = await Encounter.findById(studyId).lean()
         await Notification.create({
           ts: now,
           type: 'critical_finding',
@@ -667,7 +667,7 @@ router.post('/reports', requireAuth, async (req, res) => {
 
     // Sync study status with report status
     const studyStatus = status === 'final' ? 'reported' : 'reading'
-    await Study.findByIdAndUpdate(studyId, {
+    await Encounter.findByIdAndUpdate(studyId, {
       $set: {
         status: studyStatus,
         reportId: String(report._id),
@@ -823,7 +823,7 @@ router.get('/priors/:patientId', requireAuth, async (req, res) => {
     // Only studies that have been reported/verified and have images
     filter.status = { $in: ['reported', 'verified'] }
 
-    const priors = await Study.find(filter)
+    const priors = await Encounter.find(filter)
       .sort({ studyDate: -1, createdAt: -1 })
       .limit(10)
       .lean()

@@ -7,7 +7,7 @@ const Patient = require('../models/Patient')
 const ReferralDoctor = require('../models/ReferralDoctor')
 const Service = require('../models/Service')
 const User = require('../models/User')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 
 const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản', card: 'Thẻ', mixed: 'Hỗn hợp' }
 
@@ -471,7 +471,7 @@ router.get('/e-invoice', requireAuth, requirePermission('reports.view'), async (
 //  machine, modality group, radiologist, time-of-day, etc.
 // ═══════════════════════════════════════════════════════════════════
 
-// Common: build a date filter on Study.studyDate (YYYY-MM-DD prefix string)
+// Common: build a date filter on Encounter.studyDate (YYYY-MM-DD prefix string)
 function buildStudyDateFilter(dateFrom, dateTo) {
   const filter = {}
   if (dateFrom || dateTo) {
@@ -498,7 +498,7 @@ function applyExtraFilters(filter, q) {
 router.get('/rad/cases-by-machine', requireAuth, requirePermission('rad-reports.view'), async (req, res) => {
   try {
     const filter = applyExtraFilters(buildStudyDateFilter(req.query.dateFrom, req.query.dateTo), req.query)
-    const studies = await Study.find(filter).lean()
+    const studies = await Encounter.find(filter).lean()
 
     const map = {}
     for (const s of studies) {
@@ -528,7 +528,7 @@ router.get('/rad/cases-by-machine', requireAuth, requirePermission('rad-reports.
 router.get('/rad/cases-by-machine-group', requireAuth, requirePermission('rad-reports.view'), async (req, res) => {
   try {
     const filter = applyExtraFilters(buildStudyDateFilter(req.query.dateFrom, req.query.dateTo), req.query)
-    const studies = await Study.find(filter).lean()
+    const studies = await Encounter.find(filter).lean()
 
     const map = {}
     for (const s of studies) {
@@ -559,7 +559,7 @@ router.get('/rad/cases-by-machine-group', requireAuth, requirePermission('rad-re
 router.get('/rad/cases-by-radiologist', requireAuth, requirePermission('rad-reports.view'), async (req, res) => {
   try {
     const filter = applyExtraFilters(buildStudyDateFilter(req.query.dateFrom, req.query.dateTo), req.query)
-    const studies = await Study.find(filter).lean()
+    const studies = await Encounter.find(filter).lean()
 
     const map = {}
     for (const s of studies) {
@@ -610,7 +610,7 @@ router.get('/rad/cases-by-radiologist', requireAuth, requirePermission('rad-repo
 router.get('/rad/cases-by-radiologist-modality', requireAuth, requirePermission('rad-reports.view'), async (req, res) => {
   try {
     const filter = applyExtraFilters(buildStudyDateFilter(req.query.dateFrom, req.query.dateTo), req.query)
-    const studies = await Study.find(filter).lean()
+    const studies = await Encounter.find(filter).lean()
 
     const modalitySet = new Set()
     const map = {}
@@ -641,7 +641,7 @@ router.get('/rad/cases-by-radiologist-modality', requireAuth, requirePermission(
 router.get('/rad/cases-by-time', requireAuth, requirePermission('rad-reports.view'), async (req, res) => {
   try {
     const filter = applyExtraFilters(buildStudyDateFilter(req.query.dateFrom, req.query.dateTo), req.query)
-    const studies = await Study.find(filter).lean()
+    const studies = await Encounter.find(filter).lean()
 
     const granularity = req.query.granularity || 'hour' // 'hour' | 'day' | 'weekday'
     const buckets = {}
@@ -675,7 +675,7 @@ router.get('/rad/cases-by-time', requireAuth, requirePermission('rad-reports.vie
 router.get('/rad/services-detail', requireAuth, requirePermission('rad-reports.view'), async (req, res) => {
   try {
     const filter = applyExtraFilters(buildStudyDateFilter(req.query.dateFrom, req.query.dateTo), req.query)
-    const studies = await Study.find(filter).sort({ studyDate: -1 }).limit(1000).lean()
+    const studies = await Encounter.find(filter).sort({ studyDate: -1 }).limit(1000).lean()
 
     const rows = studies.map(s => ({
       _id: s._id,
@@ -714,7 +714,7 @@ router.get('/rad/patient-list', requireAuth, requirePermission('rad-reports.view
     if (req.query.site) filter.site = req.query.site
     filter.status = { $in: ['reported', 'verified'] }
 
-    const studies = await Study.find(filter).sort({ studyDate: -1 }).lean()
+    const studies = await Encounter.find(filter).sort({ studyDate: -1 }).lean()
     const map = {}
     for (const s of studies) {
       const key = s.patientId || s._id

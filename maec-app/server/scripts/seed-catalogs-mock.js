@@ -20,7 +20,7 @@ const ReferralDoctor = require('../models/ReferralDoctor')
 const PartnerFacility = require('../models/PartnerFacility')
 const CommissionGroup = require('../models/CommissionGroup')
 const CommissionRule = require('../models/CommissionRule')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 
 const now = () => new Date().toISOString()
 const today = () => now().slice(0, 10)
@@ -126,7 +126,7 @@ async function seed() {
     { _id: 'STD-MOCK-008', studyUID: uid(8), patientName: 'Mai Xuân Hoàng',  patientId: 'BN-MOCK-008', dob: '1958-11-19', gender: 'M', modality: 'CT',  bodyPart: 'Ngực',       clinicalInfo: 'Theo dõi sau điều trị lao', site: SITE_A, scheduledDate: daysAgo(3), studyDate: daysAgo(3) + 'T08:30:00.000Z', status: 'verified', priority: 'routine', imageStatus: 'no_images', technicianName: 'KTV Vũ Minh Đức', radiologistName: 'BS. Lê Thị Phương', reportedAt: daysAgo(3) + 'T10:05:00.000Z', verifiedAt: daysAgo(3) + 'T15:30:00.000Z' },
   ]
   for (const s of mockStudies) {
-    await Study.findByIdAndUpdate(s._id, { ...studyTs, ...s }, { upsert: true, new: true, setDefaultsOnInsert: true })
+    await Encounter.findByIdAndUpdate(s._id, { ...studyTs, ...s }, { upsert: true, new: true, setDefaultsOnInsert: true })
   }
   console.log(`✓ ${String(mockStudies.length).padStart(3)} Studies (no_images — real DICOM seeded separately)`)
 

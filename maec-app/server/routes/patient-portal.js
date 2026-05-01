@@ -6,7 +6,7 @@ const { requirePatient } = require('../middleware/auth')
 const Patient = require('../models/Patient')
 const PatientAccount = require('../models/PatientAccount')
 const Appointment = require('../models/Appointment')
-const Study = require('../models/Study')
+const Encounter = require('../models/Encounter')
 const Report = require('../models/Report')
 const Invoice = require('../models/Invoice')
 const PatientFeedback = require('../models/PatientFeedback')
@@ -77,7 +77,7 @@ router.get('/visits', requirePatient, async (req, res) => {
 
     const [invoices, studies, feedbacks] = await Promise.all([
       Invoice.find({ appointmentId: { $in: aptIds } }).lean(),
-      Study.find({ _id: { $in: studyIds } }).lean(),
+      Encounter.find({ _id: { $in: studyIds } }).lean(),
       PatientFeedback.find({ appointmentId: { $in: aptIds } }).lean(),
     ])
 
@@ -127,7 +127,7 @@ router.get('/visits/:appointmentId/report', requirePatient, async (req, res) => 
       return res.status(404).json({ error: 'Chưa có ca chụp liên kết' })
     }
 
-    const study = await Study.findById(apt.studyId).lean()
+    const study = await Encounter.findById(apt.studyId).lean()
     if (!study) return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
 
     // Try to find a formal Report document first
