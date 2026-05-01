@@ -12,6 +12,7 @@ import SiteList from './pages/SiteList'
 import Actuals from './pages/Actuals'
 import Workflow from './pages/Workflow'
 import RIS from './pages/RIS'
+import Kham from './pages/Kham'
 import Registration from './pages/Registration'
 import CRM from './pages/CRM'
 import KPISales from './pages/KPISales'
@@ -53,6 +54,7 @@ function AuthenticatedRoutes() {
             {auth.role === 'admin' && <Route path="/actuals" element={<Actuals />} />}
             {isWorkflowUser && <Route path="/workflow" element={<Workflow />} />}
             {isRISUser && <Route path="/ris" element={<RIS />} />}
+            {isWorkflowUser && <Route path="/kham" element={<Kham />} />}
             {isWorkflowUser && <Route path="/registration" element={<Registration />} />}
             {isWorkflowUser && <Route path="/billing" element={<Billing />} />}
 

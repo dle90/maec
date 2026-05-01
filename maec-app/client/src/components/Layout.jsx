@@ -37,7 +37,8 @@ const NAV = [
   {
     group: 'Khám bệnh',
     items: [
-      { path: '/ris', label: 'Lượt khám', icon: '👁️', workflowOnly: true },
+      { path: '/kham', label: 'Khám hôm nay', icon: '🩺', workflowOnly: true },
+      { path: '/ris', label: 'Lượt khám (legacy)', icon: '👁️', workflowOnly: true },
     ]
   },
   {

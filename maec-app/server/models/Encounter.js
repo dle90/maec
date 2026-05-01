@@ -53,6 +53,44 @@ const encounterSchema = new mongoose.Schema({
   },
   consumablesDeductedAt: String,
   consumablesTransactionId: String,
+
+  packageCode: String,
+  packageName: String,
+  packageTier: String,
+
+  assignedServices: {
+    type: [{
+      serviceCode: String,
+      serviceName: String,
+      status: { type: String, enum: ['pending', 'in_progress', 'done', 'skipped'], default: 'pending' },
+      assignedTo: String,
+      assignedToName: String,
+      startedAt: String,
+      completedAt: String,
+      output: { type: mongoose.Schema.Types.Mixed, default: {} },
+      coveredByEntitlement: { type: Boolean, default: false },
+      entitlementId: String,
+    }],
+    default: [],
+  },
+
+  billItems: {
+    type: [{
+      kind: { type: String, enum: ['service', 'package', 'kinh', 'thuoc'] },
+      code: String,
+      name: String,
+      qty: { type: Number, default: 1 },
+      unitPrice: { type: Number, default: 0 },
+      totalPrice: { type: Number, default: 0 },
+      addedBy: String,
+      addedAt: String,
+      note: String,
+    }],
+    default: [],
+  },
+
+  billTotal: { type: Number, default: 0 },
+
   createdAt: String,
   updatedAt: String,
 }, { _id: false })
