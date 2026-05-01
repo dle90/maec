@@ -7,80 +7,98 @@ import NotificationBell from './NotificationBell'
 import { CATALOG_GROUPS, CATALOG_TO_GROUP } from '../config/catalogGroups'
 import { REPORT_GROUPS, REPORT_TO_GROUP, TOP_LEVEL as REPORT_TOP_LEVEL } from '../config/reportGroups'
 
+// Top 3 items are headerless (rendered as direct nav items).
+// Everything else lives under collapsed "Khác" — pull out as needed.
 const NAV = [
   {
-    group: 'HIS',
-    children: [
-      {
-        group: 'Tiếp đón',
-        items: [
-          { path: '/registration', label: 'Đăng ký',   icon: '🏥', workflowOnly: true },
-          { path: '/billing',      label: 'Phiếu thu', icon: '💳', workflowOnly: true },
-        ]
-      },
-      {
-        group: 'Vận hành',
-        items: [
-          { path: '/inventory', label: 'Quản lý kho', icon: '📦', workflowOnly: true },
-        ]
-      },
-      { catalogTree: true, group: 'Danh mục' },
-      { reportTree: true,  group: 'Báo cáo' },
-      {
-        group: 'Quản lý',
-        items: [
-          { path: '/audit-log', label: 'Nhật ký hệ thống', icon: '📜', perm: 'audit.view' },
-        ]
-      },
-    ]
+    group: 'shortcut-registration', headerless: true,
+    items: [{ path: '/registration', label: 'Đăng ký', icon: '🏥', workflowOnly: true }]
   },
   {
-    group: 'Khám bệnh',
-    items: [
-      { path: '/kham', label: 'Khám hôm nay', icon: '🩺', workflowOnly: true },
-      { path: '/ris', label: 'Lượt khám (legacy)', icon: '👁️', workflowOnly: true },
-    ]
+    group: 'shortcut-kham', headerless: true,
+    items: [{ path: '/kham', label: 'Khám', icon: '🩺', workflowOnly: true }]
   },
   {
-    group: 'Phân hệ phụ trợ',
-    children: [
-      {
-        group: 'Tài chính',
-        perm: 'financials.view',
-        items: [
-          { path: '/actuals',   label: 'Nhập số liệu',          icon: '✏️', perm: 'financials.manage' },
-          { path: '/pl',        label: 'Kết quả kinh doanh',    icon: '📋', perm: 'financials.view' },
-          { path: '/cf',        label: 'Dòng tiền',             icon: '💰', perm: 'financials.view' },
-          { path: '/bs',        label: 'Bảng cân đối kế toán',  icon: '⚖️', perm: 'financials.view' },
-          { path: '/breakeven', label: 'Điểm hòa vốn',          icon: '📈', perm: 'financials.view' },
-        ]
-      },
-      {
-        group: 'CRM',
-        items: [
-          { path: '/crm',       label: 'Phân tích KH', icon: '👥' },
-          { path: '/kpi-sales', label: 'KPI Sales',    icon: '🎯' },
-          { path: '/marketing', label: 'Marketing',    icon: '📣' }
-        ]
-      },
-      {
-        group: 'Cổng công khai',
-        items: [
-          { path: '/booking',        label: 'Đặt lịch khám',  icon: '📅', external: true },
-          { path: '/patient-login',  label: 'Cổng bệnh nhân', icon: '🧑',  external: true },
-          { path: '/partner-login',  label: 'Cổng đối tác',   icon: '🤝', external: true },
-        ]
-      },
-    ]
+    group: 'shortcut-thungan', headerless: true,
+    items: [{ path: '/thu-ngan', label: 'Thu ngân', icon: '💵', workflowOnly: true }]
   },
   {
-    group: 'Inactive',
+    group: 'Khác',
     defaultCollapsed: true,
-    items: [
-      { path: '/workflow',        label: 'Công việc',          icon: '✅', workflowOnly: true },
-      { path: '/today',           label: 'Hôm nay (live)',     icon: '📡', workflowOnly: true },
-      { path: '/',                label: 'Dashboard',          icon: '📊' },
-      { path: '/sites',           label: 'Danh sách Site',     icon: '📍' },
+    children: [
+      {
+        group: 'HIS',
+        children: [
+          {
+            group: 'Tiếp đón',
+            items: [
+              { path: '/billing',      label: 'Phiếu thu (legacy)', icon: '💳', workflowOnly: true },
+            ]
+          },
+          {
+            group: 'Vận hành',
+            items: [
+              { path: '/inventory', label: 'Quản lý kho', icon: '📦', workflowOnly: true },
+            ]
+          },
+          { catalogTree: true, group: 'Danh mục' },
+          { reportTree: true,  group: 'Báo cáo' },
+          {
+            group: 'Quản lý',
+            items: [
+              { path: '/audit-log', label: 'Nhật ký hệ thống', icon: '📜', perm: 'audit.view' },
+            ]
+          },
+        ]
+      },
+      {
+        group: 'Khám bệnh (legacy RIS)',
+        items: [
+          { path: '/ris', label: 'Lượt khám (legacy)', icon: '👁️', workflowOnly: true },
+        ]
+      },
+      {
+        group: 'Phân hệ phụ trợ',
+        children: [
+          {
+            group: 'Tài chính',
+            perm: 'financials.view',
+            items: [
+              { path: '/actuals',   label: 'Nhập số liệu',          icon: '✏️', perm: 'financials.manage' },
+              { path: '/pl',        label: 'Kết quả kinh doanh',    icon: '📋', perm: 'financials.view' },
+              { path: '/cf',        label: 'Dòng tiền',             icon: '💰', perm: 'financials.view' },
+              { path: '/bs',        label: 'Bảng cân đối kế toán',  icon: '⚖️', perm: 'financials.view' },
+              { path: '/breakeven', label: 'Điểm hòa vốn',          icon: '📈', perm: 'financials.view' },
+            ]
+          },
+          {
+            group: 'CRM',
+            items: [
+              { path: '/crm',       label: 'Phân tích KH', icon: '👥' },
+              { path: '/kpi-sales', label: 'KPI Sales',    icon: '🎯' },
+              { path: '/marketing', label: 'Marketing',    icon: '📣' }
+            ]
+          },
+          {
+            group: 'Cổng công khai',
+            items: [
+              { path: '/booking',        label: 'Đặt lịch khám',  icon: '📅', external: true },
+              { path: '/patient-login',  label: 'Cổng bệnh nhân', icon: '🧑',  external: true },
+              { path: '/partner-login',  label: 'Cổng đối tác',   icon: '🤝', external: true },
+            ]
+          },
+        ]
+      },
+      {
+        group: 'Inactive',
+        defaultCollapsed: true,
+        items: [
+          { path: '/workflow',        label: 'Công việc',          icon: '✅', workflowOnly: true },
+          { path: '/today',           label: 'Hôm nay (live)',     icon: '📡', workflowOnly: true },
+          { path: '/',                label: 'Dashboard',          icon: '📊' },
+          { path: '/sites',           label: 'Danh sách Site',     icon: '📍' },
+        ]
+      },
     ]
   },
 ]
@@ -403,6 +421,13 @@ export default function Layout({ children }) {
     }
 
     const isOpen = collapsed[key] === undefined ? !section.defaultCollapsed : !collapsed[key]
+
+    // Headerless sections (used for top-level shortcut items like Đăng ký /
+    // Khám / Thu ngân) skip the section button and render items directly.
+    if (section.headerless) {
+      return <div key={key}>{content}</div>
+    }
+
     const headerClass = isTop
       ? 'w-full flex items-center py-1 text-blue-400 text-xs font-semibold uppercase tracking-wider hover:text-blue-200 transition-colors'
       : 'w-full flex items-center py-1.5 text-xs text-blue-300 hover:text-white hover:bg-blue-800 transition-colors'

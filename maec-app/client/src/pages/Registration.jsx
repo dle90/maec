@@ -1256,9 +1256,16 @@ export default function Registration() {
         paymentMethod: payment === 'bhyt' ? 'mixed' : payment,
       })
       const invoice = r.data?.invoice
+      const encounterId = r.data?.encounterId
       if (invoice) {
         // A4 Phiếu chỉ định in a separate window (auto-print + close).
         printOrderSlip(selectedPatient, invoice)
+      }
+      // Hand off to Khám: clinical staff sees the new encounter in the queue
+      // with cart items already on the bill.
+      if (encounterId) {
+        window.location.href = `/kham?id=${encodeURIComponent(encounterId)}`
+        return
       }
       goSearch()
     } catch (e) {

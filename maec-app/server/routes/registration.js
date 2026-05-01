@@ -384,7 +384,61 @@ router.post('/check-in', requireAuth, async (req, res) => {
         updatedAt: now(),
       }).save()
 
-      res.status(201).json({ invoice, appointments: created.appointments, studies: created.studies })
+      // Create one MAEC clinical Encounter (always — separate from any Studies
+      // the radiology fan-out above may produce). The cart's services become
+      // bill items here; assignedServices is derived for cart codes that match
+      // the Service catalog so KTV/BS see them in Khám immediately. Packages
+      // (codes starting PKG-) are recorded as bill 'package' items only —
+      // the Khám drawer's "Gán gói" action populates assignedServices.
+      const fullSvcDocs = codesNeeded.length
+        ? await Service.find({ code: { $in: codesNeeded } }).lean()
+        : []
+      const svcByCode = Object.fromEntries(fullSvcDocs.map(d => [d.code, d]))
+      const encId = `enc-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+      const encBillItems = []
+      const encAssigned = []
+      for (const s of services) {
+        const svc = s.code ? svcByCode[s.code] : null
+        const isPackage = (s.code || '').startsWith('PKG-')
+        encBillItems.push({
+          kind: isPackage ? 'package' : 'service',
+          code: s.code || '',
+          name: s.name || svc?.name || s.code || '',
+          qty: s.qty || 1,
+          unitPrice: s.price || 0,
+          totalPrice: (s.price || 0) * (s.qty || 1),
+          addedBy: req.user.username,
+          addedAt: now(),
+        })
+        if (svc) {
+          encAssigned.push({
+            serviceCode: svc.code,
+            serviceName: svc.name,
+            status: 'pending',
+            output: {},
+          })
+        }
+      }
+      const encBillTotal = encBillItems.reduce((a, b) => a + (b.totalPrice || 0), 0)
+      const encounter = await new Encounter({
+        _id: encId,
+        patientId: patient.patientId || patient._id,
+        patientName: patient.name,
+        dob: patient.dob || '',
+        gender: studyGender,
+        site,
+        scheduledDate,
+        studyDate: scheduledDate,
+        status: 'scheduled',
+        priority: 'routine',
+        assignedServices: encAssigned,
+        billItems: encBillItems,
+        billTotal: encBillTotal,
+        createdAt: now(),
+        updatedAt: now(),
+      }).save()
+
+      res.status(201).json({ invoice, appointments: created.appointments, studies: created.studies, encounterId: encounter._id })
     } catch (inner) {
       // Best-effort rollback — no Mongo transactions in use elsewhere in this codebase
       await Promise.all([

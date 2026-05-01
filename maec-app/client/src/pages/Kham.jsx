@@ -238,20 +238,8 @@ function EncounterDrawer({ id, onClose }) {
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {enc.status !== 'paid' && enc.status !== 'cancelled' && (
-              <button
-                onClick={async () => {
-                  if (!(enc.billItems || []).length) return alert('Bill chưa có mục nào — không thể thanh toán.')
-                  if (!confirm(`Xác nhận thanh toán ${fmtMoney(enc.billTotal)} đ cho ${enc.patientName}?\nSau khi thanh toán không thể chỉnh sửa thêm.`)) return
-                  try {
-                    await api.post(`/encounters/${enc._id}/checkout`)
-                    await load()
-                  } catch (e) { alert(e.response?.data?.error || 'Lỗi thanh toán') }
-                }}
-                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap"
-              >
-                Thanh toán {fmtMoney(enc.billTotal)} đ
-              </button>
+            {enc.status !== 'paid' && enc.status !== 'cancelled' && (enc.billItems || []).length > 0 && (
+              <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">Tổng bill: <b className="text-blue-700 font-mono">{fmtMoney(enc.billTotal)} đ</b> · chuyển <b>Thu ngân</b> để thanh toán</span>
             )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
           </div>
