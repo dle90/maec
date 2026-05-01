@@ -2,6 +2,35 @@
 
 Living doc of deferred work / known limits. Append before finishing any feature; check before starting one.
 
+## Mobile responsive — Phase 1 done, Phase 2+ pending (2026-05-01)
+
+The native Expo/RN app (P3 in CLAUDE.md) is still not scaffolded. Until then we want the web app to be acceptably usable on mobile browsers. **Phase 1 done; first pass looked OK — user wants polish on Đăng ký services view and the rest of the data-heavy pages.**
+
+### Phase 1 — done
+- [Layout.jsx](maec-app/client/src/components/Layout.jsx): sidebar becomes off-canvas drawer with backdrop below `lg` (1024px), auto-closes on nav. Header verbose elements pushed to `lg`/`xl` (long title, Chế độ xem badge, currency text). Search button → icon-only below `md`.
+- [Registration.jsx](maec-app/client/src/pages/Registration.jsx): HeaderStepper wraps + hides /tiếp đón sub-label and user/date on mobile. Body row stacks `flex-col lg:flex-row`. TodayRail goes `w-full lg:w-80` with `max-h-60` on mobile. SearchView padding scales `px-3 sm:px-6`.
+
+### Phase 2 — pending (data-heavy pages)
+Tables overflow horizontally and modals exceed 375px viewports. Files flagged by audit:
+- **ThuNgan.jsx** — 8-column billing table, no `overflow-x-auto` wrapper
+- **Billing.jsx** — `w-80` left invoice panel doesn't reflow; right-side tables need scroll wrapper
+- **Kham.jsx** — filter row has `min-w-[240px]` inputs; encounter list rows are dense
+- **HRManagement.jsx** — permission matrix `min-w-[140px]` columns + `max-w-2xl` modals overflow at 375px
+- **Inventory.jsx** — `max-w-[1600px]` container; some views have `overflow-x-auto`, others don't
+- **Catalogs.jsx** — dynamic table per catalog type; right-side drawer is fine but content cramps
+
+Pattern for each: wrap tables in `overflow-x-auto`, cap modals to `max-w-[calc(100vw-2rem)] sm:max-w-2xl`, scale `min-w-[…]` filter inputs to `w-full sm:min-w-[240px]`.
+
+### Polish ask — Đăng ký "selecting services" (user flagged 2026-05-01)
+[`ServicesView`](maec-app/client/src/pages/Registration.jsx#L921) (active when stepper = step 2):
+- Line 969: outer `p-5` — reduce on mobile (`p-3 sm:p-5`)
+- Line 978: `grid grid-cols-[1fr_380px] gap-4 flex-1` — won't reflow. Need `grid-cols-1 lg:grid-cols-[1fr_380px]` so the cart stacks below the service picker on mobile (or model it as a tab toggle / slide-up drawer)
+- Line 1019: per-row `gridTemplateColumns: '20px 90px 1fr 70px 110px'` (5 cols: checkbox · code · name · type · price) — at 375px this crushes. Either drop the code/type columns on mobile, or switch row layout to a 2-line stacked variant (name+type on top line, code+price on bottom)
+- Cart panel (line 1037+): cap height + sticky-bottom on mobile so it's visible while scrolling the service list
+
+### Phase 3 — per-page polish (lower priority)
+Login, Dashboard already responsive. Remaining: TodayDashboard chart sizing, Reports tabs, KPISales gauges, Workflow/CRM/AuditLog (already have `overflow-x-auto`).
+
 ## Open package / pricing questions (filed 2026-05-01)
 
 Reconciled against canonical price sheet [PK MA_Danh Sách Giá.xlsx](PK%20MA_Danh%20S%C3%A1ch%20Gi%C3%A1.xlsx) on 2026-05-01.
