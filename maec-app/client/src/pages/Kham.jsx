@@ -23,40 +23,120 @@ const KIND_BADGE = {
   thuoc:   { label: 'Thuốc',    cls: 'bg-amber-100 text-amber-700' },
 }
 
+const todayISO = () => new Date().toISOString().slice(0, 10)
+const startOfWeekISO = () => {
+  const d = new Date()
+  const day = d.getDay() || 7   // Sun = 0 → 7; Mon = 1
+  if (day !== 1) d.setDate(d.getDate() - (day - 1))
+  return d.toISOString().slice(0, 10)
+}
+const startOfMonthISO = () => {
+  const d = new Date()
+  d.setDate(1)
+  return d.toISOString().slice(0, 10)
+}
+const startOfYearISO = () => {
+  const d = new Date()
+  d.setMonth(0, 1)
+  return d.toISOString().slice(0, 10)
+}
+
+const PERIOD_LABELS = { today: 'Hôm nay', week: 'Tuần này', month: 'Tháng này', ytd: 'YTD', custom: 'Tùy chỉnh' }
+const periodToRange = (p) => {
+  const today = todayISO()
+  if (p === 'today') return { from: today, to: today }
+  if (p === 'week')  return { from: startOfWeekISO(), to: today }
+  if (p === 'month') return { from: startOfMonthISO(), to: today }
+  if (p === 'ytd')   return { from: startOfYearISO(), to: today }
+  return null
+}
+
 export default function Kham() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState(searchParams.get('id'))
   const [showCreate, setShowCreate] = useState(false)
+  const [period, setPeriod] = useState(searchParams.get('period') || 'today')
+  const [from, setFrom] = useState(searchParams.get('from') || todayISO())
+  const [to, setTo] = useState(searchParams.get('to') || todayISO())
+  const [site, setSite] = useState(searchParams.get('site') || '')
+
+  // When a preset period is selected, derive from/to from it. Custom = user-set.
+  useEffect(() => {
+    if (period === 'custom') return
+    const range = periodToRange(period)
+    if (range) { setFrom(range.from); setTo(range.to) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period])
 
   const load = async () => {
     setLoading(true)
     try {
-      const r = await api.get('/encounters/today')
+      const params = { from, to }
+      if (site) params.site = site
+      const r = await api.get('/encounters', { params })
       setList(r.data || [])
     } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [from, to, site])
 
-  // Sync ?id=... in URL when drawer opens/closes (so receptionist can deep-link
-  // a freshly-registered encounter)
+  // Sync filter + open-drawer state to URL (deep-link survives refresh)
   useEffect(() => {
-    if (openId) setSearchParams({ id: openId }, { replace: true })
-    else if (searchParams.get('id')) setSearchParams({}, { replace: true })
+    const next = {}
+    if (openId) next.id = openId
+    if (period !== 'today') next.period = period
+    if (period === 'custom') { next.from = from; next.to = to }
+    if (site) next.site = site
+    setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openId])
+  }, [openId, period, from, to, site])
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Khám hôm nay</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Lượt khám trong ngày — gán gói, thực hiện dịch vụ, thêm kính/thuốc vào bill.</p>
+          <h1 className="text-xl font-bold text-gray-800">Khám</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Lượt khám — gán gói, thực hiện dịch vụ, thêm kính/thuốc vào bill.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">+ Tạo lượt khám</button>
           <button onClick={load} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200">⟳ Làm mới</button>
+        </div>
+      </div>
+
+      {/* Filters: time + site */}
+      <div className="bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1">
+          {Object.entries(PERIOD_LABELS).map(([k, label]) => (
+            <button key={k} onClick={() => setPeriod(k)}
+              className={`px-3 py-1.5 text-sm rounded-lg font-medium ${period === k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {period === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border rounded px-2 py-1 text-sm" />
+            <span className="text-xs text-gray-400">→</span>
+            <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border rounded px-2 py-1 text-sm" />
+          </div>
+        )}
+        {period !== 'custom' && (
+          <span className="text-xs text-gray-500">{from === to ? from : `${from} → ${to}`}</span>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-gray-500">Cơ sở:</span>
+          {[
+            { v: '',            label: 'Tất cả' },
+            { v: 'Trung Kính',  label: 'Trung Kính' },
+            { v: 'Kim Giang',   label: 'Kim Giang' },
+          ].map(s => (
+            <button key={s.v} onClick={() => setSite(s.v)}
+              className={`px-3 py-1.5 text-sm rounded-lg font-medium ${site === s.v ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api'
 
@@ -85,10 +86,14 @@ export default function Inventory() {
   //  - warehouses: list of warehouses the current user can see
   //  - supervisor: true if this user gets the "all" option + matrix tab
   //  - activeWh: currently selected warehouse, or null = "all accessible" (supervisor only)
+  const [searchParams] = useSearchParams()
+  const urlProductKind = searchParams.get('productKind') || ''
   const [warehouses, setWarehouses] = useState([])
   const [supervisor, setSupervisor] = useState(false)
   const [activeWhId, setActiveWhId] = useState(null)  // null = "all" (supervisor only)
-  const [tab, setTab] = useState('overview')
+  // If user lands here from "Kho Kính" / "Kho Thuốc" sidebar shortcut,
+  // jump straight to the Tồn kho tab (where the productKind filter lives).
+  const [tab, setTab] = useState(urlProductKind ? 'stock' : 'overview')
   const [bootError, setBootError] = useState('')
 
   useEffect(() => {
@@ -137,7 +142,7 @@ export default function Inventory() {
         </div>
 
         {tab === 'overview' && <OverviewTab whParam={whParam} activeWh={activeWh} supervisor={supervisor} onNavigate={setTab} />}
-        {tab === 'stock' && <StockTab whParam={whParam} supervisor={supervisor} activeWh={activeWh} />}
+        {tab === 'stock' && <StockTab whParam={whParam} supervisor={supervisor} activeWh={activeWh} initialProductKind={urlProductKind} />}
         {tab === 'transactions' && <TransactionsTab whParam={whParam} warehouses={warehouses} activeWh={activeWh} supervisor={supervisor} />}
         {tab === 'stocktake' && <StocktakeTab whParam={whParam} warehouses={warehouses} activeWh={activeWh} supervisor={supervisor} />}
         {tab === 'matrix' && supervisor && <MatrixTab warehouses={warehouses} />}
@@ -346,7 +351,7 @@ const SkeletonBlock = () => (
 // ═══════════════════════════════════════════════════════════════════════════
 //  2. TỒN KHO
 // ═══════════════════════════════════════════════════════════════════════════
-function StockTab({ whParam }) {
+function StockTab({ whParam, initialProductKind = '' }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
@@ -354,7 +359,7 @@ function StockTab({ whParam }) {
   const [drawerSupplyId, setDrawerSupplyId] = useState(null)
   const [categories, setCategories] = useState([])
   const [categoryId, setCategoryId] = useState('')
-  const [productKind, setProductKind] = useState('')  // '' / thuoc / kinh / supply
+  const [productKind, setProductKind] = useState(initialProductKind)
 
   useEffect(() => { api.get('/inventory/categories').then(({ data }) => setCategories(data || [])) }, [])
 

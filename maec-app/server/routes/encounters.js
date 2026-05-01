@@ -43,7 +43,7 @@ router.post('/', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// GET /encounters/today — encounters scheduled or in progress today
+// GET /encounters/today — encounters created today (kept for back-compat).
 router.get('/today', requireAuth, async (req, res) => {
   try {
     const day = todayISO()
@@ -54,6 +54,23 @@ router.get('/today', requireAuth, async (req, res) => {
         { createdAt: { $regex: `^${day}` } },
       ],
     }).sort({ createdAt: -1 }).lean()
+    res.json(list)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// GET /encounters?from=YYYY-MM-DD&to=YYYY-MM-DD&site=...
+// Date range filter on createdAt (inclusive). site = exact match (or omit).
+// Default range: today only.
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const today = todayISO()
+    const from = req.query.from || today
+    const to = req.query.to || today
+    const filter = {
+      createdAt: { $gte: `${from}T00:00:00.000Z`, $lte: `${to}T23:59:59.999Z` },
+    }
+    if (req.query.site) filter.site = req.query.site
+    const list = await Encounter.find(filter).sort({ createdAt: -1 }).lean()
     res.json(list)
   } catch (err) { res.status(500).json({ error: err.message }) }
 })

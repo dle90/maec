@@ -31,6 +31,13 @@ const NAV = [
     ]
   },
   {
+    group: 'Kho',
+    items: [
+      { path: '/inventory?productKind=kinh',  label: 'Kho Kính',  icon: '👓', workflowOnly: true },
+      { path: '/inventory?productKind=thuoc', label: 'Kho Thuốc', icon: '💊', workflowOnly: true },
+    ]
+  },
+  {
     group: 'Khác',
     defaultCollapsed: true,
     children: [
