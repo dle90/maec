@@ -489,34 +489,57 @@ function FieldInput({ field, value, onChange }) {
 // ── Add bill item (service à la carte / kinh / thuoc) ────
 
 function AddItemModal({ encounterId, kind, onClose, onDone }) {
-  const [services, setServices] = useState([])
-  const [code, setCode] = useState('')
-  const [name, setName] = useState('')
+  // Catalog endpoints per kind. 'service' uses /catalogs/services with
+  // basePrice; 'kinh' / 'thuoc' use their dedicated catalogs with sellPrice.
+  const catalogPath = kind === 'service' ? '/catalogs/services' : kind === 'kinh' ? '/catalogs/kinh' : '/catalogs/thuoc'
+  const priceField  = kind === 'service' ? 'basePrice' : 'sellPrice'
+
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState('')
+  const [picked, setPicked] = useState(null)
   const [qty, setQty] = useState(1)
   const [unitPrice, setUnitPrice] = useState(0)
   const [note, setNote] = useState('')
+  const [freeform, setFreeform] = useState(false)
+  const [freeName, setFreeName] = useState('')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
   useEffect(() => {
-    if (kind === 'service') api.get('/catalogs/services').then(r => setServices(r.data || []))
-  }, [kind])
+    api.get(catalogPath).then(r => setItems(r.data || [])).finally(() => setLoading(false))
+  }, [catalogPath])
 
-  const onSelectService = (e) => {
-    const c = e.target.value
-    setCode(c)
-    const s = services.find(x => x.code === c)
-    if (s) { setName(s.name); setUnitPrice(s.basePrice || 0) }
+  const filtered = useMemo(() => {
+    const ql = q.toLowerCase().trim()
+    if (!ql) return items.slice(0, 30)
+    return items.filter(i =>
+      (i.name || '').toLowerCase().includes(ql) ||
+      (i.code || '').toLowerCase().includes(ql) ||
+      (i.brand || '').toLowerCase().includes(ql)
+    ).slice(0, 50)
+  }, [items, q])
+
+  const onPick = (item) => {
+    setPicked(item)
+    setUnitPrice(item[priceField] || 0)
   }
 
   const submit = async () => {
-    if (!name) return setErr('Tên là bắt buộc')
     setSaving(true); setErr('')
     try {
-      if (kind === 'service' && code) {
-        await api.post(`/encounters/${encounterId}/services`, { serviceCode: code })
+      if (kind === 'service' && picked) {
+        await api.post(`/encounters/${encounterId}/services`, { serviceCode: picked.code })
+      } else if (picked) {
+        await api.post(`/encounters/${encounterId}/bill-items`, {
+          kind, code: picked.code, name: picked.name, qty, unitPrice, note,
+        })
+      } else if (freeform && freeName.trim()) {
+        await api.post(`/encounters/${encounterId}/bill-items`, {
+          kind, code: '', name: freeName, qty, unitPrice, note,
+        })
       } else {
-        await api.post(`/encounters/${encounterId}/bill-items`, { kind, code, name, qty, unitPrice, note })
+        setErr('Chọn 1 mục từ catalog hoặc nhập freeform'); setSaving(false); return
       }
       onDone()
     } catch (e) { setErr(e.response?.data?.error || 'Lỗi'); setSaving(false) }
@@ -525,49 +548,85 @@ function AddItemModal({ encounterId, kind, onClose, onDone }) {
   const title = kind === 'service' ? 'Thêm dịch vụ' : kind === 'kinh' ? 'Thêm kính' : 'Thêm thuốc'
 
   return (
-    <Modal onClose={onClose} title={title}>
+    <Modal onClose={onClose} title={title} wide>
       <div className="space-y-3">
-        {kind === 'service' ? (
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Chọn dịch vụ</label>
-            <select value={code} onChange={onSelectService} className="w-full border rounded px-3 py-2 text-sm">
-              <option value="">— Chọn —</option>
-              {services.map(s => <option key={s.code} value={s.code}>{s.code} — {s.name} ({fmtMoney(s.basePrice)} đ)</option>)}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">Dịch vụ sẽ được gán cho lượt khám và thêm vào bill.</p>
-          </div>
-        ) : (
+        {!picked && !freeform && (
           <>
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs text-yellow-800">
-              Catalog {kind === 'kinh' ? 'kính' : 'thuốc'} chưa được nhập. Tạm thời nhập tay tên + giá.
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Tìm theo tên / mã / brand..." className="w-full border rounded px-3 py-2 text-sm" autoFocus />
+            <div className="border rounded max-h-72 overflow-y-auto divide-y">
+              {loading ? (
+                <div className="p-3 text-center text-gray-400 text-sm">Đang tải catalog...</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-3 text-center text-gray-400 text-sm">Không có mục nào khớp</div>
+              ) : filtered.map(item => (
+                <button key={item.code} onClick={() => onPick(item)} className="w-full text-left px-3 py-2 hover:bg-blue-50">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-gray-400">{item.code}</span>
+                    <span className="font-medium text-sm flex-1">{item.name}</span>
+                    <span className="font-mono text-sm text-blue-700">{fmtMoney(item[priceField])} đ</span>
+                  </div>
+                  {(item.brand || item.spec || item.category) && (
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {[item.brand, item.spec, item.category].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
+                </button>
+              ))}
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Mã (tùy chọn)</label>
-              <input className="w-full border rounded px-3 py-2 text-sm" value={code} onChange={e => setCode(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Tên *</label>
-              <input className="w-full border rounded px-3 py-2 text-sm" value={name} onChange={e => setName(e.target.value)} placeholder={kind === 'kinh' ? 'vd: Gọng Rayban RB1234' : 'vd: Nước mắt nhân tạo Systane 10ml'} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+            {kind !== 'service' && (
+              <button onClick={() => setFreeform(true)} className="text-xs text-blue-600 hover:text-blue-800">
+                + Nhập freeform (mục không có trong catalog)
+              </button>
+            )}
+          </>
+        )}
+
+        {picked && (
+          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Số lượng</label>
-                <input type="number" className="w-full border rounded px-3 py-2 text-sm" value={qty} onChange={e => setQty(Number(e.target.value) || 1)} />
+                <div className="font-semibold text-sm">{picked.name}</div>
+                <div className="text-xs text-gray-500 font-mono">{picked.code}</div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Đơn giá (VND)</label>
-                <input type="number" className="w-full border rounded px-3 py-2 text-sm" value={unitPrice} onChange={e => setUnitPrice(Number(e.target.value) || 0)} />
-              </div>
+              <button onClick={() => setPicked(null)} className="text-xs text-blue-600 hover:text-blue-800">Đổi</button>
             </div>
+          </div>
+        )}
+
+        {freeform && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-yellow-800 font-semibold">Mục freeform (không có catalog code)</div>
+              <button onClick={() => { setFreeform(false); setFreeName('') }} className="text-xs text-yellow-700 hover:text-yellow-900">← Quay lại catalog</button>
+            </div>
+            <input value={freeName} onChange={e => setFreeName(e.target.value)} placeholder={kind === 'kinh' ? 'vd: Gọng Rayban RB1234' : 'vd: Nước rửa kính loại khác'} className="w-full border rounded px-3 py-2 text-sm" />
+          </div>
+        )}
+
+        {(picked || freeform) && (
+          <>
+            {kind !== 'service' && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Số lượng</label>
+                  <input type="number" className="w-full border rounded px-3 py-2 text-sm" value={qty} onChange={e => setQty(Number(e.target.value) || 1)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Đơn giá (VND)</label>
+                  <input type="number" className="w-full border rounded px-3 py-2 text-sm" value={unitPrice} onChange={e => setUnitPrice(Number(e.target.value) || 0)} />
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Ghi chú</label>
               <input className="w-full border rounded px-3 py-2 text-sm" value={note} onChange={e => setNote(e.target.value)} />
             </div>
           </>
         )}
+
         {err && <div className="text-xs text-red-600">{err}</div>}
         <div className="flex gap-2 pt-2">
-          <button onClick={submit} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50">{saving ? 'Đang lưu...' : 'Thêm'}</button>
+          <button onClick={submit} disabled={saving || (!picked && !freeform)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50">{saving ? 'Đang lưu...' : 'Thêm vào bill'}</button>
           <button onClick={onClose} className="ml-auto text-sm text-gray-500 hover:text-gray-700 px-4">Hủy</button>
         </div>
       </div>
