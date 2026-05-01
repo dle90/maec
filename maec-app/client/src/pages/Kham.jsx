@@ -179,7 +179,7 @@ export default function Kham() {
         </table>
       </div>
 
-      {openId && <EncounterDrawer id={openId} onClose={() => { setOpenId(null); load() }} />}
+      {openId && <EncounterDrawer id={openId} onClose={() => { setOpenId(null); load() }} onOpenOther={(otherId) => setOpenId(otherId)} />}
       {showCreate && <CreateEncounterModal onClose={() => setShowCreate(false)} onCreated={(id) => { setShowCreate(false); setOpenId(id); load() }} />}
     </div>
   )
@@ -275,8 +275,10 @@ function CreateEncounterModal({ onClose, onCreated }) {
 
 // ── Encounter detail drawer ───────────────────────────────
 
-function EncounterDrawer({ id, onClose }) {
+function EncounterDrawer({ id, onClose, onOpenOther }) {
   const [enc, setEnc] = useState(null)
+  const [history, setHistory] = useState([])
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [openServiceCode, setOpenServiceCode] = useState(null)
   const [showAddItem, setShowAddItem] = useState(null) // 'service' | 'kinh' | 'thuoc'
@@ -287,6 +289,12 @@ function EncounterDrawer({ id, onClose }) {
     try {
       const r = await api.get(`/encounters/${id}`)
       setEnc(r.data)
+      // Load patient history (excluding current encounter)
+      if (r.data.patientId) {
+        api.get('/encounters', { params: { patientId: r.data.patientId, excludeId: id } })
+          .then(h => setHistory(h.data || []))
+          .catch(() => setHistory([]))
+      }
     } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [id])
@@ -326,6 +334,38 @@ function EncounterDrawer({ id, onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+          {/* Patient history */}
+          <section>
+            <button onClick={() => setHistoryOpen(o => !o)} className="w-full text-left flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900">
+              <span className="text-xs">{historyOpen ? '▾' : '▸'}</span>
+              <span>Lịch sử khám</span>
+              <span className="text-xs text-gray-400 font-normal">({history.length} lượt trước)</span>
+            </button>
+            {historyOpen && (
+              history.length === 0 ? (
+                <div className="mt-2 text-xs text-gray-400 italic px-2">Bệnh nhân này chưa có lượt khám nào trước đó.</div>
+              ) : (
+                <div className="mt-2 border border-gray-200 rounded-lg divide-y max-h-64 overflow-y-auto">
+                  {history.map(h => (
+                    <button key={h._id} onClick={() => onOpenOther && onOpenOther(h._id)}
+                      className="w-full text-left px-3 py-2 hover:bg-blue-50 flex items-center gap-2 text-sm">
+                      <span className="text-xs text-gray-500 font-mono w-24 flex-shrink-0">{(h.createdAt || '').slice(0, 10) || '—'}</span>
+                      <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{h.site || '—'}</span>
+                      <span className="flex-1 truncate">
+                        {h.packageName || <span className="text-gray-400">— chưa gán gói —</span>}
+                        {h.assignedServices?.length > 0 && <span className="text-xs text-gray-500 ml-1">({h.assignedServices.length} DV)</span>}
+                      </span>
+                      <span className="font-mono text-blue-700 text-xs flex-shrink-0">{fmtMoney(h.billTotal)}đ</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${h.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {h.status === 'paid' ? 'Đã trả' : h.status === 'cancelled' ? 'Hủy' : 'Mở'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
+          </section>
 
           {/* Package section */}
           <section>

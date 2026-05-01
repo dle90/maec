@@ -58,19 +58,26 @@ router.get('/today', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// GET /encounters?from=YYYY-MM-DD&to=YYYY-MM-DD&site=...
+// GET /encounters?from=YYYY-MM-DD&to=YYYY-MM-DD&site=...&patientId=...&excludeId=...
 // Date range filter on createdAt (inclusive). site = exact match (or omit).
+// patientId = patient's history (overrides date range when set; date filters
+//   ignored so full lifetime history shows up). excludeId = drop one id from
+//   the list (used by drawer's "Lịch sử khám" panel to hide the current one).
 // Default range: today only.
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const today = todayISO()
-    const from = req.query.from || today
-    const to = req.query.to || today
-    const filter = {
-      createdAt: { $gte: `${from}T00:00:00.000Z`, $lte: `${to}T23:59:59.999Z` },
+    const filter = {}
+    if (req.query.patientId) {
+      filter.patientId = req.query.patientId
+    } else {
+      const today = todayISO()
+      const from = req.query.from || today
+      const to = req.query.to || today
+      filter.createdAt = { $gte: `${from}T00:00:00.000Z`, $lte: `${to}T23:59:59.999Z` }
     }
     if (req.query.site) filter.site = req.query.site
-    const list = await Encounter.find(filter).sort({ createdAt: -1 }).lean()
+    if (req.query.excludeId) filter._id = { $ne: req.query.excludeId }
+    const list = await Encounter.find(filter).sort({ createdAt: -1 }).limit(100).lean()
     res.json(list)
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
