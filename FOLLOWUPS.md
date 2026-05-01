@@ -36,10 +36,19 @@ Pre-deploy blocker. Steps:
 4. Visit Railway-assigned URL. Confirm app loads, login screen shows "Phòng khám Mắt Minh Anh".
 5. Try logging in with a demo user from [users.json](maec-app/server/data/users.json). New password: `maec2026`.
 
-### sites.json — fill in real clinic data
-[maec-app/server/data/sites.json](maec-app/server/data/sites.json) was rewritten from 19 LinkRad investment-tracking entries down to 2 placeholder MAEC sites:
-- `Cơ sở 1` and `Cơ sở 2`, both `location: "TP. Hồ Chí Minh"`, both `note: "Placeholder — fill in real district/address"`.
-- User must supply: actual district names (e.g. "Quận 1", "Tân Bình"), real start dates, investment figures, ownership share, bank/loan info.
+### sites.json — partially filled (2026-05-01)
+Real clinic locations are now **Trung Kính** (Cầu Giấy, Hà Nội) and **Kim Giang** (Thanh Xuân, Hà Nội). Still missing: real `startMonth`, `totalInvestment`, `bank`, `bankLoan`, ownership notes — all currently 0/empty in [sites.json](maec-app/server/data/sites.json). User to fill when financial data is ready (or edit in-app at `/sites` if admin).
+
+### Demo data still references old LinkRad regions
+Re-seeded users.json on 2026-05-01 (20 users, departments remapped to Trung Kính / Kim Giang; doctor dept changed to "Mắt"; 3 `nv_th*`/`tp_th` users dropped). However, these LinkRad-era demo data files **still reference old usernames or 3-region structure**:
+
+- [tasks.json](maec-app/server/data/tasks.json) — task assignments reference dropped usernames (`nv_hd1`, `nv_cm1`, `nv_th*` etc.). Tasks tab will show "unknown user" entries.
+- [annual-pl.json](maec-app/server/data/annual-pl.json), [annual-cf.json](maec-app/server/data/annual-cf.json), [breakeven.json](maec-app/server/data/breakeven.json) — financials structured around 3 LinkRad regions; needs re-modelling for 2 MAEC sites.
+- [SitePL.jsx](maec-app/client/src/pages/SitePL.jsx) — same 3-region assumption baked in.
+- Server scripts ([sanity-check-hr.js](maec-app/server/scripts/sanity-check-hr.js), [sanity-check-portals.js](maec-app/server/scripts/sanity-check-portals.js), [seed-catalogs-mock.js](maec-app/server/scripts/seed-catalogs-mock.js), [seed-portals.js](maec-app/server/scripts/seed-portals.js), [seed-hr.js](maec-app/server/scripts/seed-hr.js), [seed.js](maec-app/server/scripts/seed.js)) — test fixtures use old usernames.
+- [Registration.jsx](maec-app/client/src/pages/Registration.jsx), [PartnerReferralDrawer.jsx](maec-app/client/src/components/PartnerReferralDrawer.jsx) — UI defaults reference old regions/doctors.
+
+Cleanup is bigger than mechanical search/replace because the financial model needs reshaping for 2 sites instead of 3 regions. Defer until staffing + per-site economics are discussed in workflow walkthrough.
 
 ## Deferred — Domain rename (round 2)
 

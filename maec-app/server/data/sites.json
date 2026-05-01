@@ -1,4 +1,4 @@
 [
-  {"id":1,"name":"Cơ sở 1","location":"TP. Hồ Chí Minh","startMonth":"01/2023","totalInvestment":40000,"maecShare":1.0,"maecInvestment":40000,"bankLoan":0,"bank":"","note":"Placeholder — fill in real district/address"},
-  {"id":2,"name":"Cơ sở 2","location":"TP. Hồ Chí Minh","startMonth":"01/2024","totalInvestment":26000,"maecShare":1.0,"maecInvestment":26000,"bankLoan":0,"bank":"","note":"Placeholder — fill in real district/address"}
+  {"id":1,"name":"Trung Kính","location":"Cầu Giấy, Hà Nội","startMonth":"","totalInvestment":0,"maecShare":1.0,"maecInvestment":0,"bankLoan":0,"bank":"","note":""},
+  {"id":2,"name":"Kim Giang","location":"Thanh Xuân, Hà Nội","startMonth":"","totalInvestment":0,"maecShare":1.0,"maecInvestment":0,"bankLoan":0,"bank":"","note":""}
 ]
