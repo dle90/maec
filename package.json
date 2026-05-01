@@ -1,0 +1,16 @@
+{
+  "name": "maec",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "npm --prefix maec-app/client install && npm --prefix maec-app/client run build",
+    "start": "node maec-app/server/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "xlsx": "^0.18.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

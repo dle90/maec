@@ -1,0 +1,8 @@
+[phases.install]
+cmds = ["npm install", "npm install --prefix maec-app/server"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "node maec-app/server/index.js"

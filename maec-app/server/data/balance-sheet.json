@@ -1,0 +1,28 @@
+{
+  "year": 2025,
+  "months": [1,2,3,4,5,6,7,8,9,10,11,12],
+  "rows": [
+    {"id":"cash","label":"Tiền và tương đương tiền","group":"Tài sản ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"receivable","label":"Phải thu khách hàng","group":"Tài sản ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"advance","label":"Ứng trước nhà cung cấp","group":"Tài sản ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"prepaid","label":"Chi phí chờ phân bổ (ngắn hạn)","group":"Tài sản ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"vat","label":"Thuế GTGT được khấu trừ","group":"Tài sản ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"current_assets","label":"Tổng tài sản ngắn hạn","group":"","isSubtotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"ppe","label":"Tài sản cố định","group":"Tài sản dài hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"lt_prepaid","label":"Chi phí chờ phân bổ (dài hạn)","group":"Tài sản dài hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"non_current_assets","label":"Tổng tài sản dài hạn","group":"","isSubtotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"total_assets","label":"TỔNG TÀI SẢN","group":"","isTotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"payable","label":"Phải trả nhà cung cấp","group":"Nợ ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"tax_payable","label":"Thuế GTGT & thuế khác phải trả","group":"Nợ ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"other_payable","label":"Phải trả khác","group":"Nợ ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"st_loan","label":"Vay và nợ ngắn hạn","group":"Nợ ngắn hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"current_liab","label":"Tổng nợ ngắn hạn","group":"","isSubtotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"lt_loan","label":"Vay và nợ dài hạn","group":"Nợ dài hạn","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"non_current_liab","label":"Tổng nợ dài hạn","group":"","isSubtotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"total_liab","label":"TỔNG NỢ PHẢI TRẢ","group":"","isTotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"charter_cap","label":"Vốn điều lệ","group":"Vốn chủ sở hữu","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"retained","label":"Lợi nhuận giữ lại","group":"Vốn chủ sở hữu","values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"equity","label":"TỔNG VỐN CHỦ SỞ HỮU","group":"","isTotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"id":"total_liab_equity","label":"TỔNG NỢ VÀ VỐN CHỦ SỞ HỮU","group":"","isTotal":true,"values":[0,0,0,0,0,0,0,0,0,0,0,0]}
+  ]
+}

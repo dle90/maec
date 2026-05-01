@@ -1,0 +1,18 @@
+{
+  "Name": "LinkRad PACS",
+  "HttpPort": 8042,
+  "DicomPort": 4242,
+  "DicomAet": "LINKRAD",
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": false,
+  "HttpCrossOriginEnabled": true,
+  "StorageDirectory": "/var/lib/orthanc/db",
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/wado",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Ssl": false,
+    "QidoCaseSensitive": false
+  }
+}

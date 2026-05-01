@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  orthanc:
+    image: orthancteam/orthanc:latest
+    container_name: linkrad-orthanc
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+    volumes:
+      - orthanc-data:/var/lib/orthanc/db
+    environment:
+      ORTHANC__NAME: "LinkRad PACS"
+      ORTHANC__REMOTE_ACCESS_ALLOWED: "true"
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__HTTP_CROSS_ORIGIN_ENABLED: "true"
+      DICOM_WEB_PLUGIN_ENABLED: "true"
+      ORTHANC__DICOM_WEB__ENABLE: "true"
+      ORTHANC__DICOM_WEB__ROOT: "/wado"
+      ORTHANC__DICOM_WEB__ENABLE_WADO: "true"
+      ORTHANC__DICOM_WEB__WADO_ROOT: "/wado"
+    restart: unless-stopped
+
+  ohif:
+    build:
+      context: ./ohif
+      dockerfile: Dockerfile
+    container_name: linkrad-ohif
+    ports:
+      - "3000:80"
+    environment:
+      # Internal Docker network hostname — overridden by ORTHANC_BACKEND_URL env var in cloud
+      ORTHANC_BACKEND_URL: http://orthanc:8042
+    depends_on:
+      - orthanc
+    restart: unless-stopped
+
+volumes:
+  orthanc-data:
