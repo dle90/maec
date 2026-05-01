@@ -20,10 +20,11 @@ export const CATALOG_GROUPS = [
   },
   {
     key: 'services',
-    label: 'Dịch vụ & Chuyên khoa',
+    label: 'Dịch vụ & Gói khám',
     color: 'teal',
     items: [
-      { key: 'services',         label: 'Dịch vụ',            icon: '📄' },
+      { key: 'services',         label: 'Dịch vụ (Khám)',     icon: '📄' },
+      { key: 'packages',         label: 'Gói khám',           icon: '📦' },
       { key: 'service-types',    label: 'Loại dịch vụ',       icon: '📂' },
       { key: 'tax-groups',       label: 'Nhóm thuế dịch vụ',  icon: '📊' },
       { key: 'specialties',      label: 'Chuyên khoa',        icon: '🩺' },

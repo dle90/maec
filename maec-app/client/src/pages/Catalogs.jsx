@@ -94,18 +94,80 @@ const CATALOG_FIELDS = {
     ],
   },
   'services': {
-    columns: ['code', 'technicalInfo', 'name', 'serviceTypeCode', 'basePrice'],
-    columnLabels: { code: 'Mã', technicalInfo: 'Thông tin kỹ thuật', name: 'Tên', serviceTypeCode: 'Nhóm dịch vụ', basePrice: 'Đơn giá' },
+    columns: ['code', 'name', 'category', 'station', 'role', 'devices', 'basePrice'],
+    columnLabels: { code: 'Mã', name: 'Tên', category: 'Nhóm', station: 'Trạm', role: 'Người TH', devices: 'Thiết bị', basePrice: 'Đơn giá' },
     editFields: [
-      { key: 'code', label: 'Mã', required: true }, { key: 'name', label: 'Tên', required: true },
-      { key: 'technicalInfo', label: 'Thông tin kỹ thuật', wide: true },
-      { key: 'serviceTypeCode', label: 'Nhóm dịch vụ' },
-      { key: 'modality', label: 'Modality', type: 'select', options: ['CT', 'MRI', 'XR', 'US', 'LAB', 'OTHER'].map(m => ({ value: m, label: m })) },
-      { key: 'bodyPart', label: 'Bộ phận' }, { key: 'basePrice', label: 'Đơn giá', type: 'number' },
+      { key: 'code', label: 'Mã', required: true },
+      { key: 'name', label: 'Tên', required: true, wide: true },
+      { key: 'category', label: 'Nhóm', type: 'select', options: [
+        { value: 'khucxa',   label: 'Khúc xạ / thị lực' },
+        { value: 'iop-shv',  label: 'Nhãn áp & SHV' },
+        { value: 'imaging',  label: 'Chẩn đoán hình ảnh + sinh trắc' },
+        { value: 'cl',       label: 'Kính tiếp xúc + kiểm soát cận thị' },
+        { value: 'thuthuat', label: 'Thủ thuật' },
+      ] },
+      { key: 'station', label: 'Trạm' },
+      { key: 'role', label: 'Người thực hiện', type: 'select', options: [
+        { value: 'le-tan',       label: 'Lễ tân' },
+        { value: 'ktv-khuc-xa',  label: 'KTV khúc xạ' },
+        { value: 'ktv',          label: 'KTV' },
+        { value: 'bs',           label: 'Bác sĩ' },
+        { value: 'bs-cl',        label: 'BS chuyên KTX' },
+      ] },
+      { key: 'devices', label: 'Thiết bị (cách nhau bằng dấu phẩy)' },
+      { key: 'basePrice', label: 'Đơn giá', type: 'number' },
       { key: 'unit', label: 'Đơn vị' },
+      { key: 'description', label: 'Mô tả', wide: true },
     ],
-    formatCell: { basePrice: v => fmtMoney(v) },
+    formatCell: {
+      basePrice: v => fmtMoney(v),
+      devices: v => Array.isArray(v) ? v.join(', ') : (v || ''),
+      category: v => ({
+        'khucxa': 'Khúc xạ / thị lực',
+        'iop-shv': 'Nhãn áp & SHV',
+        'imaging': 'CĐHA + sinh trắc',
+        'cl': 'KTX + kiểm soát CT',
+        'thuthuat': 'Thủ thuật',
+      }[v] || v || ''),
+      role: v => ({
+        'le-tan': 'Lễ tân',
+        'ktv-khuc-xa': 'KTV khúc xạ',
+        'ktv': 'KTV',
+        'bs': 'Bác sĩ',
+        'bs-cl': 'BS KTX',
+      }[v] || v || ''),
+    },
     rightAlign: ['basePrice'],
+  },
+  'packages': {
+    columns: ['code', 'name', 'bundledCount', 'priceDisplay', 'entitlementDisplay'],
+    columnLabels: { code: 'Mã', name: 'Tên gói', bundledCount: 'Số DV gộp', priceDisplay: 'Giá', entitlementDisplay: 'Entitlement' },
+    editFields: [
+      { key: 'code', label: 'Mã', required: true },
+      { key: 'name', label: 'Tên gói', required: true, wide: true },
+      { key: 'description', label: 'Mô tả', wide: true },
+      { key: 'basePrice', label: 'Đơn giá (cho gói flat-price)', type: 'number' },
+    ],
+    formatCell: {
+      bundledCount: (_, row) => (row.bundledServices || []).length,
+      priceDisplay: (_, row) => {
+        if (row.pricingTiers?.length) {
+          return row.pricingTiers.map(t => `${t.name}: ${fmtMoney(t.totalPrice)}`).join(' · ')
+        }
+        if (row.pricingRules?.length) {
+          return row.pricingRules.map(r => `${r.condition}: ${fmtMoney(r.price)}`).join(' · ')
+        }
+        return fmtMoney(row.basePrice)
+      },
+      entitlementDisplay: (_, row) => {
+        const e = row.activatesEntitlement
+        if (!e || !e.durationMonths) return '—'
+        const n = (e.coveredServices || []).length
+        return `${e.durationMonths}th · ${n} DV free`
+      },
+    },
+    rightAlign: ['bundledCount'],
+    note: 'Gói khám bundle nhiều dịch vụ. Sửa pricingTiers / activatesEntitlement / pricingRules qua seed script (UI editing chỉ hỗ trợ các trường flat).',
   },
   'service-types': {
     columns: ['code', 'name', 'abbreviation', 'taxGroupName'],

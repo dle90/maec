@@ -5,6 +5,7 @@ const { requireAuth, requireAdmin, requirePermission } = require('../middleware/
 // All catalog models
 const ServiceType = require('../models/ServiceType')
 const Service = require('../models/Service')
+const Package = require('../models/Package')
 const Specialty = require('../models/Specialty')
 const ReferralDoctor = require('../models/ReferralDoctor')
 const PartnerFacility = require('../models/PartnerFacility')
@@ -83,6 +84,7 @@ function catalogCRUD(Model, prefix, nameField = 'name', writePerm = null) {
 // Register all catalog CRUD routes
 catalogCRUD(ServiceType, 'service-types')
 catalogCRUD(Service, 'services')
+catalogCRUD(Package, 'packages')
 catalogCRUD(Specialty, 'specialties')
 catalogCRUD(ReferralDoctor, 'referral-doctors', 'name', 'partners.manage')
 catalogCRUD(PartnerFacility, 'partner-facilities', 'name', 'partners.manage')
