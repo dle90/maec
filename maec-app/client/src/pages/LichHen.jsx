@@ -550,14 +550,14 @@ function AppointmentForm({ mode, defaultDate, defaultSite, existing, onClose, on
             <label className="block text-xs font-semibold text-gray-600 mb-1">Bệnh nhân</label>
             <PatientPicker value={picked} onPick={setPicked} onClear={() => setPicked(null)} />
             {!picked && (
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <input value={walkInName} onChange={e => setWalkInName(e.target.value)} placeholder="Hoặc tên khách (chưa có hồ sơ)" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                 <input value={walkInPhone} onChange={e => setWalkInPhone(e.target.value)} placeholder="SĐT" className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Cơ sở</label>
               <select value={site} onChange={e => setSite(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
@@ -572,7 +572,7 @@ function AppointmentForm({ mode, defaultDate, defaultSite, existing, onClose, on
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Ngày</label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />

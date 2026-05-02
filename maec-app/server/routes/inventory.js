@@ -12,11 +12,12 @@ const SupplyServiceMapping = require('../models/SupplyServiceMapping')
 const StocktakeSession = require('../models/StocktakeSession')
 const { requireAuth, requirePermission } = require('../middleware/auth')
 const { withWarehouseScope, listAccessibleWarehouses, isSupervisor } = require('../lib/warehouseScope')
+const { localDate } = require('../lib/dates')
 
 const manageInventory = requirePermission('inventory.manage')
 
 const now = () => new Date().toISOString()
-const today = () => now().slice(0, 10)
+const today = () => localDate()  // HCM-local YYYY-MM-DD; was UTC slice
 const rid = (prefix) => `${prefix}-${Date.now()}-${crypto.randomUUID().slice(0, 4)}`
 
 // ═══════════════════════════════════════════════════════════
@@ -735,14 +736,19 @@ router.get('/stocktakes/:id', requireAuth, async (req, res) => {
 // POST /stocktakes — start a session, snapshot current system qty per supply
 router.post('/stocktakes', requireAuth, async (req, res) => {
   try {
-    const { warehouseId, name, scope, categoryId, notes } = req.body
+    const { warehouseId, name, scope, categoryId, productKind, notes } = req.body
     if (!warehouseId) return res.status(400).json({ error: 'Thiếu kho' })
     const accessible = await listAccessibleWarehouses(req.user)
     const wh = accessible.find(w => w._id === warehouseId)
     if (!wh) return res.status(403).json({ error: 'Bạn không có quyền kiểm kê kho này' })
 
+    // Q5 — productKind chip narrows the count to Thuốc / Kính / Vật tư so
+    // staff can run "Thuốc Tuesday / Kính Wednesday" rhythm instead of
+    // counting all 200+ SKUs in one go. Combine with categoryId for finer
+    // slices ("just the ortho-K shelves").
     const supplyFilter = { status: 'active' }
     if (scope === 'category' && categoryId) supplyFilter.categoryId = categoryId
+    if (productKind) supplyFilter.productKind = productKind
     const supplies = await Supply.find(supplyFilter).lean()
 
     const agg = await InventoryLot.aggregate([
@@ -772,6 +778,7 @@ router.post('/stocktakes', requireAuth, async (req, res) => {
       name: name || `Kiểm kê ${today()}`,
       scope: scope || 'all',
       categoryId: categoryId || null,
+      productKind: productKind || null,
       items,
       status: 'open',
       startedBy: req.user.username,

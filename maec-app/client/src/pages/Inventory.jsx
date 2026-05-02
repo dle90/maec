@@ -136,8 +136,10 @@ export default function Inventory() {
         activeWhId={activeWhId}
       />
       <div className="max-w-[1600px] mx-auto p-2 sm:p-4 lg:p-6">
-        <div className="flex items-center gap-2 sm:gap-3 mb-4 flex-wrap">
-          {/* Prominent warehouse selector */}
+        {/* Warehouse selector — own row on mobile so the 3 tabs below render
+            consistently (without it, mobile pushed Tồn kho up next to the
+            selector and Giao dịch + Kiểm kê below as plain-text). */}
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 flex-wrap">
           <div className="inline-flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
             <span className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Kho</span>
             <select
@@ -151,7 +153,9 @@ export default function Inventory() {
               ))}
             </select>
           </div>
-          <div className="w-px h-8 bg-gray-200" />
+        </div>
+        {/* Tabs — own row, scrollable horizontally on tiny viewports. */}
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
           <TabBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Tồn kho</TabBtn>
           <TabBtn active={tab === 'transactions'} onClick={() => setTab('transactions')}>Giao dịch</TabBtn>
           <TabBtn active={tab === 'stocktake'} onClick={() => setTab('stocktake')}>Kiểm kê</TabBtn>
@@ -593,11 +597,18 @@ function TransactionsTab({ whParam, warehouses, activeWh, supervisor }) {
           <button
             onClick={() => setCreateMenuOpen(v => !v)}
             disabled={!activeWh}
-            className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-            title={!activeWh ? 'Chọn một kho để tạo phiếu' : ''}
+            className={`px-5 py-2.5 text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5 ${
+              activeWh
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            }`}
+            title={!activeWh ? 'Chọn một kho cụ thể để tạo phiếu' : ''}
           >
             <span className="text-base">＋</span> Tạo giao dịch <span className="text-xs">▾</span>
           </button>
+          {!activeWh && (
+            <div className="absolute right-0 top-full mt-1 text-[10px] text-gray-500 whitespace-nowrap">↑ chọn 1 kho cụ thể</div>
+          )}
           {createMenuOpen && (
             <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[200px]">
               {[
@@ -947,11 +958,17 @@ function StocktakeTab({ whParam, warehouses, activeWh }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex justify-end items-center gap-2">
+        {!activeWh && <div className="text-[10px] text-gray-500">Chọn 1 kho cụ thể →</div>}
         <button
           onClick={() => setNewOpen(true)}
           disabled={!activeWh}
-          className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40"
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+            activeWh
+              ? 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+          }`}
+          title={!activeWh ? 'Chọn 1 kho cụ thể để bắt đầu kiểm kê' : ''}
         >＋ Bắt đầu kiểm kê mới</button>
       </div>
 
@@ -1009,16 +1026,48 @@ function stocktakeStatusLbl(s) {
 }
 
 function StocktakeNewModal({ warehouse, onClose, onCreated }) {
+  useEscapeKey(onClose)
   const [name, setName] = useState(`Kiểm kê ${new Date().toISOString().slice(0, 7)}`)
+  const [productKind, setProductKind] = useState('') // '' = all
+  const [categoryId, setCategoryId] = useState('')
+  const [categories, setCategories] = useState([])
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+
+  useEffect(() => {
+    api.get('/inventory/categories').then(({ data }) => setCategories(data || [])).catch(() => {})
+  }, [])
+
   const start = async () => {
     setSaving(true); setErr('')
     try {
-      const { data } = await api.post('/inventory/stocktakes', { warehouseId: warehouse._id, name, scope: 'all' })
+      const body = {
+        warehouseId: warehouse._id,
+        name,
+        scope: categoryId ? 'category' : 'all',
+        categoryId: categoryId || null,
+        productKind: productKind || null,
+      }
+      const { data } = await api.post('/inventory/stocktakes', body)
       onCreated(data._id)
     } catch (e) { setErr(e.response?.data?.error || 'Lỗi'); setSaving(false) }
   }
+
+  // Q5 — productKind chips let staff scope the count to "Thuốc day / Kính day"
+  // (matching the Tồn kho sub-tab split). Category dropdown is optional finer
+  // granularity for "just the ortho-K shelves" type counts. Filter categories
+  // by productKind when one is picked.
+  const KINDS = [
+    { k: '', label: 'Tất cả' },
+    { k: 'thuoc', label: '💊 Thuốc' },
+    { k: 'kinh', label: '👓 Kính' },
+    { k: 'supply', label: '📦 Vật tư' },
+  ]
+  // Categories filter: if productKind is set, filter to categories that match.
+  // (The /inventory/categories list doesn't return productKind, so this is
+  // best-effort; we just show the dropdown.)
+  const visibleCategories = categories
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
@@ -1028,6 +1077,24 @@ function StocktakeNewModal({ warehouse, onClose, onCreated }) {
           <div>
             <label className="block text-xs text-gray-500 mb-1">Tên phiên</label>
             <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Phạm vi kiểm kê</label>
+            <div className="flex gap-1 flex-wrap">
+              {KINDS.map(k => (
+                <button key={k.k} type="button" onClick={() => setProductKind(k.k)}
+                  className={`px-3 py-1.5 text-xs rounded-lg ${productKind === k.k ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-100'}`}>
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Nhóm vật tư (tuỳ chọn)</label>
+            <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+              <option value="">— Tất cả nhóm —</option>
+              {visibleCategories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+            </select>
           </div>
           <div className="text-xs text-gray-500">Kho: <span className="font-medium text-gray-900">{warehouse?.name}</span></div>
         </div>

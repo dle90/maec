@@ -1,5 +1,22 @@
 const mongoose = require('mongoose')
 
+// Bill item subdoc with stable _id. Inline-array shorthand inside a schema
+// that has `{ _id: false }` doesn't reliably auto-add subdoc _ids, so we
+// declare an explicit subschema (Mongoose's `new Schema(...)` defaults to
+// adding _id, which is what we want — the DELETE endpoint uses it to delete
+// the right item even when concurrent edits shift the array order.
+const billItemSchema = new mongoose.Schema({
+  kind: { type: String, enum: ['service', 'package', 'kinh', 'thuoc'] },
+  code: String,
+  name: String,
+  qty: { type: Number, default: 1 },
+  unitPrice: { type: Number, default: 0 },
+  totalPrice: { type: Number, default: 0 },
+  addedBy: String,
+  addedAt: String,
+  note: String,
+}) // implicit _id: true — Mongoose auto-generates ObjectId per item
+
 const encounterSchema = new mongoose.Schema({
   _id: String,
   studyUID: String,
@@ -123,20 +140,7 @@ const encounterSchema = new mongoose.Schema({
     default: [],
   },
 
-  billItems: {
-    type: [{
-      kind: { type: String, enum: ['service', 'package', 'kinh', 'thuoc'] },
-      code: String,
-      name: String,
-      qty: { type: Number, default: 1 },
-      unitPrice: { type: Number, default: 0 },
-      totalPrice: { type: Number, default: 0 },
-      addedBy: String,
-      addedAt: String,
-      note: String,
-    }],
-    default: [],
-  },
+  billItems: { type: [billItemSchema], default: [] },
 
   // Sum of billItems totalPrice (no discount applied).
   billTotal: { type: Number, default: 0 },

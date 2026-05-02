@@ -1656,7 +1656,7 @@ function PatientsTable() {
         </div>
       )}
       <div className="bg-white rounded-xl border border-gray-200 overflow-auto">
-        <table className="w-full text-sm whitespace-nowrap">
+        <table className="w-full text-sm whitespace-nowrap min-w-[560px]">
           <thead><tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide text-left">
             <th className="px-4 py-3">Mã</th>
             <th className="px-4 py-3">Tên</th>

@@ -8,6 +8,7 @@ const ReferralDoctor = require('../models/ReferralDoctor')
 const Service = require('../models/Service')
 const User = require('../models/User')
 const Encounter = require('../models/Encounter')
+const { localDate, localDayStartUtcZ, localWeekStart, localMonthStart, localYearStart, addDaysLocal } = require('../lib/dates')
 
 const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản', card: 'Thẻ', mixed: 'Hỗn hợp' }
 
@@ -17,25 +18,28 @@ const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản', car
 // users (it's the home page); per-role gating can layer on top later.
 router.get('/maec-overview', requireAuth, async (req, res) => {
   try {
-    const now = new Date()
-    const todayStr = now.toISOString().slice(0, 10)
-    const startWeek = new Date(now)
-    const dow = now.getDay() || 7
-    if (dow !== 1) startWeek.setDate(now.getDate() - (dow - 1))
-    const wtdStr = startWeek.toISOString().slice(0, 10)
-    const mtdStr = todayStr.slice(0, 8) + '01'
-    const ytdStr = todayStr.slice(0, 5) + '01-01'
-    const start12 = new Date(now); start12.setMonth(now.getMonth() - 11); start12.setDate(1)
-    const start12Str = start12.toISOString().slice(0, 10)
+    // All "today / this week / this month / this year" boundaries are computed
+    // in Asia/Ho_Chi_Minh local time so cashier KPIs match wall-clock reality.
+    // Without this, between UTC midnight (~7am local) and local midnight the
+    // server would still answer "yesterday" for 7 hours each day.
+    const todayStr = localDate()
+    const wtdStr = localWeekStart(todayStr)
+    const mtdStr = localMonthStart(todayStr)
+    const ytdStr = localYearStart(todayStr)
+    // 12-month series: anchor at the 1st of the month 11 months before this
+    // local month.
+    const [yy, mm] = todayStr.split('-').map(Number)
+    const start12Date = new Date(Date.UTC(yy, mm - 1 - 11, 1))
+    const start12Str = start12Date.toISOString().slice(0, 10)
 
     // Q3 — paidAmount is now denormalized as the NET (positive payments minus
     // refunds), and an encounter that's been fully refunded ends up in
     // status='completed'. Widen the status filter to capture partial + fully
     // refunded encounters; paidAmount > 0 keeps the zero-revenue rows out.
     const REVENUE_STATUSES = ['paid', 'partial', 'completed']
-    async function aggRange(fromDate) {
+    async function aggRange(fromLocalDate) {
       const docs = await Encounter.aggregate([
-        { $match: { status: { $in: REVENUE_STATUSES }, paidAmount: { $gt: 0 }, paidAt: { $gte: `${fromDate}T00:00:00.000Z` } } },
+        { $match: { status: { $in: REVENUE_STATUSES }, paidAmount: { $gt: 0 }, paidAt: { $gte: localDayStartUtcZ(fromLocalDate) } } },
         { $group: { _id: '$site', revenue: { $sum: '$paidAmount' }, encounters: { $sum: 1 } } },
       ])
       const result = { total: 0, encounters: 0, bySite: {} }
@@ -54,11 +58,11 @@ router.get('/maec-overview', requireAuth, async (req, res) => {
       aggRange(mtdStr),
       aggRange(ytdStr),
       Encounter.aggregate([
-        { $match: { status: { $in: REVENUE_STATUSES }, paidAmount: { $gt: 0 }, paidAt: { $gte: `${start12Str}T00:00:00.000Z` } } },
+        { $match: { status: { $in: REVENUE_STATUSES }, paidAmount: { $gt: 0 }, paidAt: { $gte: localDayStartUtcZ(start12Str) } } },
         { $group: { _id: { month: { $substr: ['$paidAt', 0, 7] }, site: '$site' }, revenue: { $sum: '$paidAmount' } } },
         { $sort: { '_id.month': 1 } },
       ]),
-      Encounter.find({ createdAt: { $gte: `${todayStr}T00:00:00.000Z`, $lte: `${todayStr}T23:59:59.999Z` } })
+      Encounter.find({ createdAt: { $gte: localDayStartUtcZ(todayStr), $lte: new Date(`${todayStr}T23:59:59.999+07:00`).toISOString() } })
         .sort({ createdAt: -1 }).limit(20).lean(),
     ])
 
@@ -73,7 +77,7 @@ router.get('/maec-overview', requireAuth, async (req, res) => {
     }
     const monthly = []
     for (let i = 11; i >= 0; i--) {
-      const d = new Date(now); d.setMonth(now.getMonth() - i); d.setDate(1)
+      const d = new Date(Date.UTC(yy, mm - 1 - i, 1))
       const m = d.toISOString().slice(0, 7)
       monthly.push(monthMap[m] || { month: m, total: 0, bySite: {} })
     }

@@ -5,13 +5,10 @@ const Patient = require('../models/Patient')
 const Appointment = require('../models/Appointment')
 const Encounter = require('../models/Encounter')
 const { requireAuth } = require('../middleware/auth')
+const { localDate, addDaysLocal } = require('../lib/dates')
 
 // ── helpers ────────────────────────────────────────────────────────────────
 const now = () => new Date().toISOString()
-const localDate = () => {
-  // Local date stamp YYYY-MM-DD (Asia/Ho_Chi_Minh — sv-SE locale gives ISO).
-  return new Date().toLocaleDateString('sv-SE')
-}
 const genId = () => `APT-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
 // Default duration per examType. Workflow (2) — refraction with cycloplegic
@@ -68,10 +65,7 @@ router.get('/', requireAuth, async (req, res) => {
 // that are not cancelled/done and haven't been ticked off yet.
 router.get('/upcoming-reminders', requireAuth, async (req, res) => {
   try {
-    const target = req.query.date || (() => {
-      const d = new Date(); d.setDate(d.getDate() + 1)
-      return d.toLocaleDateString('sv-SE')
-    })()
+    const target = req.query.date || addDaysLocal(localDate(), 1)
     const filter = {
       ...buildSiteFilter(req.user),
       scheduledAt: { $gte: `${target}T00:00:00`, $lte: `${target}T23:59:59` },

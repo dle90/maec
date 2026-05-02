@@ -927,7 +927,9 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
                         {!isClosed && (
                           <button onClick={async () => {
                             if (!confirm(`Xóa "${b.name}" khỏi bill?`)) return
-                            await api.delete(`/encounters/${enc._id}/bill-items/${i}`)
+                            // Prefer the stable subdoc _id; fall back to array
+                            // index for any legacy item that doesn't have one.
+                            await api.delete(`/encounters/${enc._id}/bill-items/${b._id || i}`)
                             reload()
                           }} className="text-red-500 hover:text-red-700 text-xs">×</button>
                         )}

@@ -85,7 +85,7 @@ export default function ThuNgan() {
           <h1 className="text-xl font-bold text-gray-800">Thu ngân</h1>
           <p className="text-xs text-gray-500 mt-0.5">Xác nhận và thanh toán bill cho lượt khám hôm nay.</p>
         </div>
-        <button onClick={load} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200">⟳ Làm mới</button>
+        <button onClick={load} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 whitespace-nowrap flex-shrink-0">⟳ Làm mới</button>
       </div>
 
       <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
@@ -95,7 +95,7 @@ export default function ThuNgan() {
           { k: 'empty',  label: 'Chưa có bill',   count: empty.length,  color: 'text-gray-600 border-gray-400' },
         ].map(t => (
           <button key={t.k} onClick={() => setTab(t.k)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t.k ? t.color : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t.k ? t.color : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             {t.label} <span className="ml-1 text-xs bg-gray-100 text-gray-600 rounded-full px-1.5">{t.count}</span>
           </button>
         ))}

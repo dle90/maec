@@ -27,6 +27,7 @@ const stocktakeSessionSchema = new mongoose.Schema({
   name: String,                               // e.g. "Kiểm kê tháng 4"
   scope: { type: String, enum: ['all', 'category'], default: 'all' },
   categoryId: String,                         // when scope='category'
+  productKind: String,                        // optional Q5 narrowing: 'thuoc' | 'kinh' | 'supply' | other
   items: [stocktakeItemSchema],
   status: { type: String, enum: ['open', 'submitted', 'approved', 'cancelled', 'applied'], default: 'open' },
   adjustmentTxIds: [String],

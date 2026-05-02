@@ -12,18 +12,38 @@ const InventoryLot = require('../models/InventoryLot')
 const { requireAuth } = require('../middleware/auth')
 const { fifoDeduct, stockCheck } = require('../lib/fifoDeduct')
 const SERVICE_OUTPUT_FIELDS = require('../config/serviceOutputFields')
+const { localDate, localDayStartUtcZ, localDayEndUtcZ } = require('../lib/dates')
 
 const now = () => new Date().toISOString()
-const todayISO = () => new Date().toISOString().slice(0, 10)
+const todayISO = () => localDate()  // HCM-local YYYY-MM-DD; was UTC slice
 const sumBill = (items) => (items || []).reduce((s, i) => s + (i.totalPrice || 0), 0)
 
 // POST /encounters — create new clinical encounter (Lễ tân workflow).
 // Minimal: just patientId + site. Package / services / bill items added via
 // subsequent endpoints (assign-package, services, bill-items).
+//
+// Idempotency: if this patient already has an open encounter (anything not
+// yet paid / completed / cancelled), return that one instead of creating a
+// duplicate. Mirrors /registration/check-in's behavior so receptionists who
+// double-click "+ Tạo lượt khám" don't end up with two parallel encounters
+// per visit.
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { patientId, patientName, site, dob, gender } = req.body
     if (!patientId || !patientName) return res.status(400).json({ error: 'patientId + patientName required' })
+
+    const existing = await Encounter.findOne({
+      patientId,
+      status: { $nin: ['paid', 'completed', 'cancelled'] },
+    }).lean()
+    if (existing) {
+      // Sync site if caller specified a different one (matches /check-in pattern)
+      if (site && existing.site !== site) {
+        await Encounter.updateOne({ _id: existing._id }, { $set: { site, updatedAt: now() } })
+      }
+      return res.status(200).json({ ...existing, _existing: true })
+    }
+
     const id = `enc-${Date.now()}-${Math.floor(Math.random() * 10000)}`
     const enc = await new Encounter({
       _id: id,
@@ -32,8 +52,8 @@ router.post('/', requireAuth, async (req, res) => {
       site: site || '',
       dob: dob || '',
       gender: ['M', 'F'].includes(gender) ? gender : 'M',
-      scheduledDate: new Date().toISOString().slice(0, 10),
-      studyDate: new Date().toISOString().slice(0, 10),
+      scheduledDate: todayISO(),
+      studyDate: todayISO(),
       status: 'scheduled',
       assignedServices: [],
       billItems: [],
@@ -41,13 +61,19 @@ router.post('/', requireAuth, async (req, res) => {
       createdAt: now(),
       updatedAt: now(),
     }).save()
-    // Denormalize lastEncounterAt on the patient (best-effort)
-    await Patient.updateOne({ patientId }, { $set: { lastEncounterAt: enc.createdAt, updatedAt: now() } }).catch(() => {})
+    // Denormalize lastEncounterAt on the patient (best-effort).
+    // Patient _id == patientId at create time, but the safer lookup is on _id
+    // since some callers pass the legacy patientId field (BN-YYYYMMDD-XXXX)
+    // which equals _id for seed/registered patients.
+    await Patient.updateOne({ _id: patientId }, { $set: { lastEncounterAt: enc.createdAt, updatedAt: now() } }).catch(() => {})
     res.status(201).json(enc.toObject())
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// GET /encounters/today — encounters created today (kept for back-compat).
+// GET /encounters/today — encounters whose local-day createdAt is today
+// (HCM time). scheduledDate / studyDate are stored as YYYY-MM-DD strings
+// already in local form so prefix-match still works for them; createdAt is
+// a UTC ISO so we use the local-day UTC window.
 router.get('/today', requireAuth, async (req, res) => {
   try {
     const day = todayISO()
@@ -55,7 +81,7 @@ router.get('/today', requireAuth, async (req, res) => {
       $or: [
         { scheduledDate: { $regex: `^${day}` } },
         { studyDate: { $regex: `^${day}` } },
-        { createdAt: { $regex: `^${day}` } },
+        { createdAt: { $gte: localDayStartUtcZ(day), $lte: localDayEndUtcZ(day) } },
       ],
     }).sort({ createdAt: -1 }).lean()
     res.json(list)
@@ -79,7 +105,9 @@ router.get('/', requireAuth, async (req, res) => {
       const today = todayISO()
       const from = req.query.from || today
       const to = req.query.to || today
-      filter.createdAt = { $gte: `${from}T00:00:00.000Z`, $lte: `${to}T23:59:59.999Z` }
+      // from/to are local YYYY-MM-DD; convert to the matching UTC window
+      // so cashier-day boundaries align with wall clock, not server clock.
+      filter.createdAt = { $gte: localDayStartUtcZ(from), $lte: localDayEndUtcZ(to) }
     }
     if (req.query.site) filter.site = req.query.site
     if (req.query.excludeId) filter._id = { $ne: req.query.excludeId }
@@ -715,16 +743,38 @@ router.post('/:id/checkout', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// DELETE /encounters/:id/bill-items/:idx — remove an item by array index
-router.delete('/:id/bill-items/:idx', requireAuth, async (req, res) => {
+// DELETE /encounters/:id/bill-items/:billItemId — remove an item by its
+// stable subdoc _id. Mongoose auto-assigns each subdoc an _id; using that
+// instead of an array index avoids race-prone delete-the-wrong-row bugs
+// when two staff members hit the same encounter concurrently.
+//
+// Backward compatibility: the legacy index-based call (`:idx` as a small
+// integer string) is detected by the param being numeric AND in-range, and
+// falls back to splice. Everything else is treated as a subdoc _id.
+router.delete('/:id/bill-items/:billItemId', requireAuth, async (req, res) => {
   try {
-    const idx = parseInt(req.params.idx, 10)
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
-    if (Number.isNaN(idx) || idx < 0 || idx >= enc.billItems.length) {
-      return res.status(400).json({ error: 'idx không hợp lệ' })
+
+    const param = req.params.billItemId
+    let removed = false
+
+    // Try stable _id first.
+    const sub = enc.billItems.id ? enc.billItems.id(param) : null
+    if (sub) {
+      sub.deleteOne ? sub.deleteOne() : enc.billItems.pull({ _id: param })
+      removed = true
+    } else if (/^\d+$/.test(param)) {
+      // Legacy: numeric index (kept so any in-flight client that hasn't
+      // refreshed still works).
+      const idx = parseInt(param, 10)
+      if (idx >= 0 && idx < enc.billItems.length) {
+        enc.billItems.splice(idx, 1)
+        removed = true
+      }
     }
-    enc.billItems.splice(idx, 1)
+
+    if (!removed) return res.status(400).json({ error: 'Không tìm thấy mục bill' })
     enc.billTotal = sumBill(enc.billItems)
     enc.updatedAt = now()
     await enc.save()
