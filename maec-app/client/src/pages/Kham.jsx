@@ -537,14 +537,14 @@ function PatientLookup({ onPick }) {
   }, [q])
 
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <input
         value={q}
         onChange={e => setQ(e.target.value)}
         onFocus={() => results.length && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Tìm tên / SĐT / mã BN..."
-        className="border border-gray-200 rounded-lg pl-3 pr-7 py-1.5 text-sm w-64 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+        className="border border-gray-200 rounded-lg pl-3 pr-7 py-1.5 text-sm w-full sm:w-64 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
       />
       {loading && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">…</span>}
       {open && results.length > 0 && (

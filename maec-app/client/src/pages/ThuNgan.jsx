@@ -59,7 +59,7 @@ export default function ThuNgan() {
         <button onClick={load} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200">⟳ Làm mới</button>
       </div>
 
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
         {[
           { k: 'unpaid', label: 'Chờ thanh toán', count: unpaid.length, color: 'text-orange-600 border-orange-500' },
           { k: 'paid',   label: 'Đã thanh toán',  count: paid.length,   color: 'text-green-600 border-green-500' },
@@ -72,8 +72,8 @@ export default function ThuNgan() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+        <table className="w-full text-sm min-w-[720px]">
           <thead className="bg-gray-50 text-xs text-gray-600 uppercase">
             <tr>
               <th className="px-3 py-2 text-left">BN</th>

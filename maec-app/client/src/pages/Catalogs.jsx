@@ -1562,7 +1562,7 @@ function PatientsTable() {
     <>
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <input
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-72 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full sm:w-72 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
           placeholder="Tìm hoặc thêm BN — tên, SĐT (BN/giám hộ), mã..."
           value={searchQ}
           onChange={e => setSearchQ(e.target.value)}

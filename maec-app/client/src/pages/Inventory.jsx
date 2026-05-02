@@ -134,8 +134,8 @@ export default function Inventory() {
         onSwitch={setActiveWhId}
         activeWhId={activeWhId}
       />
-      <div className="max-w-[1600px] mx-auto p-6">
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div className="max-w-[1600px] mx-auto p-2 sm:p-4 lg:p-6">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 flex-wrap">
           {/* Prominent warehouse selector */}
           <div className="inline-flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
             <span className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Kho</span>
@@ -174,16 +174,16 @@ function PageHeader({ activeWh, auth, supervisor, warehouses, onSwitch, activeWh
   const scopeLabel = activeWh ? activeWh.name : (supervisor ? `Tất cả kho (${warehouses.length})` : '')
   const userName = auth?.displayName || auth?.username
   return (
-    <div className="flex items-center gap-6 px-4 py-2 border-b bg-white">
+    <div className="flex items-center gap-2 sm:gap-6 px-2 sm:px-4 py-2 border-b bg-white flex-wrap">
       <div className="flex items-baseline gap-2">
-        <div className="text-lg font-semibold text-gray-800">Quản lý kho</div>
-        <div className="text-xs text-gray-400 font-mono">/vận hành</div>
+        <div className="text-base sm:text-lg font-semibold text-gray-800">Quản lý kho</div>
+        <div className="text-xs text-gray-400 font-mono hidden sm:inline">/vận hành</div>
       </div>
-      <div className="flex-1 text-xs text-gray-500">
+      <div className="flex-1 text-xs text-gray-500 min-w-0">
         {scopeLabel && <span>Phạm vi: <b className="text-gray-700">{scopeLabel}</b></span>}
       </div>
       <div className="flex items-center gap-2 text-xs text-gray-500">
-        {userName && <span className="px-2 py-1 bg-gray-100 rounded-md">👤 {userName}</span>}
+        {userName && <span className="hidden md:inline-block px-2 py-1 bg-gray-100 rounded-md">👤 {userName}</span>}
         <span className="px-2 py-1 bg-gray-100 rounded-md">{dateStr}</span>
       </div>
     </div>
@@ -409,7 +409,7 @@ function StockTab({ whParam, initialProductKind = '' }) {
       </div>
       <Card className="p-3 flex items-center gap-2 flex-wrap">
         <input
-          className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="flex-1 w-full sm:w-auto sm:min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="Tìm theo tên hoặc mã..."
           value={q} onChange={e => setQ(e.target.value)}
         />
@@ -423,8 +423,8 @@ function StockTab({ whParam, initialProductKind = '' }) {
         </label>
       </Card>
 
-      <Card>
-        <div className="grid grid-cols-[1fr_100px_100px_140px_80px] gap-3 px-4 py-3 text-xs text-gray-500 border-b border-gray-100">
+      <Card className="overflow-x-auto">
+        <div className="grid grid-cols-[1fr_100px_100px_140px_80px] gap-3 px-4 py-3 text-xs text-gray-500 border-b border-gray-100 min-w-[640px]">
           <div>Vật tư</div>
           <div className="text-right">Tồn</div>
           <div className="text-right">Định mức</div>
@@ -443,7 +443,7 @@ function StockTab({ whParam, initialProductKind = '' }) {
               <button
                 key={r.supply._id}
                 onClick={() => setDrawerSupplyId(r.supply._id)}
-                className="w-full grid grid-cols-[1fr_100px_100px_140px_80px] gap-3 px-4 py-3 text-sm border-b border-gray-50 hover:bg-gray-50 text-left"
+                className="w-full grid grid-cols-[1fr_100px_100px_140px_80px] gap-3 px-4 py-3 text-sm border-b border-gray-50 hover:bg-gray-50 text-left min-w-[640px]"
               >
                 <div>
                   <div className="text-gray-900">{r.supply.name}</div>
@@ -575,7 +575,7 @@ function TransactionsTab({ whParam, warehouses, activeWh, supervisor }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <Card className="p-3 flex items-center gap-2 flex-wrap flex-1 min-w-[300px]">
+        <Card className="p-3 flex items-center gap-2 flex-wrap flex-1 w-full sm:w-auto sm:min-w-[300px]">
           <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white" value={type} onChange={e => setType(e.target.value)}>
             <option value="">Tất cả loại</option>
             {Object.entries(TX_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -953,8 +953,8 @@ function StocktakeTab({ whParam, warehouses, activeWh }) {
         >＋ Bắt đầu kiểm kê mới</button>
       </div>
 
-      <Card>
-        <div className="grid grid-cols-[1fr_120px_100px_120px_120px] px-4 py-3 text-xs text-gray-500 border-b border-gray-100">
+      <Card className="overflow-x-auto">
+        <div className="grid grid-cols-[1fr_120px_100px_120px_120px] px-4 py-3 text-xs text-gray-500 border-b border-gray-100 min-w-[640px]">
           <div>Tên / Số phiên</div>
           <div>Ngày bắt đầu</div>
           <div>Số dòng</div>
@@ -968,7 +968,7 @@ function StocktakeTab({ whParam, warehouses, activeWh }) {
         ) : (
           sessions.map(s => (
             <button key={s._id} onClick={() => setActiveSessionId(s._id)}
-              className="w-full grid grid-cols-[1fr_120px_100px_120px_120px] px-4 py-3 text-sm border-b border-gray-50 hover:bg-gray-50 text-left">
+              className="w-full grid grid-cols-[1fr_120px_100px_120px_120px] px-4 py-3 text-sm border-b border-gray-50 hover:bg-gray-50 text-left min-w-[640px]">
               <div>
                 <div className="text-gray-900">{s.name}</div>
                 <div className="text-xs text-gray-500">{s.sessionNumber}</div>
@@ -1125,12 +1125,12 @@ function StocktakeSession({ id, onClose }) {
       </div>
 
       <Card className="p-3 flex gap-2 flex-wrap">
-        <input className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Tìm vật tư..." value={q} onChange={e => setQ(e.target.value)} />
+        <input className="flex-1 w-full sm:w-auto sm:min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Tìm vật tư..." value={q} onChange={e => setQ(e.target.value)} />
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyDiff} onChange={e => setOnlyDiff(e.target.checked)} /> Chỉ chênh lệch</label>
       </Card>
 
-      <Card>
-        <div className="grid grid-cols-[1fr_80px_140px_80px_160px] gap-3 px-4 py-3 text-xs text-gray-500 border-b border-gray-100">
+      <Card className="overflow-x-auto">
+        <div className="grid grid-cols-[1fr_80px_140px_80px_160px] gap-3 px-4 py-3 text-xs text-gray-500 border-b border-gray-100 min-w-[660px]">
           <div>Vật tư</div><div className="text-center">Tồn HT</div><div className="text-center">Đã đếm</div><div className="text-center">Chênh</div><div>Lý do</div>
         </div>
         {items.map(it => {
@@ -1138,7 +1138,7 @@ function StocktakeSession({ id, onClose }) {
           const varCls = variance > 0 ? 'text-blue-700' : variance < 0 ? 'text-red-700' : 'text-gray-400'
           const needReason = variance !== 0 && !it.reasonCode
           return (
-            <div key={it.supplyId} className="grid grid-cols-[1fr_80px_140px_80px_160px] gap-3 px-4 py-3 text-sm border-b border-gray-50 items-center">
+            <div key={it.supplyId} className="grid grid-cols-[1fr_80px_140px_80px_160px] gap-3 px-4 py-3 text-sm border-b border-gray-50 items-center min-w-[660px]">
               <div>
                 <div className="text-gray-900">{it.supplyName}</div>
                 <div className="text-xs text-gray-500">{it.supplyCode}</div>
@@ -1211,7 +1211,7 @@ function MatrixTab({ warehouses }) {
   return (
     <div className="space-y-3">
       <Card className="p-3 flex items-center gap-2 flex-wrap">
-        <input className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Tìm vật tư..." value={q} onChange={e => setQ(e.target.value)} />
+        <input className="flex-1 w-full sm:w-auto sm:min-w-[240px] border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Tìm vật tư..." value={q} onChange={e => setQ(e.target.value)} />
         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={belowMinOnly} onChange={e => setBelowMinOnly(e.target.checked)} /> Chỉ dưới định mức</label>
       </Card>
 

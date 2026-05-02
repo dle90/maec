@@ -54,17 +54,20 @@ The native Expo/RN app (P3 in CLAUDE.md) is still not scaffolded. Until then we 
 - [Layout.jsx](maec-app/client/src/components/Layout.jsx): sidebar becomes off-canvas drawer with backdrop below `lg` (1024px), auto-closes on nav. Header verbose elements pushed to `lg`/`xl` (long title, Chế độ xem badge, currency text). Search button → icon-only below `md`.
 - [Registration.jsx](maec-app/client/src/pages/Registration.jsx): HeaderStepper wraps + hides /tiếp đón sub-label and user/date on mobile. Body row stacks `flex-col lg:flex-row`. TodayRail goes `w-full lg:w-80` with `max-h-60` on mobile. SearchView padding scales `px-3 sm:px-6`.
 
-### Phase 2 — pending (data-heavy pages)
-Tables overflow horizontally and modals exceed 375px viewports. Files flagged by audit:
-- **ThuNgan.jsx** — 8-column billing table, no `overflow-x-auto` wrapper
-- **Billing.jsx** — `w-80` left invoice panel doesn't reflow; right-side tables need scroll wrapper
-- **Kham.jsx** — filter row has `min-w-[240px]` inputs; encounter list rows are dense
-- **HRManagement.jsx** — permission matrix `min-w-[140px]` columns + `max-w-2xl` modals overflow at 375px
-- **Inventory.jsx** — `max-w-[1600px]` container; some views have `overflow-x-auto`, others don't
-- **Catalogs.jsx** — dynamic table per catalog type; right-side drawer is fine but content cramps
-- **LichHen.jsx** (new 2026-05-02) — day-view calendar grid is a 2-site horizontal layout `repeat(${siteCols.length}, minmax(220px, 1fr))` plus a 60px time gutter. At 375px the columns get cut. Reminder tab table is 6 cols with action buttons. Either overflow-x-auto wrap, or single-site stacked view on mobile.
+### Phase 2 — done 2026-05-02 (workflow tabs)
+Pass over the 6 active workflow tabs (Tổng quan / Bệnh nhân / Lịch hẹn / Khám / Thu ngân / Kho — skipped Dịch vụ since the Bảng giá matrix is inherently wide):
+- **Dashboard.jsx** (Tổng quan) — was already responsive (`grid-cols-2 lg:grid-cols-4` KPI, `lg:grid-cols-[1fr_360px]` chart layout). No changes.
+- **LichHen.jsx** — toolbar already uses `flex-wrap`, calendar grid wrapped in `overflow-auto` so week view scrolls horizontally on mobile.
+- **Inventory.jsx** — outer padding `p-6` → `p-2 sm:p-4 lg:p-6`. PageHeader gets `flex-wrap`, hides `/vận hành` and `👤 user` chips below md. Filter inputs `min-w-[240/300px]` → `w-full sm:w-auto sm:min-w-[…]`. Three wide tables (Tồn kho / Phiên kiểm kê / Kiểm kê items) wrapped in `Card overflow-x-auto` + their grids get `min-w-[640/660px]` so columns don't squash.
+- **Kham.jsx** — PatientLookup input `w-64` → `w-full sm:w-64`, wrapper `relative w-full sm:w-auto` so it stretches when wrapping.
+- **ThuNgan.jsx** — 8-col billing table wrapped in `overflow-x-auto` + `min-w-[720px]`. Tab strip wrapped in `overflow-x-auto` so the 3 status tabs scroll at very narrow widths.
+- **Catalogs.jsx PatientsTable** — search input `w-72` → `w-full sm:w-72`. Table already had `overflow-auto whitespace-nowrap` and modal already uses `w-full max-w-5xl p-4`. No table changes.
 
-Pattern for each: wrap tables in `overflow-x-auto`, cap modals to `max-w-[calc(100vw-2rem)] sm:max-w-2xl`, scale `min-w-[…]` filter inputs to `w-full sm:min-w-[240px]`.
+### Phase 2 — still pending (legacy pages outside the new sidebar)
+- **Billing.jsx** — `w-80` left invoice panel doesn't reflow; right-side tables need scroll wrapper. Lives in Khác → "Phiếu thu (legacy)" so lower priority.
+- **HRManagement.jsx** — permission matrix `min-w-[140px]` columns + `max-w-2xl` modals overflow at 375px. Admin-only tab.
+
+Pattern used: wrap wide tables in `overflow-x-auto` + give the inner grid/table a `min-w-[…]` so columns keep their intent and the page horizontally scrolls instead of squishing; cap modals to `max-w-Nxl` with `p-4` outer padding (the inner `w-full` shrinks to viewport); scale `min-w-[…]` filter inputs to `w-full sm:w-auto sm:min-w-[…]`.
 
 ### Đăng ký step 2 simplified to pure check-in (2026-05-02) — supersedes prior polish ask
 The 2026-05-01 polish ask above was for the step-2 service picker + cart + "In phiếu chỉ định" panel. That panel has been deleted. Step 2 is now `CheckInView`: PatientSummary + a single "Tiếp đón" button that POSTs `services: []` to `/registration/check-in`, creating an empty Encounter and redirecting to Khám. No invoice / phiếu is generated at this stage; KTV/BS pick services in Khám and Thu Ngân handles billing after the visit.
