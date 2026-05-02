@@ -5,3 +5,5 @@ dist/
 .mcp.json
 .vscode/
 .playwright-mcp/
+.claude/
+tmp-playwright/

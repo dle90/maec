@@ -2,6 +2,37 @@
 
 Living doc of deferred work / known limits. Append before finishing any feature; check before starting one.
 
+## Sprint state (2026-05-02 EOD) — re-verified clean
+
+Four sprints shipped + audit-verified:
+- **Sprint 0** (`b2ad8c7`): Bệnh nhân server-side filters + pagination + 9 indexes. Ready for tens-of-thousands import.
+- **Sprint A** (`7a4609b`): catalogCRUD `_id` fix, deleted legacy `/api/registration/appointments`, mobile patient/encounter headers, Lịch hẹn 30-min event card compact mode, Q2 (auto-stamp `assignedTo`), Q4 (In lại biên lai), 2 typo fixes.
+- **Sprint B** (`a0cf9ae`): Q3 full Payment ledger (`Encounter.payments[]` + `/payment` + `/refund` + stock-return reversal), inventory transfer auto-confirm + expiry propagation, Q7 Đổi cơ sở, shared `useEscapeKey` hook wired to 8+ modals.
+- **Sprint C** (`02e4c7e`): UTC→local-date helper (`maec-app/server/lib/dates.js`), POST /encounters idempotency, bill-items stable subdoc `_id`, Q5 stocktake productKind chips + category dropdown, mobile UI polish (Thu ngân tabs, Bệnh nhân table min-w, Inventory disabled-button styling + mobile tab strip, AppointmentForm mobile grid).
+
+Smoke scripts in `maec-app/server/scripts/` — re-run any time via `cd maec-app/server && railway run node scripts/<name>.js`:
+- `smoke-patients-10k.js` — Sprint 0 pagination + filters (10k seed, asserts age window narrows correctly, cleans up)
+- `smoke-patients-route.js` — same but via HTTP (500 row seed)
+- `smoke-catalog-roundtrip.js` — Sprint A catalogCRUD POST→PUT→GET→DELETE
+- `smoke-sprintB.js` — transfer flow + payment ledger + Q7 site swap
+- `smoke-sprintC.js` — idempotency + bill-items stable _id + stocktake productKind + date helpers
+- `audit2-seed.js` — quick seed/clean of one `_TESTFL2_` patient + encounter for UI flow testing
+
+All test-data prefixes use `_TEST*_*` so cleanup is `M.deleteMany({_id:{$regex:'^_TEST'}})`. Last verified 0 residual `_TEST*` rows in patients/encounters/appointments.
+
+## 8 workflow questions — answered + implemented
+
+| Q | Decision | Where |
+|---|---|---|
+| Q1 — Reschedule audit | A: keep as-is (no audit) | n/a |
+| Q2 — KTV/BS assignment | B: auto-stamp `assignedTo` on save | `encounters.js` PUT /:id/services/:code |
+| Q3 — Partial pay + refund | C: full Payment ledger + refund + stock-return | new endpoints + ThuNgan rewrite |
+| Q4 — Reprint biên lai | B: button on paid rows + drawer | ThuNgan.jsx |
+| Q5 — Stocktake by category | C: productKind chips + category dropdown | StocktakeNewModal |
+| Q6 — Site filter on Bệnh nhân | A: skip (BN db is shared) | n/a |
+| Q7 — Edit encounter site | B: editable pre-checkout | `PUT /encounters/:id/site` + Đổi cơ sở button |
+| Q8 — Server-side patient filters | C: filters + pagination + larger pageSize | Sprint 0 |
+
 ## Lịch hẹn — reminder automation (deferred 2026-05-02)
 
 Lịch hẹn tab shipped 2026-05-02 with **manual reminder workflow only**: staff calls / texts patients themselves and ticks a "Đã nhắc / Không liên lạc được" checkbox on the Nhắc lịch view. No automation yet.
