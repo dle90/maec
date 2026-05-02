@@ -2,6 +2,30 @@
 
 Living doc of deferred work / known limits. Append before finishing any feature; check before starting one.
 
+## Lịch hẹn — reminder automation (deferred 2026-05-02)
+
+Lịch hẹn tab shipped 2026-05-02 with **manual reminder workflow only**: staff calls / texts patients themselves and ticks a "Đã nhắc / Không liên lạc được" checkbox on the Nhắc lịch view. No automation yet.
+
+When the clinic picks a delivery channel (likely Zalo OA or VietGuys / Speedsms for SMS), wire it server-side into a `POST /appointments/auto-remind` cron (T-1 day at e.g. 16:00) that:
+- iterates `Appointment.find({ scheduledAt: tomorrow, status: in [scheduled, confirmed], reminderStatus: 'pending' })`
+- calls the provider for each
+- sets `reminderStatus = 'reminded'` + `remindMethod = 'sms'|'zalo'` + `remindedBy = 'system'` on success
+- sets `'failed'` + log on failure (so the manual queue picks them up next day)
+
+Model already has the fields (`reminderStatus`, `remindedAt`, `remindedBy`, `remindMethod`, `remindNote`). UI on Nhắc lịch view already shows the method tag + reminder timestamp.
+
+Provider creds need to land in Railway env (`SMS_API_KEY` etc.) before this can be turned on.
+
+## Lịch hẹn — walk-in appointments don't auto-create Patient (deferred 2026-05-02)
+
+`POST /api/appointments` accepts `patientName + phone` without a `patientId` so phone-enquiry bookings can land on the calendar before the person is in the patient DB. The Tiếp đón button is disabled for these (it requires `patientId`); staff has to open the appt → Sửa → search/create the patient first, then re-tiếp đón.
+
+If walk-in becomes common, add a "Tạo bệnh nhân từ lịch này" affordance in the appointment detail modal that pops the FormView (already extracted from Registration.jsx as embeddable) prefilled with the appt's `patientName + phone + dob + gender`, then writes the new `patientId` back onto the appointment.
+
+## Lịch hẹn — slot conflict warning (deferred 2026-05-02)
+
+The form lets you double-book the same site/time. Calendar visualisation makes overlaps obvious so this hasn't bitten anyone, but if scheduling tightens add a server-side check on POST/PUT against `Appointment.find({ site, scheduledAt overlap, status: not in [cancelled, no_show] })` and either block or warn-then-confirm.
+
 ## Bệnh nhân — referrer typeahead with create-new (deferred 2026-05-02)
 
 The patient form ([FormView in Registration.jsx](maec-app/client/src/pages/Registration.jsx)) currently uses a 2-dropdown picker for referrers (Loại đối tác select → Đối tác giới thiệu select listing all referrers of that type). With a long referral list this gets unwieldy.
@@ -38,6 +62,7 @@ Tables overflow horizontally and modals exceed 375px viewports. Files flagged by
 - **HRManagement.jsx** — permission matrix `min-w-[140px]` columns + `max-w-2xl` modals overflow at 375px
 - **Inventory.jsx** — `max-w-[1600px]` container; some views have `overflow-x-auto`, others don't
 - **Catalogs.jsx** — dynamic table per catalog type; right-side drawer is fine but content cramps
+- **LichHen.jsx** (new 2026-05-02) — day-view calendar grid is a 2-site horizontal layout `repeat(${siteCols.length}, minmax(220px, 1fr))` plus a 60px time gutter. At 375px the columns get cut. Reminder tab table is 6 cols with action buttons. Either overflow-x-auto wrap, or single-site stacked view on mobile.
 
 Pattern for each: wrap tables in `overflow-x-auto`, cap modals to `max-w-[calc(100vw-2rem)] sm:max-w-2xl`, scale `min-w-[…]` filter inputs to `w-full sm:min-w-[240px]`.
 

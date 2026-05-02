@@ -8,6 +8,7 @@ import SiteList from './pages/SiteList'
 import Workflow from './pages/Workflow'
 import RIS from './pages/RIS'
 import Kham from './pages/Kham'
+import LichHen from './pages/LichHen'
 import ThuNgan from './pages/ThuNgan'
 import Registration from './pages/Registration'
 import CRM from './pages/CRM'
@@ -48,6 +49,7 @@ function AuthenticatedRoutes() {
             <Route path="/" element={<Dashboard />} />
             {isWorkflowUser && <Route path="/workflow" element={<Workflow />} />}
             {isRISUser && <Route path="/ris" element={<RIS />} />}
+            {isWorkflowUser && <Route path="/lich-hen" element={<LichHen />} />}
             {isWorkflowUser && <Route path="/kham" element={<Kham />} />}
             {isWorkflowUser && <Route path="/thu-ngan" element={<ThuNgan />} />}
             {/* Đăng ký removed from sidebar 2026-05-02 (merged into Bệnh nhân).

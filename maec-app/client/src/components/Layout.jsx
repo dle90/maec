@@ -23,6 +23,10 @@ const NAV = [
     items: [{ path: '/catalogs/patients', label: 'Bệnh nhân', icon: '🧑', workflowOnly: true }]
   },
   {
+    group: 'shortcut-lichhen', headerless: true,
+    items: [{ path: '/lich-hen', label: 'Lịch hẹn', icon: '📅', workflowOnly: true }]
+  },
+  {
     group: 'shortcut-kham', headerless: true,
     items: [{ path: '/kham', label: 'Khám', icon: '🩺', workflowOnly: true }]
   },
