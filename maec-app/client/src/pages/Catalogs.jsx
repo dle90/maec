@@ -94,8 +94,8 @@ const CATALOG_FIELDS = {
     ],
   },
   'services': {
-    columns: ['code', 'name', 'category', 'station', 'role', 'devices', 'basePrice', 'inPackagePrice'],
-    columnLabels: { code: 'Mã', name: 'Tên', category: 'Nhóm', station: 'Trạm', role: 'Người TH', devices: 'Thiết bị', basePrice: 'Giá lẻ', inPackagePrice: 'Giá trong gói' },
+    columns: ['code', 'name', 'category', 'basePrice', 'inPackagePrice'],
+    columnLabels: { code: 'Mã', name: 'Tên', category: 'Nhóm', basePrice: 'Giá lẻ', inPackagePrice: 'Giá trong gói' },
     editFields: [
       { key: 'code', label: 'Mã', required: true },
       { key: 'name', label: 'Tên', required: true, wide: true },
@@ -106,15 +106,6 @@ const CATALOG_FIELDS = {
         { value: 'cl',       label: 'Kính tiếp xúc + kiểm soát cận thị' },
         { value: 'thuthuat', label: 'Thủ thuật' },
       ] },
-      { key: 'station', label: 'Trạm' },
-      { key: 'role', label: 'Người thực hiện', type: 'select', options: [
-        { value: 'le-tan',       label: 'Lễ tân' },
-        { value: 'ktv-khuc-xa',  label: 'KTV khúc xạ' },
-        { value: 'ktv',          label: 'KTV' },
-        { value: 'bs',           label: 'Bác sĩ' },
-        { value: 'bs-cl',        label: 'BS chuyên KTX' },
-      ] },
-      { key: 'devices', label: 'Thiết bị (cách nhau bằng dấu phẩy)' },
       { key: 'basePrice', label: 'Giá lẻ (à la carte)', type: 'number' },
       { key: 'inPackagePrice', label: 'Giá trong gói (discount, để trống = dùng giá lẻ)', type: 'number' },
       { key: 'unit', label: 'Đơn vị' },
@@ -123,20 +114,12 @@ const CATALOG_FIELDS = {
     formatCell: {
       basePrice: v => fmtMoney(v),
       inPackagePrice: v => v == null ? '—' : fmtMoney(v),
-      devices: v => Array.isArray(v) ? v.join(', ') : (v || ''),
       category: v => ({
         'khucxa': 'Khúc xạ / thị lực',
         'iop-shv': 'Nhãn áp & SHV',
         'imaging': 'CĐHA + sinh trắc',
         'cl': 'KTX + kiểm soát CT',
         'thuthuat': 'Thủ thuật',
-      }[v] || v || ''),
-      role: v => ({
-        'le-tan': 'Lễ tân',
-        'ktv-khuc-xa': 'KTV khúc xạ',
-        'ktv': 'KTV',
-        'bs': 'Bác sĩ',
-        'bs-cl': 'BS KTX',
       }[v] || v || ''),
     },
     rightAlign: ['basePrice', 'inPackagePrice'],

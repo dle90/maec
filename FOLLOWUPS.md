@@ -179,6 +179,58 @@ File names `RIS.jsx`, `RadiologyReports.jsx`, `CriticalFindings.jsx` are interna
 ### Multi-site ops dashboard (salvage from old TeleradAdmin)
 Before deletion, `TeleradAdmin.jsx` had a useful pattern: sidebar of doctor workload + tabbed "pool / in-progress / done" case list with reassignment. For 2-location MAEC ops, an equivalent could show: per-clinic patient queue, per-station bottleneck, per-doctor workload. Build when ops needs it; pattern is documented here.
 
+## Devices module — deferred (split out of Service 2026-05-02)
+
+`Service.station`, `Service.role`, `Service.devices` were dropped from the [Service](maec-app/server/models/Service.js) schema and the [Catalogs.jsx](maec-app/client/src/pages/Catalogs.jsx) services config on 2026-05-02 (user: "we don't need station, role, devices here"). They were design notes baked into the catalog, never queried, never edited in production.
+
+When the Devices module is built, model it as its own collection (not nested on Service). Likely shape:
+
+- **`Device`** — physical hardware unit. Fields: `code`, `name`, `model`, `vendor`, `siteId` (Trung Kính / Kim Giang), `category` (auto-ref / slit-lamp / OCT / topo / fundus / biometer / etc.), `serialNumber`, `licenseStatus` (e.g. Optopol Revo DICOM-module licensed?), `status` (active / repair / retired), `lastServiceDate`.
+- **`Service ↔ Device` link** — many-to-many. A service can be performed on multiple device types (e.g. SVC-IOP runs on iCare or Goldmann); a device can serve multiple services (e.g. Optopol Revo covers OCT-ANT + OCT-POST + OCT-FULL + biometry on some configs). Probably a `ServiceDeviceCompatibility` join collection or an array of device-category codes on Service.
+- **Station / role** — these were *workflow* metadata, not device metadata. They probably belong on the Encounter form module config (which station each service is performed at) and on the user/role permission map (who can perform it), not on Device.
+
+### Source-of-truth snapshot (was in seed-maec-catalog.js until 2026-05-02)
+
+Keep this table to seed the Devices module + Service↔Device links when they're built:
+
+| Service code | Station | Role (performer) | Devices |
+|---|---|---|---|
+| SVC-AUTOREF | auto-ref | ktv-khuc-xa | Auto-refractor |
+| SVC-REFRACT | va-refraction | ktv-khuc-xa | Trial frame + lens, VA chart |
+| SVC-TG2M | tg2m | ktv-khuc-xa | Worth 4-dot, Maddox, Prism bar |
+| SVC-CYCLO | cyclo-room | ktv-khuc-xa | Atropin 0.5%, Cyclogyl 1%, Trial frame |
+| SVC-CONTRAST | contrast | ktv | Pelli-Robson chart |
+| SVC-ISHIHARA | color-vision | ktv | Ishihara plates |
+| SVC-IOP | iop-portable | ktv | iCare, Goldmann |
+| SVC-SLIT | slit-lamp | bs | Slit lamp, 90D / 78D |
+| SVC-BIO | bio | bs | Indirect ophthalmoscope, 20D lens |
+| SVC-SCHIRMER | schirmer | ktv | Schirmer strips |
+| SVC-TOPO | topo | ktv | Medmont |
+| SVC-OCT-ANT | oct | ktv | Optopol Revo |
+| SVC-OCT-POST | oct | ktv | Optopol Revo |
+| SVC-FUNDUS | fundus | ktv | DRS Plus (Trung Kính), Vietcan {model TBD} (Kim Giang) |
+| SVC-DRYEYE | dry-eye | ktv | IDRA, Medmont Meridia |
+| SVC-BIOMETRY | biometry | ktv | MediWorks AB800, Syseye, Optopol Revo |
+| SVC-OCT-FULL | oct | ktv | Optopol Revo |
+| SVC-CL-FIT-SOFT | cl-fit | bs-cl | Trial CL kit (soft), Slit lamp |
+| SVC-CL-FIT-RGP | cl-fit | bs-cl | Trial CL kit (RGP), Slit lamp |
+| SVC-CL-FIT-SCLERAL | cl-fit | bs-cl | Trial CL kit (scleral), Slit lamp |
+| SVC-MYOPIA-CONSULT | consult | bs | (none) |
+| SVC-FB-REMOVE | procedure | bs | Slit lamp, Sterile needle |
+
+Note SVC-FUNDUS already encodes a per-site device split (DRS Plus at Trung Kính vs Vietcan at Kim Giang) — the Devices module needs a `siteId` field to model this cleanly.
+
+## Per-site pricing — deferred (flagged 2026-05-02)
+
+`Service.basePrice` / `Service.inPackagePrice` and `Package.basePrice` / `Package.pricingTiers` are currently single-value across both sites. Prices may diverge across Trung Kính vs Kim Giang (different rent / patient mix / promotional pricing). When this becomes real:
+
+- Move pricing into its own collection (e.g. `ServicePrice` / `PackagePrice`) keyed by `(serviceCode | packageCode, siteId, effectiveFrom)`. Effective-dated rows so price changes are auditable and a historical bill can be reconstructed at the price in force at the time.
+- Keep `basePrice` on Service/Package as a **default / fallback** for sites that don't override, OR drop it entirely and require a price row per (item, site).
+- Billing flow ([routes/registration.js](maec-app/server/routes/registration.js), Billing.jsx, ThuNgan.jsx) needs to take the patient's encounter site and resolve the correct price. Today it reads `Service.basePrice` directly — that lookup is the join point.
+- Reports that aggregate revenue across sites need to keep the per-site price visible (don't average / collapse).
+
+Until then, treat the existing prices as "Trung Kính standard" and don't introduce site-specific pricing through ad-hoc fields.
+
 ## Imaging integration (P2)
 
 ### Imaging device adapters (Minh Anh hardware)
