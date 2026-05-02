@@ -180,6 +180,26 @@ File names `RIS.jsx`, `RadiologyReports.jsx`, `CriticalFindings.jsx` are interna
 ### Multi-site ops dashboard (salvage from old TeleradAdmin)
 Before deletion, `TeleradAdmin.jsx` had a useful pattern: sidebar of doctor workload + tabbed "pool / in-progress / done" case list with reassignment. For 2-location MAEC ops, an equivalent could show: per-clinic patient queue, per-station bottleneck, per-doctor workload. Build when ops needs it; pattern is documented here.
 
+## DB audit — sweep for remaining LinkRad-era leftover (TODO 2026-05-02)
+
+Operational data wipe ran 2026-05-02 via [scripts/wipe-operational-data.js](maec-app/server/scripts/wipe-operational-data.js): 3 Patient + 42 Encounter + 2 Invoice + zeros for Appointment/Payment/Entitlement/PartnerReferral/PatientAccount/PatientFeedback/Notification/Report/KeyImage/StudyAnnotation. Khám list now empty.
+
+Still needs an audit pass — collections we deliberately left intact may still contain LinkRad-era seed data:
+
+- **Users / Departments** — already re-seeded 2026-05-01 to MAEC's 20 users + Trung Kính/Kim Giang departments, but worth diffing against any old `nv_*` / `tp_*` / 3-region usernames still referenced from JSON fixtures (see "Demo data still references old LinkRad usernames" section in this file).
+- **ReferralDoctor / PartnerFacility / CommissionGroup / CommissionRule** — never touched in the rebrand pass; may contain LinkRad demo partners.
+- **Promotion / PromoCode** — `LINKRAD10` was renamed to `MAEC10` in 2026-05-01 sweep but other promos may exist.
+- **CustomerSource** — probably radiology-themed (BV chuyển, BS giới thiệu chụp...) rather than eye-clinic flavored.
+- **CancelReason** — likely radiology-themed.
+- **Specialty** — may list non-eye specialties.
+- **ReportTemplate** — radiology templates likely; need eye-exam templates instead.
+- **AuditLog** — kept on purpose, but contains pre-MAEC entries; consider wiping when ready.
+- **Inventory state** (InventoryLot / InventoryTransaction / Warehouse / StocktakeSession) — kept intact since user complaint was patients only, but worth a look in case there are demo lots from radiology supplies.
+- **Task** — clinic tasks; CLAUDE.md notes [tasks.json](maec-app/server/data/tasks.json) references dropped usernames.
+- **KVStore** — config blobs; may have LinkRad-era settings.
+
+When auditing, useful to: `mongosh` into the cluster, run `db.<collection>.find().count()` + spot-check a sample document. Easy fix script pattern: copy [scripts/wipe-operational-data.js](maec-app/server/scripts/wipe-operational-data.js) and adjust the TARGETS list.
+
 ## Tổng quan dashboard — content TBD (placeholder live 2026-05-02)
 
 The sidebar's first item ("Tổng quan" 📊) currently routes to [Dashboard.jsx](maec-app/client/src/pages/Dashboard.jsx) which is just a welcome card ("Xin chào, ..."). The user asked for a real Tổng quan but said "we'll go over what should be in there later." When that conversation happens, candidates to surface:
