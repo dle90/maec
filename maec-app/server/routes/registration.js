@@ -41,7 +41,10 @@ router.get('/patients', requireAuth, async (req, res) => {
     const filter = {}
     if (q) {
       const re = new RegExp(q, 'i')
-      filter.$or = [{ name: re }, { patientId: re }, { phone: re }, { idCard: re }]
+      filter.$or = [
+        { name: re }, { patientId: re }, { phone: re }, { idCard: re },
+        { guardianName: re }, { guardianPhone: re },
+      ]
     }
     if (site) filter.registeredSite = site
     const patients = await Patient.find(filter).limit(Number(limit)).lean()

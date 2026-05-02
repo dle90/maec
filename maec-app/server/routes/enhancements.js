@@ -373,7 +373,7 @@ router.get('/search', requireAuth, async (req, res) => {
     const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
 
     const [patients, studies, services, employees, referralDoctors] = await Promise.all([
-      Patient.find({ $or: [{ name: re }, { phone: re }, { patientId: re }, { _id: re }] }).limit(8).lean(),
+      Patient.find({ $or: [{ name: re }, { phone: re }, { patientId: re }, { _id: re }, { guardianName: re }, { guardianPhone: re }] }).limit(8).lean(),
       Encounter.find({ $or: [{ patientName: re }, { patientId: re }, { studyUID: re }, { _id: re }] }).limit(8).lean(),
       Service.find({ $or: [{ name: re }, { code: re }] }).limit(6).lean(),
       User.find({ $or: [{ displayName: re }, { _id: re }, { phone: re }] }).select('-password').limit(6).lean(),

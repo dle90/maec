@@ -361,6 +361,8 @@ router.get('/patients', requireAuth, async (req, res) => {
       { name: { $regex: req.query.q, $options: 'i' } },
       { patientId: { $regex: req.query.q, $options: 'i' } },
       { phone: { $regex: req.query.q, $options: 'i' } },
+      { guardianName: { $regex: req.query.q, $options: 'i' } },
+      { guardianPhone: { $regex: req.query.q, $options: 'i' } },
     ]
     const patients = await Patient.find(filter).sort({ createdAt: -1 }).limit(+(req.query.limit || 100)).lean()
     res.json(patients)
