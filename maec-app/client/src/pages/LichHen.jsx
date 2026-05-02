@@ -353,9 +353,9 @@ function ReminderView() {
 
       <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-0">
         <div className="overflow-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[760px]">
             <thead className="bg-gray-50 sticky top-0">
-              <tr className="text-left text-xs uppercase tracking-wide text-gray-600 font-semibold">
+              <tr className="text-left text-xs uppercase tracking-wide text-gray-600 font-semibold whitespace-nowrap">
                 <th className="px-3 py-2">Giờ</th>
                 <th className="px-3 py-2">Bệnh nhân</th>
                 <th className="px-3 py-2">Liên hệ</th>

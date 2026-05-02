@@ -1889,14 +1889,14 @@ function PageHeader({ breadcrumb, userName }) {
   const date = new Date()
   const dateStr = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`
   return (
-    <div className="flex items-center gap-6 px-4 py-2 border-b bg-white -mx-4 -mt-4 mb-4">
+    <div className="flex items-center gap-2 sm:gap-6 px-2 sm:px-4 py-2 border-b bg-white -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 mb-3 sm:mb-4 flex-wrap">
       <div className="flex items-baseline gap-2">
-        <div className="text-lg font-semibold text-gray-800">Danh mục</div>
-        <div className="text-xs text-gray-400 font-mono">/quản trị</div>
+        <div className="text-base sm:text-lg font-semibold text-gray-800">Danh mục</div>
+        <div className="text-xs text-gray-400 font-mono hidden sm:inline">/quản trị</div>
       </div>
-      <div className="flex-1 text-xs text-gray-500">{breadcrumb}</div>
+      <div className="flex-1 text-xs text-gray-500 min-w-0 truncate">{breadcrumb}</div>
       <div className="flex items-center gap-2 text-xs text-gray-500">
-        {userName && <span className="px-2 py-1 bg-gray-100 rounded-md">👤 {userName}</span>}
+        {userName && <span className="hidden md:inline-block px-2 py-1 bg-gray-100 rounded-md">👤 {userName}</span>}
         <span className="px-2 py-1 bg-gray-100 rounded-md">{dateStr}</span>
       </div>
     </div>
