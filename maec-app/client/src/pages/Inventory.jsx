@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api'
 
@@ -384,16 +384,27 @@ function StockTab({ whParam, initialProductKind = '' }) {
     { k: 'kinh',   label: 'Kính 👓' },
     { k: 'supply', label: 'Vật tư' },
   ]
+  // Catalog management URLs per kind — Kính/Thuốc are managed as inventory now
+  // (catalog rows + stock movements), Sản phẩm & Dịch vụ holds only clinical
+  // items. The link gives quick access to the SKU editor for the active kind.
+  const CATALOG_URLS = { thuoc: '/catalogs/thuoc', kinh: '/catalogs/kinh', supply: '/catalogs/supplies' }
+  const catalogUrl = CATALOG_URLS[productKind]
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 flex-wrap">
+      <div className="flex items-center gap-1 flex-wrap">
         {KIND_TABS.map(t => (
           <button key={t.k} onClick={() => setProductKind(t.k)}
             className={`px-3 py-1.5 text-sm rounded-lg font-semibold ${productKind === t.k ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
             {t.label}
           </button>
         ))}
+        {catalogUrl && (
+          <Link to={catalogUrl}
+            className="ml-auto text-xs text-blue-600 hover:text-blue-800 px-3 py-1.5 border border-blue-200 rounded-lg hover:bg-blue-50">
+            ⚙ Quản lý SKU {productKind === 'thuoc' ? 'Thuốc' : productKind === 'kinh' ? 'Kính' : 'Vật tư'} →
+          </Link>
+        )}
       </div>
       <Card className="p-3 flex items-center gap-2 flex-wrap">
         <input

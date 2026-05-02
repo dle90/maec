@@ -158,8 +158,15 @@ const CATALOG_FIELDS = {
       { key: 'category', label: 'Loại', type: 'select', options: [
         { value: 'gong',     label: 'Gọng kính' },
         { value: 'trong',    label: 'Tròng kính' },
-        { value: 'ktx',      label: 'Kính tiếp xúc' },
+        { value: 'ktx',      label: 'Kính tiếp xúc (mềm)' },
+        { value: 'ortho-k',  label: 'Ortho-K' },
         { value: 'phu-kien', label: 'Phụ kiện (CL care, dụng cụ)' },
+      ] },
+      { key: 'kinhType', label: 'Loại Ortho-K (chỉ áp dụng cho category Ortho-K)', type: 'select', options: [
+        { value: '',           label: '— không phân loại —' },
+        { value: 'standard',   label: 'Standard' },
+        { value: 'toric',      label: 'Toric' },
+        { value: 'customized', label: 'Customized' },
       ] },
       { key: 'brand', label: 'Brand' },
       { key: 'spec', label: 'Quy cách / dung tích / size' },
@@ -170,7 +177,7 @@ const CATALOG_FIELDS = {
     formatCell: {
       importPrice: v => v == null ? '—' : Number(v).toLocaleString('vi-VN'),
       sellPrice: v => v == null ? '—' : Number(v).toLocaleString('vi-VN'),
-      category: v => ({ gong: 'Gọng', trong: 'Tròng', ktx: 'KTX', 'phu-kien': 'Phụ kiện' }[v] || v || ''),
+      category: v => ({ gong: 'Gọng', trong: 'Tròng', ktx: 'KTX (mềm)', 'ortho-k': 'Ortho-K', 'phu-kien': 'Phụ kiện' }[v] || v || ''),
     },
     rightAlign: ['importPrice', 'sellPrice'],
   },
@@ -304,21 +311,27 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
   const title = isNew ? 'Thêm mới' : (record.name || record.displayName || record.code || record._id)
   const subtitle = isNew ? catalogLabel : (record.code || record._id)
 
+  // Wider modal for catalogs that have a builder section (currently packages)
+  // since the bundle / tier / entitlement editor needs horizontal room.
+  const isWideModal = catalogKey === 'packages'
+  const modalCls = isWideModal ? 'max-w-5xl' : 'max-w-2xl'
+  const formCols = isWideModal ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2'
+
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
-      <div className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className={`w-full ${modalCls} bg-white max-h-[92vh] flex flex-col shadow-2xl rounded-xl overflow-hidden`} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between">
-          <div>
-            <div className="text-base font-semibold text-gray-900 truncate max-w-[260px]">{title}</div>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
+          <div className="min-w-0 flex-1">
+            <div className="text-base font-semibold text-gray-900 truncate">{title}</div>
             <div className="text-xs text-gray-400 font-mono mt-0.5">{subtitle}</div>
           </div>
-          <button onClick={onClose} aria-label="Đóng" className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
+          <button onClick={onClose} aria-label="Đóng" className="text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0">×</button>
         </div>
 
         {/* Tabs — only show history + usage for existing rows */}
         {!isNew && (
-          <div className="px-5 pt-3 border-b border-gray-100 flex gap-5 text-sm">
+          <div className="px-5 pt-3 border-b border-gray-100 flex gap-5 text-sm flex-shrink-0">
             <TabLink active={tab === 'info'} onClick={() => setTab('info')}>Thông tin</TabLink>
             <TabLink active={tab === 'history'} onClick={() => setTab('history')}>Lịch sử</TabLink>
             <TabLink active={tab === 'usage'} onClick={() => setTab('usage')}>Điểm sử dụng</TabLink>
@@ -331,16 +344,16 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
             <>
               <div className="p-5 space-y-3">
                 {error && <div className="text-sm text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-lg">{error}</div>}
-                <div className="grid grid-cols-2 gap-3">
+                <div className={`grid ${formCols} gap-3`}>
                   {fields.map(f => (
-                    <div key={f.key} className={f.wide ? 'col-span-2' : ''}>
+                    <div key={f.key} className={f.wide ? (isWideModal ? 'col-span-2 lg:col-span-3' : 'col-span-2') : ''}>
                       <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}{f.required ? <span className="text-rose-500"> *</span> : null}</label>
                       <FormField f={f} form={form} setForm={setForm} userOptions={userOptions} disabled={!canEdit} />
                     </div>
                   ))}
                 </div>
               </div>
-              {!isNew && catalogKey === 'packages' && <PackageBundleDetails pkg={record} />}
+              {!isNew && catalogKey === 'packages' && <PackageBuilder pkg={record} canEdit={canEdit} />}
             </>
           )}
           {tab === 'history' && !isNew && (
@@ -353,7 +366,7 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
 
         {/* Footer — save only on info tab */}
         {tab === 'info' && canEdit && (
-          <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2">
+          <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2 flex-shrink-0">
             <button onClick={onClose} className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
             <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">{saving ? 'Đang lưu...' : 'Lưu'}</button>
           </div>
@@ -400,92 +413,795 @@ function FormField({ f, form, setForm, userOptions, disabled }) {
   return <input className={inputCls} value={form[f.key] || ''} onChange={e => set(e.target.value)} disabled={disabled} />
 }
 
-// Read-only bundle / tier / entitlement view for a Gói khám row.
-// Resolves bundledServices codes against the live services catalog so users
-// see actual service names + the per-package price. Editing the bundle
-// itself is still seed-only — see note at the bottom of the panel.
-function PackageBundleDetails({ pkg }) {
+// Editable bundle / tier / entitlement view for a Gói khám row.
+// Each service in the bundle has a price-mode toggle [Giá lẻ / Trong gói] that
+// determines what it contributes to the package's suggested total. Tiers can
+// optionally attach a Kính SKU (e.g. Ortho-K lens). Entitlement covers
+// services + maxUses. "Lưu thay đổi" persists via PUT /catalogs/packages/:id.
+function PackageBuilder({ pkg, canEdit }) {
   const [services, setServices] = useState([])
+  const [kinhList, setKinhList] = useState([])
+  const [bundled, setBundled] = useState(() => normalizeBundle(pkg))
+  const [tiers, setTiers] = useState(() => (pkg.pricingTiers || []).map(t => ({ ...t })))
+  const [entOpen, setEntOpen] = useState(!!pkg.activatesEntitlement?.durationMonths)
+  const [entMonths, setEntMonths] = useState(pkg.activatesEntitlement?.durationMonths || 12)
+  const [entCovered, setEntCovered] = useState(() => (pkg.activatesEntitlement?.coveredServices || []).map(c => ({ ...c })))
+  const [picking, setPicking] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const [savedAt, setSavedAt] = useState(null)
+
+  useEffect(() => {
+    setBundled(normalizeBundle(pkg))
+    setTiers((pkg.pricingTiers || []).map(t => ({ ...t })))
+    setEntOpen(!!pkg.activatesEntitlement?.durationMonths)
+    setEntMonths(pkg.activatesEntitlement?.durationMonths || 12)
+    setEntCovered((pkg.activatesEntitlement?.coveredServices || []).map(c => ({ ...c })))
+    setSavedAt(null)
+    setErr('')
+  }, [pkg._id])
+
   useEffect(() => {
     let cancelled = false
-    api.get('/catalogs/services').then(r => { if (!cancelled) setServices(r.data || []) }).catch(() => {})
+    Promise.all([
+      api.get('/catalogs/services').catch(() => ({ data: [] })),
+      api.get('/catalogs/kinh').catch(() => ({ data: [] })),
+    ]).then(([sR, kR]) => {
+      if (cancelled) return
+      setServices(sR.data || [])
+      setKinhList(kR.data || [])
+    })
     return () => { cancelled = true }
   }, [])
+
   const svcMap = Object.fromEntries(services.map(s => [s.code, s]))
-  const bundled = pkg.bundledServices || []
-  const tiers = pkg.pricingTiers || []
-  const ent = pkg.activatesEntitlement
+  const kinhMap = Object.fromEntries(kinhList.map(k => [k.code, k]))
+  const availableServices = services.filter(s => !bundled.some(b => b.code === s.code))
+
+  const priceFor = (entry) => {
+    const svc = svcMap[entry.code]
+    if (!svc) return 0
+    if (entry.priceMode === 'base') return svc.basePrice || 0
+    return svc.inPackagePrice ?? svc.basePrice ?? 0
+  }
+  const suggestedTotal = bundled.reduce((sum, b) => sum + priceFor(b), 0)
+
+  const addService = (code) => {
+    if (!code || bundled.some(b => b.code === code)) return
+    setBundled([...bundled, { code, priceMode: 'inPackage' }])
+    setPicking(false)
+  }
+  const removeService = (code) => setBundled(bundled.filter(b => b.code !== code))
+  const flipMode = (code) => setBundled(bundled.map(b => b.code === code
+    ? { ...b, priceMode: b.priceMode === 'base' ? 'inPackage' : 'base' }
+    : b))
+
+  const addTier = () => setTiers([...tiers, { code: `tier-${tiers.length + 1}`, name: '', totalPrice: 0, extraProductSku: '', extraServices: [] }])
+  const updateTier = (i, patch) => setTiers(tiers.map((t, j) => j === i ? { ...t, ...patch } : t))
+  const removeTier = (i) => setTiers(tiers.filter((_, j) => j !== i))
+
+  const toggleEntCover = (code) => {
+    if (entCovered.some(c => c.serviceCode === code)) {
+      setEntCovered(entCovered.filter(c => c.serviceCode !== code))
+    } else {
+      setEntCovered([...entCovered, { serviceCode: code, maxUses: null }])
+    }
+  }
+  const setEntMaxUses = (code, val) => setEntCovered(entCovered.map(c => c.serviceCode === code
+    ? { ...c, maxUses: val === '' ? null : Math.max(0, +val) }
+    : c))
+
+  const save = async () => {
+    setSaving(true); setErr('')
+    try {
+      const body = {
+        ...pkg,
+        bundledServices: bundled.map(b => b.code),
+        bundledServiceModes: bundled.map(b => ({ code: b.code, priceMode: b.priceMode })),
+        pricingTiers: tiers,
+        activatesEntitlement: entOpen
+          ? { durationMonths: +entMonths || 12, coveredServices: entCovered }
+          : undefined,
+      }
+      delete body._id
+      await api.put(`/catalogs/packages/${pkg.code}`, body)
+      setSavedAt(new Date())
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Lỗi lưu')
+    }
+    setSaving(false)
+  }
+
+  const dirty = JSON.stringify({ b: bundled, t: tiers, e: entOpen, em: entMonths, ec: entCovered })
+    !== JSON.stringify({ b: normalizeBundle(pkg), t: pkg.pricingTiers || [], e: !!pkg.activatesEntitlement?.durationMonths, em: pkg.activatesEntitlement?.durationMonths || 12, ec: pkg.activatesEntitlement?.coveredServices || [] })
+
+  // Split this package's pricing tiers into separate packages, one per tier.
+  // Each new package: code = `${pkg.code}-${SUFFIX}` (uppercase first 3 chars
+  // of tier.code), bundles the source services + tier.extraServices, attaches
+  // tier.extraProductSku as bundledKinhSku. The source package is left active
+  // so the user can verify before deactivating it manually.
+  const splitTiers = async () => {
+    if (!tiers.length) return
+    const suffixOf = (code) => (code || 'TIER').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase()
+    const newPkgs = tiers.map(t => {
+      const suffix = suffixOf(t.code) || 'X'
+      const newCode = `${pkg.code}-${suffix}`
+      const allServiceCodes = [...new Set([
+        ...bundled.map(b => b.code),
+        ...(t.extraServices || []),
+      ])]
+      const modes = bundled.reduce((acc, b) => ({ ...acc, [b.code]: b.priceMode }), {})
+      return {
+        code: newCode,
+        name: `${pkg.name}${t.name ? ` — ${t.name}` : ''}`,
+        description: pkg.description || '',
+        bundledServices: allServiceCodes,
+        bundledServiceModes: allServiceCodes.map(code => ({
+          code, priceMode: modes[code] || 'inPackage', customPrice: 0,
+        })),
+        bundledKinhSku: t.extraProductSku || '',
+        basePrice: 0,
+        pricingTiers: [],
+        activatesEntitlement: pkg.activatesEntitlement,
+        status: 'active',
+      }
+    })
+    const labels = newPkgs.map(p => `  • ${p.code} — ${p.name}`).join('\n')
+    if (!confirm(`Tạo ${newPkgs.length} gói mới từ các bậc giá hiện tại:\n\n${labels}\n\nGói gốc ${pkg.code} sẽ vẫn active — bạn tự đặt inactive sau khi kiểm tra.`)) return
+    setSaving(true); setErr('')
+    try {
+      for (const p of newPkgs) {
+        await api.post('/catalogs/packages', p)
+      }
+      alert(`Đã tạo ${newPkgs.length} gói. Mở "Bảng giá gói" để xem & chỉnh giá.`)
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Lỗi tách bậc — kiểm tra trùng mã')
+    }
+    setSaving(false)
+  }
+
   return (
     <div className="border-t border-gray-100 px-5 py-4 space-y-5 bg-gray-50">
+      {/* Bundle editor */}
       <section>
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Dịch vụ trong gói ({bundled.length})</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Dịch vụ trong gói ({bundled.length})</h3>
+          {canEdit && !picking && availableServices.length > 0 && (
+            <button onClick={() => setPicking(true)} className="text-xs text-blue-600 hover:text-blue-800">+ Thêm dịch vụ</button>
+          )}
+        </div>
+        {picking && (
+          <div className="mb-2 p-2 bg-white border border-blue-200 rounded-lg">
+            <select autoFocus className="w-full text-sm border border-gray-200 rounded px-2 py-1"
+              defaultValue=""
+              onChange={e => addService(e.target.value)}>
+              <option value="" disabled>— Chọn dịch vụ —</option>
+              {availableServices.map(s => (
+                <option key={s.code} value={s.code}>
+                  {s.code} — {s.name} ({fmtMoney(s.basePrice || 0)}đ)
+                </option>
+              ))}
+            </select>
+            <button onClick={() => setPicking(false)} className="mt-1 text-xs text-gray-500 hover:text-gray-800">Hủy</button>
+          </div>
+        )}
         {bundled.length === 0 ? (
-          <div className="text-xs text-gray-400 italic">Chưa có dịch vụ nào</div>
+          <div className="text-xs text-gray-400 italic px-2 py-3 bg-white rounded border border-gray-200">Chưa có dịch vụ nào. Bấm "+ Thêm dịch vụ".</div>
         ) : (
           <ul className="space-y-1">
-            {bundled.map(code => {
-              const svc = svcMap[code]
-              const ala = svc?.basePrice ?? 0
-              const inPkg = svc?.inPackagePrice ?? ala
-              const isDiscounted = svc?.inPackagePrice != null && svc.inPackagePrice !== ala
+            {bundled.map(entry => {
+              const svc = svcMap[entry.code]
+              const base = svc?.basePrice ?? 0
+              const inPkg = svc?.inPackagePrice ?? base
+              const hasInPkgDiscount = svc?.inPackagePrice != null && svc.inPackagePrice !== base
+              const effective = priceFor(entry)
               return (
-                <li key={code} className="flex items-center justify-between gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
+                <li key={entry.code} className="flex items-center justify-between gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
                   <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[10px] text-gray-400">{code}</div>
+                    <div className="font-mono text-[10px] text-gray-400">{entry.code}</div>
                     <div className="text-gray-700 truncate">{svc?.name || <span className="italic text-gray-400">(không tìm thấy)</span>}</div>
                   </div>
-                  {svc && (
-                    <div className="font-mono text-[11px] text-gray-700 flex-shrink-0 text-right">
-                      {fmtMoney(inPkg)}đ
-                      {isDiscounted && <div className="text-[10px] text-gray-400 line-through">{fmtMoney(ala)}đ</div>}
+                  {svc && hasInPkgDiscount && canEdit && (
+                    <div className="inline-flex border border-gray-200 rounded overflow-hidden flex-shrink-0">
+                      <button type="button" onClick={() => entry.priceMode === 'base' || flipMode(entry.code)}
+                        className={`px-2 py-0.5 text-[10px] ${entry.priceMode === 'base' ? 'bg-gray-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                        Giá lẻ {fmtMoney(base)}đ
+                      </button>
+                      <button type="button" onClick={() => entry.priceMode === 'inPackage' || flipMode(entry.code)}
+                        className={`px-2 py-0.5 text-[10px] ${entry.priceMode === 'inPackage' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                        Trong gói {fmtMoney(inPkg)}đ
+                      </button>
                     </div>
+                  )}
+                  <div className="font-mono text-[11px] text-blue-700 flex-shrink-0 w-20 text-right">{fmtMoney(effective)}đ</div>
+                  {canEdit && (
+                    <button onClick={() => removeService(entry.code)} className="text-red-500 hover:text-red-700 text-base leading-none flex-shrink-0" aria-label="Bỏ">×</button>
                   )}
                 </li>
               )
             })}
           </ul>
         )}
+        {bundled.length > 0 && (
+          <div className="mt-2 text-xs text-gray-600 flex items-center justify-between bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
+            <span>Tổng giá đề xuất (sum theo lựa chọn trên):</span>
+            <span className="font-mono font-semibold text-blue-700">{fmtMoney(suggestedTotal)}đ</span>
+          </div>
+        )}
       </section>
 
-      {tiers.length > 0 && (
-        <section>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Bậc giá ({tiers.length})</h3>
-          <ul className="space-y-1">
-            {tiers.map(t => (
-              <li key={t.code} className="flex items-center justify-between gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-gray-700">{t.name}</div>
-                  <div className="font-mono text-[10px] text-gray-400 truncate">{t.code}{t.extraProductSku ? ` · ${t.extraProductSku}` : ''}</div>
+      {/* Tiers */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bậc giá ({tiers.length})</h3>
+          <div className="flex items-center gap-2">
+            {canEdit && tiers.length > 0 && (
+              <button onClick={splitTiers} disabled={saving}
+                className="text-xs text-purple-700 hover:text-purple-900 px-2 py-0.5 border border-purple-200 rounded hover:bg-purple-50"
+                title="Tạo các gói riêng từ mỗi bậc giá">
+                ⎘ Tách bậc thành gói riêng
+              </button>
+            )}
+            {canEdit && <button onClick={addTier} className="text-xs text-blue-600 hover:text-blue-800">+ Thêm bậc</button>}
+          </div>
+        </div>
+        {tiers.length === 0 ? (
+          <div className="text-xs text-gray-400 italic">Không có bậc giá. Gói dùng "Đơn giá" ở trên (form Thông tin) cho mọi lượt khám.</div>
+        ) : (
+          <ul className="space-y-2">
+            {tiers.map((t, i) => (
+              <li key={i} className="bg-white border border-gray-200 rounded-lg p-2.5 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <input value={t.name || ''} onChange={e => updateTier(i, { name: e.target.value })} disabled={!canEdit}
+                    placeholder="Tên bậc (vd: Standard)"
+                    className="flex-1 border border-gray-200 rounded px-2 py-1 text-sm" />
+                  <input value={t.code || ''} onChange={e => updateTier(i, { code: e.target.value })} disabled={!canEdit}
+                    placeholder="mã"
+                    className="w-24 border border-gray-200 rounded px-2 py-1 text-xs font-mono" />
+                  <input type="number" value={t.totalPrice || 0} onChange={e => updateTier(i, { totalPrice: +e.target.value })} disabled={!canEdit}
+                    className="w-28 border border-gray-200 rounded px-2 py-1 text-sm font-mono text-right" />
+                  <span className="text-xs text-gray-400">đ</span>
+                  {canEdit && <button onClick={() => removeTier(i)} className="text-red-500 hover:text-red-700 text-base leading-none">×</button>}
                 </div>
-                <div className="font-mono text-gray-700 flex-shrink-0">{fmtMoney(t.totalPrice)}đ</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Kính kèm:</span>
+                  <select value={t.extraProductSku || ''} onChange={e => updateTier(i, { extraProductSku: e.target.value })} disabled={!canEdit}
+                    className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs bg-white">
+                    <option value="">— Không có —</option>
+                    {kinhList.map(k => (
+                      <option key={k.code} value={k.code}>
+                        {k.code} — {k.name} ({fmtMoney(k.sellPrice || 0)}đ)
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </li>
             ))}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
-      {ent?.durationMonths > 0 && (
-        <section>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Quyền lợi kèm gói</h3>
-          <div className="text-xs text-gray-600 mb-2">Thời hạn: <span className="font-semibold">{ent.durationMonths} tháng</span></div>
-          {ent.coveredServices?.length > 0 && (
-            <ul className="space-y-1">
-              {ent.coveredServices.map(c => (
-                <li key={c.serviceCode} className="flex items-center justify-between gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[10px] text-gray-400">{c.serviceCode}</div>
-                    <div className="text-gray-700 truncate">{svcMap[c.serviceCode]?.name || <span className="italic text-gray-400">(không tìm thấy)</span>}</div>
-                  </div>
-                  <div className="text-[11px] text-gray-500 flex-shrink-0">{c.maxUses == null ? 'Không giới hạn' : `Tối đa ${c.maxUses} lần`}</div>
-                </li>
-              ))}
-            </ul>
+      {/* Entitlement */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Quyền lợi kèm gói</h3>
+          {canEdit && (
+            <label className="text-xs text-gray-600 inline-flex items-center gap-1.5">
+              <input type="checkbox" checked={entOpen} onChange={e => setEntOpen(e.target.checked)} />
+              Bật entitlement
+            </label>
           )}
-        </section>
-      )}
+        </div>
+        {entOpen ? (
+          <div className="bg-white border border-gray-200 rounded-lg p-2.5 space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">Thời hạn (tháng):</span>
+              <input type="number" min="1" value={entMonths} onChange={e => setEntMonths(+e.target.value)} disabled={!canEdit}
+                className="w-20 border border-gray-200 rounded px-2 py-1 text-sm font-mono text-right" />
+            </div>
+            <div className="text-xs text-gray-500">Dịch vụ được phủ:</div>
+            <ul className="space-y-1">
+              {bundled.map(b => {
+                const covered = entCovered.find(c => c.serviceCode === b.code)
+                return (
+                  <li key={b.code} className="flex items-center gap-2 text-xs">
+                    <input type="checkbox" checked={!!covered} onChange={() => toggleEntCover(b.code)} disabled={!canEdit} />
+                    <span className="flex-1 truncate">{svcMap[b.code]?.name || b.code}</span>
+                    {covered && (
+                      <>
+                        <span className="text-gray-400">Tối đa</span>
+                        <input type="number" min="0" value={covered.maxUses ?? ''} onChange={e => setEntMaxUses(b.code, e.target.value)} disabled={!canEdit}
+                          placeholder="∞"
+                          className="w-14 border border-gray-200 rounded px-1.5 py-0.5 text-xs font-mono text-right" />
+                        <span className="text-gray-400">lần</span>
+                      </>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400 italic">Không có entitlement. Gói chỉ áp 1 lần cho lượt khám hiện tại.</div>
+        )}
+      </section>
 
-      <div className="text-[11px] text-gray-400 italic">
-        Hiển thị chỉ đọc. Sửa bundle / tier / entitlement bằng cách chỉnh seed-maec-catalog.js và chạy lại seed.
+      {canEdit && (
+        <div className="border-t border-gray-200 pt-3 flex items-center justify-end gap-2">
+          {err && <div className="flex-1 text-xs text-rose-600">{err}</div>}
+          {savedAt && !dirty && <div className="flex-1 text-xs text-emerald-600">✓ Đã lưu lúc {savedAt.toLocaleTimeString('vi-VN')}</div>}
+          <button onClick={save} disabled={saving || !dirty}
+            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+            {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Read pkg.bundledServices + bundledServiceModes into a unified array of
+// { code, priceMode } entries. Missing modes default to 'inPackage'.
+function normalizeBundle(pkg) {
+  const modeMap = Object.fromEntries((pkg.bundledServiceModes || []).map(m => [m.code, m]))
+  return (pkg.bundledServices || []).map(code => {
+    const m = modeMap[code]
+    return {
+      code,
+      priceMode: m?.priceMode || 'inPackage',
+      customPrice: m?.customPrice || 0,
+    }
+  })
+}
+
+// PackagePriceMatrix — services × packages grid for cross-package editing.
+// Click a cell to cycle: empty → "gói" (in-package price) → "lẻ" (base price)
+// → empty. Bottom of each package column shows the auto-computed total
+// (sum of selected service prices + Kính kèm sellPrice if attached).
+// "Lưu thay đổi" persists every modified package via parallel PUTs.
+function PackagePriceMatrix({ canEdit }) {
+  const [packages, setPackages] = useState([])
+  const [services, setServices] = useState([])
+  const [kinhList, setKinhList] = useState([])
+  const [draft, setDraft] = useState({})  // packageCode → {bundle: [{code,priceMode}], kinh: code}
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const [savedAt, setSavedAt] = useState(null)
+  const [showInactive, setShowInactive] = useState(false)
+  const [kinhFilter, setKinhFilter] = useState('') // default: all Kính categories
+
+  const reload = async () => {
+    setLoading(true)
+    try {
+      const [pR, sR, kR] = await Promise.all([
+        api.get('/catalogs/packages'),
+        api.get('/catalogs/services'),
+        api.get('/catalogs/kinh'),
+      ])
+      const allPkgs = pR.data || []
+      setPackages(showInactive ? allPkgs : allPkgs.filter(p => p.status !== 'inactive'))
+      setServices(sR.data || [])
+      setKinhList(kR.data || [])
+      // Seed draft from server state. Two Kính bundling mechanisms:
+      //   bundledKinhSkus → specific Kính SKUs (any non-ortho-K kept as SKU-bundled)
+      //   bundledKinhTypes → ortho-K type tokens ('standard'/'toric'/'customized');
+      //                      the actual SKU is picked at billing time
+      // Backward compat: legacy single bundledKinhSku → bundledKinhSkus[0].
+      const d = {}
+      for (const p of allPkgs) {
+        const kinhArr = (p.bundledKinhSkus || []).length
+          ? [...p.bundledKinhSkus]
+          : (p.bundledKinhSku ? [p.bundledKinhSku] : [])
+        d[p.code] = {
+          bundle: normalizeBundle(p),
+          kinhSkus: kinhArr,
+          kinhTypes: [...(p.bundledKinhTypes || [])],
+        }
+      }
+      setDraft(d)
+      setSavedAt(null); setErr('')
+    } finally { setLoading(false) }
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { reload() }, [showInactive])
+
+  if (loading) return <div className="p-8 text-center text-gray-400 text-sm">Đang tải bảng giá gói...</div>
+  if (services.length === 0 || packages.length === 0) {
+    return <div className="p-8 text-center text-gray-400 text-sm">Chưa có dữ liệu gói/dịch vụ.</div>
+  }
+
+  const svcMap = Object.fromEntries(services.map(s => [s.code, s]))
+  const kinhMap = Object.fromEntries(kinhList.map(k => [k.code, k]))
+
+  const cellEntry = (pkgCode, svcCode) => (draft[pkgCode]?.bundle || []).find(b => b.code === svcCode) || null
+  const cellPrice = (svc, entry) => {
+    if (!svc || !entry) return 0
+    if (entry.priceMode === 'custom') return entry.customPrice || 0
+    if (entry.priceMode === 'base') return svc.basePrice || 0
+    return svc.inPackagePrice ?? svc.basePrice ?? 0
+  }
+  // Cycle MODE only. Empty → inPackage → base → custom (seeded with current
+  // effective price) → empty. Mode label click cycles; price input edits the
+  // custom override directly.
+  const cycleMode = (pkgCode, svcCode) => {
+    if (!canEdit) return
+    setSavedAt(null)
+    const svc = svcMap[svcCode]
+    const cur = cellEntry(pkgCode, svcCode)
+    setDraft(d => {
+      const bundle = (d[pkgCode]?.bundle || []).filter(b => b.code !== svcCode)
+      let next
+      if (cur == null) next = { code: svcCode, priceMode: 'inPackage', customPrice: 0 }
+      else if (cur.priceMode === 'inPackage') next = { ...cur, priceMode: 'base' }
+      else if (cur.priceMode === 'base') {
+        // Seed customPrice with current effective price (base) for convenience
+        next = { ...cur, priceMode: 'custom', customPrice: cur.customPrice || svc?.basePrice || 0 }
+      }
+      else next = null  // 'custom' → empty
+      if (next) bundle.push(next)
+      return { ...d, [pkgCode]: { ...d[pkgCode], bundle } }
+    })
+  }
+  // Set custom price — auto-promotes the cell to custom mode if not already.
+  const setCustomPrice = (pkgCode, svcCode, raw) => {
+    if (!canEdit) return
+    setSavedAt(null)
+    const num = Math.max(0, Number(String(raw).replace(/[^\d]/g, '')) || 0)
+    setDraft(d => {
+      const bundle = [...(d[pkgCode]?.bundle || [])]
+      const idx = bundle.findIndex(b => b.code === svcCode)
+      if (idx >= 0) {
+        bundle[idx] = { ...bundle[idx], priceMode: 'custom', customPrice: num }
+      } else {
+        bundle.push({ code: svcCode, priceMode: 'custom', customPrice: num })
+      }
+      return { ...d, [pkgCode]: { ...d[pkgCode], bundle } }
+    })
+  }
+  const isKinhInPkg = (pkgCode, kinhCode) => (draft[pkgCode]?.kinhSkus || []).includes(kinhCode)
+  const toggleKinh = (pkgCode, kinhCode) => {
+    if (!canEdit) return
+    setSavedAt(null)
+    setDraft(d => {
+      const cur = d[pkgCode]?.kinhSkus || []
+      const next = cur.includes(kinhCode) ? cur.filter(c => c !== kinhCode) : [...cur, kinhCode]
+      return { ...d, [pkgCode]: { ...d[pkgCode], kinhSkus: next } }
+    })
+  }
+
+  // Type-level toggle for ortho-K. The actual lens SKU is picked at billing
+  // time from whichever ortho-K SKUs match the type and are in stock.
+  const isTypeInPkg = (pkgCode, typeCode) => (draft[pkgCode]?.kinhTypes || []).includes(typeCode)
+  const toggleType = (pkgCode, typeCode) => {
+    if (!canEdit) return
+    setSavedAt(null)
+    setDraft(d => {
+      const cur = d[pkgCode]?.kinhTypes || []
+      const next = cur.includes(typeCode) ? cur.filter(c => c !== typeCode) : [...cur, typeCode]
+      return { ...d, [pkgCode]: { ...d[pkgCode], kinhTypes: next } }
+    })
+  }
+  // Build type → {label, skus, avgPrice} map from ortho-K SKUs
+  const orthoKByType = (() => {
+    const groups = {}
+    for (const k of kinhList) {
+      if (k.category !== 'ortho-k' || k.status === 'inactive') continue
+      const t = k.kinhType || ''
+      if (!groups[t]) groups[t] = { type: t, skus: [], total: 0, count: 0 }
+      groups[t].skus.push(k)
+      groups[t].total += (k.sellPrice || 0)
+      groups[t].count += 1
+    }
+    return groups
+  })()
+  const typeAvgPrice = (typeCode) => {
+    const g = orthoKByType[typeCode]
+    if (!g || g.count === 0) return 0
+    return Math.round(g.total / g.count)
+  }
+  const TYPE_LABELS = { standard: 'Standard', toric: 'Toric', customized: 'Customized' }
+
+  const pkgServiceTotal = (pkgCode) => {
+    const bundle = draft[pkgCode]?.bundle || []
+    return bundle.reduce((s, b) => s + cellPrice(svcMap[b.code], b), 0)
+  }
+  const pkgKinhPrice = (pkgCode) => {
+    return (draft[pkgCode]?.kinhSkus || []).reduce((s, code) => s + (kinhMap[code]?.sellPrice || 0), 0)
+  }
+  const pkgTypePrice = (pkgCode) => {
+    return (draft[pkgCode]?.kinhTypes || []).reduce((s, t) => s + typeAvgPrice(t), 0)
+  }
+  const pkgGrandTotal = (pkgCode) => pkgServiceTotal(pkgCode) + pkgKinhPrice(pkgCode) + pkgTypePrice(pkgCode)
+
+  const isDirty = (pkgCode) => {
+    const orig = packages.find(p => p.code === pkgCode)
+    if (!orig) return false
+    const origBundle = normalizeBundle(orig)
+    const draftBundle = draft[pkgCode]?.bundle || []
+    if (origBundle.length !== draftBundle.length) return true
+    const origMap = Object.fromEntries(origBundle.map(b => [b.code, b]))
+    for (const b of draftBundle) {
+      const o = origMap[b.code]
+      if (!o) return true
+      if (o.priceMode !== b.priceMode) return true
+      if (b.priceMode === 'custom' && (o.customPrice || 0) !== (b.customPrice || 0)) return true
+    }
+    const origKinh = (orig.bundledKinhSkus || []).length
+      ? [...orig.bundledKinhSkus].sort()
+      : (orig.bundledKinhSku ? [orig.bundledKinhSku] : [])
+    const draftKinh = [...(draft[pkgCode]?.kinhSkus || [])].sort()
+    if (origKinh.join(',') !== draftKinh.join(',')) return true
+    const origTypes = [...(orig.bundledKinhTypes || [])].sort()
+    const draftTypes = [...(draft[pkgCode]?.kinhTypes || [])].sort()
+    if (origTypes.join(',') !== draftTypes.join(',')) return true
+    return false
+  }
+  const dirtyCodes = packages.filter(p => isDirty(p.code)).map(p => p.code)
+
+  const save = async () => {
+    if (dirtyCodes.length === 0) return
+    setSaving(true); setErr('')
+    try {
+      await Promise.all(dirtyCodes.map(code => {
+        const orig = packages.find(p => p.code === code)
+        const d = draft[code]
+        return api.put(`/catalogs/packages/${code}`, {
+          ...orig,
+          _id: undefined,
+          bundledServices: d.bundle.map(b => b.code),
+          bundledServiceModes: d.bundle.map(b => ({
+            code: b.code,
+            priceMode: b.priceMode,
+            customPrice: b.priceMode === 'custom' ? (b.customPrice || 0) : 0,
+          })),
+          bundledKinhSkus: d.kinhSkus || [],
+          bundledKinhSku: '',
+          bundledKinhTypes: d.kinhTypes || [],
+        })
+      }))
+      await reload()
+      setSavedAt(new Date())
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Lỗi lưu')
+    }
+    setSaving(false)
+  }
+
+  // Sort services by category then by name for stable rendering
+  const orderedServices = [...services].sort((a, b) => (a.category || '').localeCompare(b.category || '') || (a.name || '').localeCompare(b.name || ''))
+
+  // Kính SKU rows: shown for non-ortho-K Kính (frames, soft CL, accessories
+  // etc.). Ortho-K is bundled at type level and rendered separately above.
+  const visibleKinh = kinhList
+    .filter(k => k.status !== 'inactive')
+    .filter(k => k.category !== 'ortho-k')   // ortho-K handled by type rows
+    .filter(k => !kinhFilter || kinhFilter === 'ortho-k' || k.category === kinhFilter)
+    .sort((a, b) => (a.category || '').localeCompare(b.category || '') || (a.name || '').localeCompare(b.name || ''))
+  // Ortho-K type rows: only shown if there are ortho-K SKUs categorized.
+  // Order: standard → toric → customized → others (alphabetical)
+  const TYPE_ORDER = ['standard', 'toric', 'customized']
+  const visibleTypes = (kinhFilter === '' || kinhFilter === 'ortho-k')
+    ? Object.keys(orthoKByType)
+        .filter(t => t)  // skip empty/uncategorized for now
+        .sort((a, b) => {
+          const ai = TYPE_ORDER.indexOf(a); const bi = TYPE_ORDER.indexOf(b)
+          if (ai !== -1 && bi !== -1) return ai - bi
+          if (ai !== -1) return -1
+          if (bi !== -1) return 1
+          return a.localeCompare(b)
+        })
+    : []
+  const uncategorizedOrthoK = (orthoKByType[''] || { skus: [] }).skus.length
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 flex flex-col max-h-[calc(100vh-12rem)]">
+      <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-3 flex-wrap flex-shrink-0">
+        <div className="text-xs text-gray-500">
+          <b className="text-gray-700">{services.length}</b> dịch vụ × <b className="text-gray-700">{packages.length}</b> gói.
+          Bấm nhãn ô: <span className="px-1 rounded bg-blue-100 text-blue-700 font-mono">gói</span> → <span className="px-1 rounded bg-gray-200 text-gray-700 font-mono">lẻ</span> → <span className="px-1 rounded bg-yellow-200 text-yellow-800 font-mono">tự</span> → bỏ. Sửa giá trực tiếp để chuyển sang "tự".
+        </div>
+        <label className="text-xs text-gray-600 inline-flex items-center gap-1">
+          <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />
+          Hiện gói đã khóa
+        </label>
+        <label className="text-xs text-gray-600 inline-flex items-center gap-1">
+          Kính:
+          <select value={kinhFilter} onChange={e => setKinhFilter(e.target.value)}
+            className="border border-gray-200 rounded px-1.5 py-0.5 text-xs bg-white">
+            <option value="">Tất cả</option>
+            <option value="ortho-k">Ortho-K</option>
+            <option value="ktx">KTX (mềm)</option>
+            <option value="trong">Tròng</option>
+            <option value="gong">Gọng</option>
+            <option value="phu-kien">Phụ kiện</option>
+          </select>
+        </label>
+        <div className="ml-auto flex items-center gap-2">
+          {err && <span className="text-xs text-rose-600">{err}</span>}
+          {savedAt && dirtyCodes.length === 0 && <span className="text-xs text-emerald-600">✓ Đã lưu lúc {savedAt.toLocaleTimeString('vi-VN')}</span>}
+          {canEdit && (
+            <button onClick={save} disabled={saving || dirtyCodes.length === 0}
+              className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+              {saving ? 'Đang lưu…' : `Lưu ${dirtyCodes.length || ''} thay đổi`.trim()}
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto">
+      <table className="text-xs whitespace-nowrap">
+        <thead className="sticky top-0 z-30">
+          {/* Row 1: column headers (sticky top:0) */}
+          <tr className="bg-gray-50 text-gray-600">
+            <th className="sticky top-0 left-0 bg-gray-50 px-2 py-2 text-left font-semibold border-r border-gray-200 z-30">Mã DV</th>
+            <th className="sticky top-0 left-[80px] bg-gray-50 px-2 py-2 text-left font-semibold border-r border-gray-200 min-w-[200px] z-30">Tên dịch vụ</th>
+            <th className="sticky top-0 px-2 py-2 text-right font-semibold border-r border-gray-200 bg-gray-100 z-20">Giá lẻ</th>
+            <th className="sticky top-0 px-2 py-2 text-right font-semibold border-r border-gray-200 bg-gray-100 z-20">Giá trong gói</th>
+            {packages.map(p => (
+              <th key={p.code} className="sticky top-0 px-2 py-2 text-center font-semibold border-r border-gray-200 align-bottom bg-gray-50 z-20">
+                <div className="text-[10px] font-mono text-gray-400">{p.code}</div>
+                <div className="text-xs text-gray-700 max-w-[100px] mx-auto whitespace-normal" title={p.name}>{p.name}</div>
+              </th>
+            ))}
+          </tr>
+          {/* Row 2: Tổng giá gói (auto) — moved from tfoot, sticks just below header */}
+          <tr className="bg-blue-50 text-blue-900 border-y-2 border-blue-300 font-bold">
+            <td className="sticky top-[60px] left-0 bg-blue-50 px-2 py-2 border-r border-gray-200 z-30" />
+            <td colSpan={3} className="sticky top-[60px] left-[80px] bg-blue-50 px-2 py-2 text-right border-r border-gray-200 z-30">Tổng giá gói (auto)</td>
+            {packages.map(p => (
+              <td key={p.code} className={`sticky top-[60px] px-2 py-2 text-right font-mono border-r border-gray-200 z-20 ${isDirty(p.code) ? 'bg-yellow-100 text-yellow-900' : 'bg-blue-50'}`}>
+                {fmtMoney(pkgGrandTotal(p.code))}đ
+              </td>
+            ))}
+          </tr>
+          {/* Row 3: breakdown — service total + Kính total */}
+          <tr className="bg-gray-100 text-gray-600 text-[11px]">
+            <td className="sticky top-[100px] left-0 bg-gray-100 px-2 py-1.5 border-r border-gray-200 z-30" />
+            <td colSpan={3} className="sticky top-[100px] left-[80px] bg-gray-100 px-2 py-1.5 text-right border-r border-gray-200 z-30">DV + Ortho-K(TB) + Kính khác</td>
+            {packages.map(p => {
+              const sp = pkgServiceTotal(p.code)
+              const kp = pkgKinhPrice(p.code)
+              const tp = pkgTypePrice(p.code)
+              const ks = (draft[p.code]?.kinhSkus || []).length
+              const ts = (draft[p.code]?.kinhTypes || []).length
+              return (
+                <td key={p.code} className="sticky top-[100px] bg-gray-100 px-2 py-1.5 text-right font-mono border-r border-gray-200 z-20">
+                  <div>{fmtMoney(sp)}</div>
+                  {(kp + tp) > 0 && (
+                    <div className="text-[9px] text-gray-500">
+                      +{fmtMoney(kp + tp)} {ts > 0 && `(${ts}T)`}{ks > 0 && ` (${ks}S)`}
+                    </div>
+                  )}
+                </td>
+              )
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {orderedServices.map(svc => (
+            <tr key={svc.code} className="border-t border-gray-100 hover:bg-blue-50/30">
+              <td className="sticky left-0 bg-white px-2 py-1.5 font-mono text-[10px] text-gray-500 border-r border-gray-200 z-10">{svc.code}</td>
+              <td className="sticky left-[80px] bg-white px-2 py-1.5 text-gray-700 border-r border-gray-200 z-10">{svc.name}</td>
+              <td className="px-2 py-1.5 text-right font-mono text-gray-700 border-r border-gray-200">{fmtMoney(svc.basePrice || 0)}</td>
+              <td className="px-2 py-1.5 text-right font-mono text-gray-700 border-r border-gray-200">{svc.inPackagePrice == null ? '—' : fmtMoney(svc.inPackagePrice)}</td>
+              {packages.map(p => {
+                const entry = cellEntry(p.code, svc.code)
+                const mode = entry?.priceMode
+                const price = cellPrice(svc, entry)
+                const bgCls = mode === 'inPackage' ? 'bg-blue-50'
+                  : mode === 'base' ? 'bg-gray-100'
+                  : mode === 'custom' ? 'bg-yellow-50'
+                  : 'bg-white hover:bg-blue-50/40'
+                const labelCls = mode === 'inPackage' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  : mode === 'base' ? 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  : mode === 'custom' ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300'
+                  : 'bg-gray-100 text-gray-400 hover:bg-blue-100'
+                const label = mode == null ? '+' : mode === 'inPackage' ? 'gói' : mode === 'base' ? 'lẻ' : 'tự'
+                return (
+                  <td key={p.code} className={`border-r border-gray-200 p-0.5 ${bgCls}`}>
+                    <div className="flex flex-col gap-0.5 items-stretch">
+                      <button onClick={() => cycleMode(p.code, svc.code)} disabled={!canEdit}
+                        className={`text-[9px] font-semibold rounded leading-tight py-0.5 transition-colors ${labelCls}`}
+                        title={mode == null ? 'Bấm để thêm' : 'Bấm để đổi mode (gói → lẻ → tự → bỏ)'}>
+                        {label}
+                      </button>
+                      {mode != null && (
+                        <input
+                          type="text"
+                          value={price === 0 && mode !== 'custom' ? '' : fmtMoney(price)}
+                          onChange={e => setCustomPrice(p.code, svc.code, e.target.value)}
+                          disabled={!canEdit}
+                          className="w-full text-[10px] font-mono text-right px-1 py-0.5 border border-transparent rounded bg-white/70 hover:bg-white focus:bg-white focus:border-blue-300 focus:outline-none disabled:bg-transparent"
+                          title={mode === 'custom' ? 'Giá tùy chỉnh — sửa tự do' : 'Sửa giá để đặt tùy chỉnh (auto-chuyển sang "tự")'}
+                        />
+                      )}
+                    </div>
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+          {visibleTypes.length > 0 && (
+            <>
+              <tr className="bg-purple-50 border-t-2 border-purple-300">
+                <td colSpan={4 + packages.length} className="sticky left-0 bg-purple-50 px-2 py-1.5 text-xs font-semibold text-purple-700 z-10">
+                  🔬 Ortho-K (theo loại) — bấm ô để gắn loại vào gói. SKU cụ thể chọn lúc bill ở Khám.
+                  {uncategorizedOrthoK > 0 && (
+                    <span className="ml-2 font-normal text-purple-600">
+                      ({uncategorizedOrthoK} SKU Ortho-K chưa phân loại — sửa "Loại Ortho-K" trên row Kính)
+                    </span>
+                  )}
+                </td>
+              </tr>
+              {visibleTypes.map(t => {
+                const g = orthoKByType[t]
+                const avg = typeAvgPrice(t)
+                return (
+                  <tr key={`T-${t}`} className="border-t border-purple-100 hover:bg-purple-50/30">
+                    <td className="sticky left-0 bg-white px-2 py-1.5 font-mono text-[10px] text-purple-500 border-r border-gray-200 z-10">type:{t}</td>
+                    <td className="sticky left-[80px] bg-white px-2 py-1.5 text-purple-900 border-r border-gray-200 z-10">
+                      Ortho-K {TYPE_LABELS[t] || t}
+                      <span className="ml-1 text-[10px] text-gray-400">[{g.count} SKU]</span>
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-mono text-gray-700 border-r border-gray-200" colSpan={2}>
+                      ~{fmtMoney(avg)} <span className="text-[9px] text-gray-400">(TB)</span>
+                    </td>
+                    {packages.map(p => {
+                      const checked = isTypeInPkg(p.code, t)
+                      return (
+                        <td key={p.code} className={`border-r border-gray-200 p-0.5 ${checked ? 'bg-purple-50' : 'bg-white hover:bg-purple-50/40'}`}>
+                          <button onClick={() => toggleType(p.code, t)} disabled={!canEdit}
+                            className={`w-full text-[10px] font-semibold rounded leading-tight py-1 transition-colors ${checked ? 'bg-purple-200 text-purple-800 hover:bg-purple-300' : 'bg-gray-100 text-gray-400 hover:bg-purple-100'}`}
+                            title={checked ? `Đã gắn loại — bấm để bỏ (~${fmtMoney(avg)}đ TB)` : `Bấm để gắn loại Ortho-K ${TYPE_LABELS[t] || t}`}>
+                            {checked ? '✓' : '+'}
+                            {checked && <div className="text-[9px] font-mono">~{fmtMoney(avg)}</div>}
+                          </button>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
+            </>
+          )}
+          <tr className="bg-emerald-50 border-t-2 border-emerald-300">
+            <td colSpan={4 + packages.length} className="sticky left-0 bg-emerald-50 px-2 py-1.5 text-xs font-semibold text-emerald-700 z-10">
+              👓 Kính khác / Lens ({visibleKinh.length}{kinhFilter && kinhFilter !== 'ortho-k' ? ` · lọc: ${kinhFilter}` : ''}) — bấm ô để gắn SKU cụ thể vào gói
+              {visibleKinh.length === 0 && (
+                <span className="ml-2 font-normal text-emerald-600">
+                  Không có Kính khớp bộ lọc.{' '}
+                  <button onClick={() => setKinhFilter('')} className="underline hover:text-emerald-900">Hiển thị tất cả →</button>
+                </span>
+              )}
+            </td>
+          </tr>
+          {visibleKinh.map(k => (
+            <tr key={`K-${k.code}`} className="border-t border-gray-100 hover:bg-emerald-50/30">
+              <td className="sticky left-0 bg-white px-2 py-1.5 font-mono text-[10px] text-gray-500 border-r border-gray-200 z-10">{k.code}</td>
+              <td className="sticky left-[80px] bg-white px-2 py-1.5 text-gray-700 border-r border-gray-200 z-10">
+                {k.name}
+                {k.category && <span className="ml-1 text-[10px] text-gray-400">[{k.category}]</span>}
+              </td>
+              <td className="px-2 py-1.5 text-right font-mono text-gray-700 border-r border-gray-200" colSpan={2}>
+                {fmtMoney(k.sellPrice || 0)}
+              </td>
+              {packages.map(p => {
+                const checked = isKinhInPkg(p.code, k.code)
+                return (
+                  <td key={p.code} className={`border-r border-gray-200 p-0.5 ${checked ? 'bg-emerald-50' : 'bg-white hover:bg-emerald-50/40'}`}>
+                    <button onClick={() => toggleKinh(p.code, k.code)} disabled={!canEdit}
+                      className={`w-full text-[10px] font-semibold rounded leading-tight py-1 transition-colors ${checked ? 'bg-emerald-200 text-emerald-800 hover:bg-emerald-300' : 'bg-gray-100 text-gray-400 hover:bg-emerald-100'}`}
+                      title={checked ? `Đang kèm — bấm để bỏ (${fmtMoney(k.sellPrice || 0)}đ)` : 'Bấm để gắn'}>
+                      {checked ? '✓' : '+'}
+                      {checked && <div className="text-[9px] font-mono">{fmtMoney(k.sellPrice || 0)}</div>}
+                    </button>
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
       </div>
     </div>
   )
@@ -563,24 +1279,28 @@ function CatalogTable({ catalogKey, catalogLabel, canEdit }) {
   const [editing, setEditing] = useState(null)
   const [searchQ, setSearchQ] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // all | active | inactive
+  const [categoryFilter, setCategoryFilter] = useState('') // empty = all
   const [sortBy, setSortBy] = useState('')
   const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
 
   // Reset pagination when the catalog or any filter changes so we don't end up
   // on page 3 of a catalog that only has 10 rows after a filter switch.
-  useEffect(() => { setPage(1) }, [catalogKey, searchQ, statusFilter, sortBy, sortDir])
+  useEffect(() => { setPage(1) }, [catalogKey, searchQ, statusFilter, categoryFilter, sortBy, sortDir])
+  // Clear category filter when switching catalogs (it's per-catalog)
+  useEffect(() => { setCategoryFilter('') }, [catalogKey])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const params = {}
       if (searchQ) params.q = searchQ
+      if (categoryFilter) params.category = categoryFilter
       const r = await api.get(`/catalogs/${catalogKey}`, { params })
       setItems(r.data)
     } catch {}
     setLoading(false)
-  }, [catalogKey, searchQ])
+  }, [catalogKey, searchQ, categoryFilter])
 
   useEffect(() => { load() }, [load])
 
@@ -646,6 +1366,19 @@ function CatalogTable({ catalogKey, catalogLabel, canEdit }) {
           <option value="active">Đang hoạt động</option>
           <option value="inactive">Đã ngưng</option>
         </select>
+        {(() => {
+          const catField = (config.editFields || []).find(f => f.key === 'category' && f.type === 'select')
+          if (!catField) return null
+          return (
+            <select
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white"
+              value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
+            >
+              <option value="">Loại: Tất cả</option>
+              {catField.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )
+        })()}
         <div className="flex-1 text-xs text-gray-500">
           <b className="text-gray-700">{items.length}</b> mục
           {items.length > 0 && <span> · <b className="text-gray-700">{activeCount}</b> đang hoạt động</span>}
@@ -1212,6 +1945,19 @@ export default function Catalogs() {
     ? <>{activeGroup.label} · <b className="text-gray-700">{activeLabel}</b></>
     : 'Không tìm thấy'
 
+  // Packages have an alternate "matrix" view (services × packages grid).
+  // Toggle persists in URL ?view=matrix so deep-links survive refreshes.
+  const isPackages = activeKey === 'packages'
+  const viewParam = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search).get('view') : null
+  const [packagesView, setPackagesView] = useState(viewParam === 'matrix' ? 'matrix' : 'table')
+  useEffect(() => {
+    if (!isPackages) return
+    const sp = new URLSearchParams(window.location.search)
+    if (packagesView === 'matrix') sp.set('view', 'matrix'); else sp.delete('view')
+    const next = sp.toString() ? `?${sp.toString()}` : ''
+    if (window.location.search !== next) window.history.replaceState(null, '', `${window.location.pathname}${next}`)
+  }, [isPackages, packagesView])
+
   const renderContent = () => {
     if (activeKey === 'hr-employees')    return <EmployeeSection />
     if (activeKey === 'hr-departments')  return <DepartmentSection />
@@ -1220,6 +1966,7 @@ export default function Catalogs() {
     if (activeKey === 'patients')        return <PatientsTable />
     if (activeKey === 'promotions')      return <PromotionsTable canEdit={hasPerm('catalogs.manage')} />
     if (activeKey === 'promo-codes')     return <PromoCodesTable />
+    if (isPackages && packagesView === 'matrix') return <PackagePriceMatrix canEdit={hasPerm(catalogEditPerm)} />
     if (CATALOG_FIELDS[activeKey])       return <CatalogTable catalogKey={activeKey} catalogLabel={activeLabel} canEdit={hasPerm(catalogEditPerm)} />
     return <div className="text-gray-400 text-sm p-4">Danh mục không tồn tại.</div>
   }
@@ -1230,13 +1977,25 @@ export default function Catalogs() {
     <div>
       <PageHeader breadcrumb={breadcrumb} userName={auth?.displayName || auth?.username} />
       {inProductCluster && (
-        <div className="flex gap-1 mb-3 flex-wrap">
+        <div className="flex gap-1 mb-3 flex-wrap items-center">
           {PRODUCT_SERVICE_CLUSTER.map(c => (
             <Link key={c.key} to={`/catalogs/${c.key}`}
               className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${activeKey === c.key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
               <span className="mr-1">{c.icon}</span>{c.label}
             </Link>
           ))}
+          {isPackages && (
+            <div className="ml-auto inline-flex border border-gray-200 rounded-lg overflow-hidden">
+              <button onClick={() => setPackagesView('table')}
+                className={`px-3 py-1.5 text-xs font-medium ${packagesView === 'table' ? 'bg-gray-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                Danh sách
+              </button>
+              <button onClick={() => setPackagesView('matrix')}
+                className={`px-3 py-1.5 text-xs font-medium ${packagesView === 'matrix' ? 'bg-gray-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                Bảng giá gói
+              </button>
+            </div>
+          )}
         </div>
       )}
       {renderContent()}
@@ -1244,12 +2003,10 @@ export default function Catalogs() {
   )
 }
 
-// Subcatalogs that share the "Sản phẩm & Dịch vụ" sidebar entry. The Catalogs
-// page renders these as a tab bar so users can switch without going through
-// the secondary catalog tree.
+// Subcatalogs that share the "Sản phẩm & Dịch vụ" sidebar entry. Kính and
+// Thuốc moved to the Kho page on 2026-05-02 — they're physical inventory,
+// not clinical billables. Sản phẩm & Dịch vụ is now clinical/service-only.
 const PRODUCT_SERVICE_CLUSTER = [
   { key: 'services', label: 'Dịch vụ khám', icon: '📄' },
   { key: 'packages', label: 'Gói khám',     icon: '📦' },
-  { key: 'kinh',     label: 'Kính',         icon: '👓' },
-  { key: 'thuoc',    label: 'Thuốc',        icon: '💊' },
 ]
