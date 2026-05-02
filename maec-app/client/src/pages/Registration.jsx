@@ -370,7 +370,8 @@ function FormView({ patient, prefill, onCancel, onSaved }) {
   const { auth } = useAuth()
   const emptyForm = {
     name: '', dob: '', gender: 'M', phone: '', address: '', idCard: '',
-    insuranceNumber: '', notes: '', email: '', contact: '',
+    insuranceNumber: '', notes: '', email: '',
+    guardianName: '', guardianPhone: '', guardianRelation: '',
     sourceCode: '', sourceName: '',
     referralType: '', referralId: '', referralName: '',
     clinicalInfo: '',
@@ -450,7 +451,8 @@ function FormView({ patient, prefill, onCancel, onSaved }) {
   useEffect(() => {
     if (!patient) return
     const hasExtended = patient.idCard || patient.email || patient.insuranceNumber ||
-      patient.address || patient.city || patient.ward || patient.clinicalInfo || patient.notes
+      patient.address || patient.city || patient.ward || patient.clinicalInfo || patient.notes ||
+      patient.guardianName || patient.guardianPhone
     if (hasExtended) setExpanded(true)
   }, [patient])
 
@@ -635,7 +637,7 @@ function FormView({ patient, prefill, onCancel, onSaved }) {
             <span className={`inline-flex w-5 h-5 items-center justify-center rounded border border-gray-400 text-xs transition-transform ${expanded ? 'rotate-90' : ''}`}>▸</span>
             <span className="text-sm font-semibold text-gray-700">Thông tin bổ sung</span>
             <span className="px-1.5 py-0.5 text-[10px] bg-gray-100 text-gray-500 rounded">
-              CMND · Email · Địa chỉ · BHYT · Lâm sàng · Ghi chú
+              CMND · Email · BHYT · Người giám hộ · Địa chỉ · Lâm sàng · Ghi chú
             </span>
           </div>
           <span className="text-xs text-gray-400">{expanded ? 'thu gọn' : 'mở rộng'}</span>
@@ -653,10 +655,26 @@ function FormView({ patient, prefill, onCancel, onSaved }) {
               <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className={inputCls} />
             </Field>
 
-            <Field label="Người liên hệ" className="col-span-3">
-              <input value={form.contact} onChange={e => set('contact', e.target.value)} className={inputCls} />
+            <Field label="Tên người giám hộ" className="col-span-3">
+              <input value={form.guardianName} onChange={e => set('guardianName', e.target.value)}
+                className={inputCls} placeholder="Bố / mẹ — bỏ trống nếu BN tự đến" />
             </Field>
-            <Field label="Gõ tắt địa chỉ" className="col-span-3">
+            <Field label="SĐT người giám hộ" className="col-span-2">
+              <input value={form.guardianPhone} onChange={e => set('guardianPhone', e.target.value)}
+                className={`${inputCls} font-mono`} placeholder="09x…" />
+            </Field>
+            <Field label="Quan hệ" className="col-span-1">
+              <select value={form.guardianRelation} onChange={e => set('guardianRelation', e.target.value)} className={inputCls}>
+                <option value="">—</option>
+                <option value="mẹ">Mẹ</option>
+                <option value="bố">Bố</option>
+                <option value="ông">Ông</option>
+                <option value="bà">Bà</option>
+                <option value="người thân">Người thân</option>
+              </select>
+            </Field>
+
+            <Field label="Gõ tắt địa chỉ" className="col-span-6">
               <input value={form._addrShortcut || ''} onChange={e => applyAddrShortcut(e.target.value)}
                 className={inputCls} placeholder="vd: hk, cg, q1…" />
             </Field>

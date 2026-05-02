@@ -69,7 +69,8 @@ router.get('/patients/:id', requireAuth, async (req, res) => {
 router.post('/patients', requireAuth, async (req, res) => {
   try {
     const {
-      name, dob, gender, phone, address, idCard, insuranceNumber, notes,
+      name, dob, gender, phone, email, address, idCard, insuranceNumber, notes,
+      guardianName, guardianPhone, guardianRelation,
       sourceCode, sourceName, referralType, referralId, referralName,
     } = req.body
     if (!name) return res.status(400).json({ error: 'name required' })
@@ -77,7 +78,8 @@ router.post('/patients', requireAuth, async (req, res) => {
     const patient = new Patient({
       _id: id,
       patientId: id,
-      name, dob, gender, phone, address, idCard, insuranceNumber, notes,
+      name, dob, gender, phone, email, address, idCard, insuranceNumber, notes,
+      guardianName, guardianPhone, guardianRelation,
       sourceCode, sourceName,
       referralType: referralType || '',
       referralId, referralName,
@@ -96,7 +98,8 @@ router.post('/patients', requireAuth, async (req, res) => {
 router.put('/patients/:id', requireAuth, async (req, res) => {
   try {
     const allowed = [
-      'name', 'dob', 'gender', 'phone', 'address', 'idCard', 'insuranceNumber', 'notes',
+      'name', 'dob', 'gender', 'phone', 'email', 'address', 'idCard', 'insuranceNumber', 'notes',
+      'guardianName', 'guardianPhone', 'guardianRelation',
       'sourceCode', 'sourceName', 'referralType', 'referralId', 'referralName',
     ]
     const update = {}

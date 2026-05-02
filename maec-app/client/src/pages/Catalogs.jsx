@@ -749,6 +749,12 @@ function CatalogTable({ catalogKey, catalogLabel, canEdit }) {
 // that lived here + ROLE_OPTIONS/EMP_TYPE_OPTIONS/GENDER_OPTIONS are removed.
 // The /api/catalogs/users endpoint stays for userSelect picker lookups.
 
+function GenderIcon({ gender }) {
+  if (gender === 'M') return <span className="ml-1.5 text-blue-500" title="Nam">♂</span>
+  if (gender === 'F') return <span className="ml-1.5 text-pink-500" title="Nữ">♀</span>
+  return null
+}
+
 function PatientsTable() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -766,19 +772,6 @@ function PatientsTable() {
   const filtered = items.filter(p => !genderFilter || p.gender === genderFilter)
   const paged = filtered.slice(0, page * PAGE_SIZE)
   const hasMore = paged.length < filtered.length
-  const cols = [
-    { key: 'patientId', label: 'Mã', cls: 'font-mono text-xs text-blue-600' },
-    { key: 'name', label: 'Tên', cls: 'font-medium text-gray-900' },
-    { key: 'phone', label: 'SĐT' },
-    { key: 'email', label: 'Email' },
-    { key: 'dob', label: 'Ngày sinh' },
-    { key: 'gender', label: 'Giới tính', fmt: v => v === 'M' ? 'Nam' : v === 'F' ? 'Nữ' : v || '-' },
-    { key: 'idCard', label: 'CMND/CCCD' },
-    { key: 'insuranceNumber', label: 'Mã BHYT' },
-    { key: 'province', label: 'Tỉnh/Thành phố' },
-    { key: 'district', label: 'Quận/huyện' },
-    { key: 'ward', label: 'Phường/Xã' },
-  ]
   return (
     <>
       <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -797,14 +790,27 @@ function PatientsTable() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-auto">
         <table className="w-full text-sm whitespace-nowrap">
           <thead><tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide text-left">
-            {cols.map(c => <th key={c.key} className="px-4 py-3">{c.label}</th>)}
+            <th className="px-4 py-3">Mã</th>
+            <th className="px-4 py-3">Tên</th>
+            <th className="px-4 py-3">SĐT</th>
+            <th className="px-4 py-3">Ngày sinh</th>
           </tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={cols.length} className="px-4 py-8 text-center text-gray-400">Đang tải...</td></tr>
-            : paged.length === 0 ? <tr><td colSpan={cols.length} className="px-4 py-10 text-center text-gray-400">Chưa có bệnh nhân khớp bộ lọc.</td></tr>
+            {loading ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Đang tải...</td></tr>
+            : paged.length === 0 ? <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">Chưa có bệnh nhân khớp bộ lọc.</td></tr>
             : paged.map(p => (
               <tr key={p._id} onClick={() => setOpenPatient(p)} className="border-t border-gray-100 hover:bg-blue-50/50 cursor-pointer">
-                {cols.map(c => <td key={c.key} className={`px-4 py-2.5 text-gray-600 ${c.cls || ''}`}>{c.fmt ? c.fmt(p[c.key]) : (p[c.key] || '-')}</td>)}
+                <td className="px-4 py-2.5 font-mono text-xs text-blue-600">{p.patientId || '-'}</td>
+                <td className="px-4 py-2.5 font-medium text-gray-900">
+                  {p.name || '-'}
+                  <GenderIcon gender={p.gender} />
+                </td>
+                <td className="px-4 py-2.5 text-gray-600">
+                  {p.phone || (p.guardianPhone
+                    ? <span className="text-gray-700">{p.guardianPhone}<span className="ml-1 text-[10px] text-gray-400">({p.guardianRelation || 'người giám hộ'})</span></span>
+                    : '-')}
+                </td>
+                <td className="px-4 py-2.5 text-gray-600">{p.dob || '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -875,6 +881,16 @@ function PatientDetailDrawer({ patient, onClose }) {
               {patient.clinicalInfo && <div className="col-span-2"><span className="text-gray-500">Lâm sàng:</span> {patient.clinicalInfo}</div>}
             </div>
           </section>
+          {(patient.guardianName || patient.guardianPhone) && (
+            <section>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Người giám hộ</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                <div><span className="text-gray-500">Tên:</span> {patient.guardianName || '—'}</div>
+                <div><span className="text-gray-500">Quan hệ:</span> {patient.guardianRelation || '—'}</div>
+                <div className="col-span-2"><span className="text-gray-500">SĐT:</span> <span className="font-mono">{patient.guardianPhone || '—'}</span></div>
+              </div>
+            </section>
+          )}
           <section>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lịch sử khám {encounters && `(${encounters.length})`}</h3>

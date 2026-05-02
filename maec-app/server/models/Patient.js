@@ -14,6 +14,10 @@ const patientSchema = new mongoose.Schema({
   district: String,           // Quận/huyện
   ward: String,               // Phường/Xã
   address: String,
+  // Guardian / parent — relevant for kids; falls back to here when patient.phone is empty
+  guardianName: String,
+  guardianPhone: String,
+  guardianRelation: String,   // mẹ / bố / ông / bà / người thân / ...
   registeredSite: String,     // site where first registered
   // Referral source — last-known value on patient; per-visit truth lives on Appointment.
   sourceCode: String,
