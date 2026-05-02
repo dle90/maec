@@ -94,7 +94,7 @@ function CalendarView() {
         : { from: weekStart, to: weekEnd }
       if (site) params.site = site
       const r = await api.get('/appointments', { params })
-      setAppts(r.data || [])
+      setAppts(Array.isArray(r.data) ? r.data : [])
     } catch { setAppts([]) }
     setLoading(false)
   }
@@ -316,7 +316,7 @@ function ReminderView() {
     setLoading(true)
     try {
       const r = await api.get('/appointments/upcoming-reminders', { params: { date } })
-      setAppts(r.data?.appointments || [])
+      setAppts(Array.isArray(r.data?.appointments) ? r.data.appointments : [])
     } catch { setAppts([]) }
     setLoading(false)
   }
