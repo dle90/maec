@@ -1052,10 +1052,32 @@ export default function Catalogs() {
     return <div className="text-gray-400 text-sm p-4">Danh mục không tồn tại.</div>
   }
 
+  const inProductCluster = PRODUCT_SERVICE_CLUSTER.some(c => c.key === activeKey)
+
   return (
     <div>
       <PageHeader breadcrumb={breadcrumb} userName={auth?.displayName || auth?.username} />
+      {inProductCluster && (
+        <div className="flex gap-1 mb-3 flex-wrap">
+          {PRODUCT_SERVICE_CLUSTER.map(c => (
+            <Link key={c.key} to={`/catalogs/${c.key}`}
+              className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${activeKey === c.key ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              <span className="mr-1">{c.icon}</span>{c.label}
+            </Link>
+          ))}
+        </div>
+      )}
       {renderContent()}
     </div>
   )
 }
+
+// Subcatalogs that share the "Sản phẩm & Dịch vụ" sidebar entry. The Catalogs
+// page renders these as a tab bar so users can switch without going through
+// the secondary catalog tree.
+const PRODUCT_SERVICE_CLUSTER = [
+  { key: 'services', label: 'Dịch vụ khám', icon: '📄' },
+  { key: 'packages', label: 'Gói khám',     icon: '📦' },
+  { key: 'kinh',     label: 'Kính',         icon: '👓' },
+  { key: 'thuoc',    label: 'Thuốc',        icon: '💊' },
+]

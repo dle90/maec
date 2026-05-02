@@ -7,9 +7,17 @@ import NotificationBell from './NotificationBell'
 import { CATALOG_GROUPS, CATALOG_TO_GROUP } from '../config/catalogGroups'
 import { REPORT_GROUPS, REPORT_TO_GROUP, TOP_LEVEL as REPORT_TOP_LEVEL } from '../config/reportGroups'
 
-// Top 3 items are headerless (rendered as direct nav items).
-// Everything else lives under collapsed "Khác" — pull out as needed.
+// Top-level shortcuts are 7 headerless items (Tổng quan / Đăng ký / Khám /
+// Thu ngân / Sản phẩm & Dịch vụ / Bệnh nhân / Kho); everything else lives
+// under the collapsible Khác. Sản phẩm & Dịch vụ lands on /catalogs/services
+// — switch between Dịch vụ khám / Gói khám / Kính / Thuốc via the in-page
+// subcatalog tabs at the top of that page. Kho lands on /inventory ("Tất cả"
+// kind tab) — switch to Kính / Thuốc / Vật tư via the Inventory page's tabs.
 const NAV = [
+  {
+    group: 'shortcut-tongquan', headerless: true,
+    items: [{ path: '/', label: 'Tổng quan', icon: '📊' }]
+  },
   {
     group: 'shortcut-registration', headerless: true,
     items: [{ path: '/registration', label: 'Đăng ký', icon: '🏥', workflowOnly: true }]
@@ -23,21 +31,16 @@ const NAV = [
     items: [{ path: '/thu-ngan', label: 'Thu ngân', icon: '💵', workflowOnly: true }]
   },
   {
-    group: 'Danh mục',
-    items: [
-      { path: '/catalogs/patients', label: 'Bệnh nhân',    icon: '🧑', workflowOnly: true },
-      { path: '/catalogs/services', label: 'Dịch vụ khám', icon: '📄', workflowOnly: true },
-      { path: '/catalogs/packages', label: 'Gói khám',     icon: '📦', workflowOnly: true },
-      { path: '/catalogs/kinh',     label: 'Kính',         icon: '👓', workflowOnly: true },
-      { path: '/catalogs/thuoc',    label: 'Thuốc',        icon: '💊', workflowOnly: true },
-    ]
+    group: 'shortcut-products', headerless: true,
+    items: [{ path: '/catalogs/services', label: 'Sản phẩm & Dịch vụ', icon: '🧾', workflowOnly: true }]
   },
   {
-    group: 'Kho',
-    items: [
-      { path: '/inventory?productKind=kinh',  label: 'Kho Kính',  icon: '👓', workflowOnly: true },
-      { path: '/inventory?productKind=thuoc', label: 'Kho Thuốc', icon: '💊', workflowOnly: true },
-    ]
+    group: 'shortcut-patients', headerless: true,
+    items: [{ path: '/catalogs/patients', label: 'Bệnh nhân', icon: '🧑', workflowOnly: true }]
+  },
+  {
+    group: 'shortcut-kho', headerless: true,
+    items: [{ path: '/inventory', label: 'Kho', icon: '📦', workflowOnly: true }]
   },
   {
     group: 'Khác',

@@ -180,6 +180,19 @@ File names `RIS.jsx`, `RadiologyReports.jsx`, `CriticalFindings.jsx` are interna
 ### Multi-site ops dashboard (salvage from old TeleradAdmin)
 Before deletion, `TeleradAdmin.jsx` had a useful pattern: sidebar of doctor workload + tabbed "pool / in-progress / done" case list with reassignment. For 2-location MAEC ops, an equivalent could show: per-clinic patient queue, per-station bottleneck, per-doctor workload. Build when ops needs it; pattern is documented here.
 
+## Tổng quan dashboard — content TBD (placeholder live 2026-05-02)
+
+The sidebar's first item ("Tổng quan" 📊) currently routes to [Dashboard.jsx](maec-app/client/src/pages/Dashboard.jsx) which is just a welcome card ("Xin chào, ..."). The user asked for a real Tổng quan but said "we'll go over what should be in there later." When that conversation happens, candidates to surface:
+
+- Today: # check-ins, # đang khám, # hoàn thành, doanh thu
+- Per-site split (Trung Kính vs Kim Giang)
+- Inventory red flags: items below min stock, lots near expiry
+- Pending: BN chờ thanh toán (status='completed' không in [paid, cancelled])
+- Quick links to Đăng ký / Khám / Thu ngân
+- Possibly per-role variants (Lễ tân sees check-in queue, BS sees clinical queue, Kho sees stock alerts)
+
+There are existing unfinished dashboards ([TodayDashboard.jsx](maec-app/client/src/pages/TodayDashboard.jsx), [DashboardClinical.jsx](maec-app/client/src/pages/DashboardClinical.jsx), [DashboardOps.jsx](maec-app/client/src/pages/DashboardOps.jsx)) that may have salvageable patterns — currently routed under Khác → Inactive or accessible via /reports redirects.
+
 ## Devices module — deferred (split out of Service 2026-05-02)
 
 `Service.station`, `Service.role`, `Service.devices` were dropped from the [Service](maec-app/server/models/Service.js) schema and the [Catalogs.jsx](maec-app/client/src/pages/Catalogs.jsx) services config on 2026-05-02 (user: "we don't need station, role, devices here"). They were design notes baked into the catalog, never queried, never edited in production.
