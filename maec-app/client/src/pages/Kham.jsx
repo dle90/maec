@@ -42,6 +42,19 @@ const startOfYearISO = () => {
 }
 
 const PERIOD_LABELS = { today: 'Hôm nay', week: 'Tuần này', month: 'Tháng này', ytd: 'YTD', custom: 'Tùy chỉnh' }
+
+// Encounter lifecycle for the Khám list. "Đang khám" is the active work
+// queue (anything not yet paid or cancelled — receptionist-checked-in,
+// in-progress with KTV/BS, clinical-done waiting for payment). "Hoàn thành"
+// is settled at Thu Ngân; "Đã hủy" is cancelled mid-flow. Statuses
+// pending_read..verified are radiology-era leftovers — kept in "active"
+// for safety in case any old encounter still uses them.
+const STATUS_GROUPS = {
+  active:    { label: 'Đang khám',  statuses: ['scheduled', 'in_progress', 'pending_read', 'reading', 'reported', 'verified', 'completed'] },
+  paid:      { label: 'Hoàn thành', statuses: ['paid'] },
+  cancelled: { label: 'Đã hủy',     statuses: ['cancelled'] },
+  all:       { label: 'Tất cả',     statuses: null },
+}
 const periodToRange = (p) => {
   const today = todayISO()
   if (p === 'today') return { from: today, to: today }
@@ -61,6 +74,10 @@ export default function Kham() {
   const [from, setFrom] = useState(searchParams.get('from') || todayISO())
   const [to, setTo] = useState(searchParams.get('to') || todayISO())
   const [site, setSite] = useState(searchParams.get('site') || '')
+  // Status group — defaults to "Đang khám" so the Khám tab is the active
+  // work queue, not a dump of every encounter ever. Switch to "Hoàn thành"
+  // for paid history, "Đã hủy" for cancellations, "Tất cả" for everything.
+  const [statusGroup, setStatusGroup] = useState(searchParams.get('status') || 'active')
   // Patient filter — when set, server returns full lifetime history for that
   // patient and ignores from/to. Cleared by clicking the "× BN" pill.
   const [patientFilter, setPatientFilter] = useState(() => {
@@ -87,11 +104,13 @@ export default function Kham() {
         params.to = to
       }
       if (site) params.site = site
+      const statuses = STATUS_GROUPS[statusGroup]?.statuses
+      if (statuses) params.status = statuses.join(',')
       const r = await api.get('/encounters', { params })
       setList(r.data || [])
     } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [from, to, site, patientFilter])
+  useEffect(() => { load() }, [from, to, site, patientFilter, statusGroup])
 
   // Sync filter + open-drawer state to URL (deep-link survives refresh)
   useEffect(() => {
@@ -104,16 +123,17 @@ export default function Kham() {
     if (period !== 'today') next.period = period
     if (period === 'custom') { next.from = from; next.to = to }
     if (site) next.site = site
+    if (statusGroup !== 'active') next.status = statusGroup
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openId, period, from, to, site, patientFilter])
+  }, [openId, period, from, to, site, patientFilter, statusGroup])
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-800">Khám</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Lượt khám — gán gói, thực hiện dịch vụ, thêm kính/thuốc vào bill.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Hàng đợi lượt khám đang hoạt động — gán gói, thực hiện dịch vụ, thêm kính/thuốc vào bill. Đổi sang "Hoàn thành" để xem lịch sử đã thanh toán.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">+ Tạo lượt khám</button>
@@ -121,8 +141,17 @@ export default function Kham() {
         </div>
       </div>
 
-      {/* Filters: time + site */}
+      {/* Filters: status + time + site */}
       <div className="bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1">
+          {Object.entries(STATUS_GROUPS).map(([k, g]) => (
+            <button key={k} onClick={() => setStatusGroup(k)}
+              className={`px-3 py-1.5 text-sm rounded-lg font-medium ${statusGroup === k ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              {g.label}
+            </button>
+          ))}
+        </div>
+        <div className="w-px h-6 bg-gray-200" />
         <div className={`flex gap-1 ${patientFilter ? 'opacity-40 pointer-events-none' : ''}`}>
           {Object.entries(PERIOD_LABELS).map(([k, label]) => (
             <button key={k} onClick={() => setPeriod(k)}
