@@ -64,56 +64,67 @@ export default function LichHen() {
           >🔔 Nhắc lịch</button>
         </div>
       </div>
-      {tab === 'calendar' ? <DayCalendarView /> : <ReminderView />}
+      {tab === 'calendar' ? <CalendarView /> : <ReminderView />}
     </div>
   )
 }
 
-// ── Day calendar (per-site columns, vertical time axis) ───
-function DayCalendarView() {
-  const [date, setDate] = useState(todayLocal())
+// ── Calendar (day or week view, with site filter) ────────
+function CalendarView() {
+  const [view, setView] = useState('day') // day | week
+  const [anchor, setAnchor] = useState(todayLocal()) // anchor date — week derives 7 days from this Monday
+  const [site, setSite] = useState('') // '' = all
   const [appts, setAppts] = useState([])
   const [loading, setLoading] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const [openAppt, setOpenAppt] = useState(null)
 
+  // For week view: snap anchor to the Monday of the containing week.
+  const weekStart = useMemo(() => mondayOf(anchor), [anchor])
+  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
+  const weekDays = useMemo(() =>
+    Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  , [weekStart])
+
   const load = async () => {
     setLoading(true)
     try {
-      const r = await api.get('/appointments', { params: { date } })
+      const params = view === 'day'
+        ? { date: anchor }
+        : { from: weekStart, to: weekEnd }
+      if (site) params.site = site
+      const r = await api.get('/appointments', { params })
       setAppts(r.data || [])
-    } catch (e) {
-      setAppts([])
-    }
+    } catch { setAppts([]) }
     setLoading(false)
   }
-  useEffect(() => { load() }, [date])
+  useEffect(() => { load() }, [view, anchor, site])
 
-  const stepDate = (delta) => {
-    const d = new Date(date); d.setDate(d.getDate() + delta)
-    setDate(d.toLocaleDateString('sv-SE'))
+  const step = (delta) => {
+    const span = view === 'day' ? delta : delta * 7
+    setAnchor(addDays(anchor, span))
   }
-
-  const bySite = useMemo(() => {
-    const map = Object.fromEntries(SITES.map(s => [s, []]))
-    for (const a of appts) {
-      if (!map[a.site]) map[a.site] = []
-      map[a.site].push(a)
-    }
-    return map
-  }, [appts])
-
-  const otherSites = useMemo(() => Object.keys(bySite).filter(s => !SITES.includes(s)), [bySite])
-  const siteCols = [...SITES, ...otherSites]
 
   return (
     <div className="flex-1 flex flex-col gap-3 min-h-0">
       <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex flex-wrap items-center gap-2">
-        <button onClick={() => stepDate(-1)} className="px-2 py-1 border rounded hover:bg-gray-50 text-sm" title="Hôm trước">◀</button>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1 text-sm" />
-        <button onClick={() => stepDate(1)} className="px-2 py-1 border rounded hover:bg-gray-50 text-sm" title="Hôm sau">▶</button>
-        <button onClick={() => setDate(todayLocal())} className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">Hôm nay</button>
-        <span className="ml-2 text-sm font-medium text-gray-700">{fmtDate(date)}</span>
+        <div className="flex bg-gray-100 rounded-lg overflow-hidden text-xs">
+          <button onClick={() => setView('day')} className={`px-3 py-1 ${view === 'day' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Ngày</button>
+          <button onClick={() => setView('week')} className={`px-3 py-1 ${view === 'week' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}>Tuần</button>
+        </div>
+        <button onClick={() => step(-1)} className="px-2 py-1 border rounded hover:bg-gray-50 text-sm" title={view === 'day' ? 'Hôm trước' : 'Tuần trước'}>◀</button>
+        <input type="date" value={anchor} onChange={e => setAnchor(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1 text-sm" />
+        <button onClick={() => step(1)} className="px-2 py-1 border rounded hover:bg-gray-50 text-sm" title={view === 'day' ? 'Hôm sau' : 'Tuần sau'}>▶</button>
+        <button onClick={() => setAnchor(todayLocal())} className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded">Hôm nay</button>
+        <span className="ml-2 text-sm font-medium text-gray-700">
+          {view === 'day' ? fmtDate(anchor) : `${fmtDate(weekStart)} → ${fmtDate(weekEnd)}`}
+        </span>
+
+        <select value={site} onChange={e => setSite(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1 text-sm">
+          <option value="">Cơ sở: Tất cả</option>
+          {SITES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
         <span className="text-xs text-gray-400">{loading ? '…' : `${appts.length} lịch hẹn`}</span>
         <div className="ml-auto flex gap-2">
           <button onClick={load} className="px-2.5 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200" title="Làm mới">⟳</button>
@@ -121,27 +132,18 @@ function DayCalendarView() {
         </div>
       </div>
 
-      {/* Per-site columns: time axis on the left, events laid out by hour */}
       <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-0">
-        <div className="grid border-b border-gray-200 sticky top-0 bg-gray-50 text-xs uppercase tracking-wide font-semibold text-gray-600 z-10"
-             style={{ gridTemplateColumns: `60px repeat(${siteCols.length}, minmax(220px, 1fr))` }}>
-          <div className="px-2 py-2 border-r border-gray-200">Giờ</div>
-          {siteCols.map(s => (
-            <div key={s} className="px-3 py-2 border-r border-gray-200 last:border-r-0 flex items-center justify-between">
-              <span>{s}</span>
-              <span className="text-[10px] font-normal text-gray-400">{(bySite[s] || []).filter(a => a.status !== 'cancelled' && a.status !== 'no_show').length}</span>
-            </div>
-          ))}
-        </div>
-        <div className="flex-1 overflow-auto">
-          <CalendarGrid siteCols={siteCols} bySite={bySite} onPick={setOpenAppt} />
-        </div>
+        {view === 'day'
+          ? <DayGrid date={anchor} appts={appts} showSiteBadge={!site} onPick={setOpenAppt} />
+          : <WeekGrid days={weekDays} appts={appts} showSiteBadge={!site} onPick={setOpenAppt} />
+        }
       </div>
 
       {showCreate && (
         <AppointmentForm
           mode="create"
-          defaultDate={date}
+          defaultDate={view === 'day' ? anchor : weekStart}
+          defaultSite={site || undefined}
           onClose={() => setShowCreate(false)}
           onSaved={() => { setShowCreate(false); load() }}
         />
@@ -157,69 +159,151 @@ function DayCalendarView() {
   )
 }
 
-// Hourly grid 7:00 → 18:00. Each row = 30 min. Events render as absolutely-
-// positioned cards inside their site column. Height ≈ duration / 30 * 32px.
-function CalendarGrid({ siteCols, bySite, onPick }) {
-  const HOUR_START = 7
-  const HOUR_END = 18
-  const SLOT_PX = 32 // half-hour
-  const slots = []
+// ── Time grid primitives ──────────────────────────────────
+const HOUR_START = 7
+const HOUR_END = 18
+const SLOT_PX = 32 // half-hour
+const SLOTS = (() => {
+  const out = []
   for (let h = HOUR_START; h < HOUR_END; h++) {
-    slots.push(`${String(h).padStart(2, '0')}:00`)
-    slots.push(`${String(h).padStart(2, '0')}:30`)
+    out.push(`${String(h).padStart(2, '0')}:00`)
+    out.push(`${String(h).padStart(2, '0')}:30`)
   }
-  const totalHeight = slots.length * SLOT_PX
+  return out
+})()
+const TOTAL_GRID_HEIGHT = SLOTS.length * SLOT_PX
 
-  const offsetFor = (iso) => {
-    const t = iso?.slice(11, 16) || '07:00'
-    const [h, m] = t.split(':').map(Number)
-    return ((h - HOUR_START) * 2 + m / 30) * SLOT_PX
-  }
-  const heightFor = (dur) => Math.max(SLOT_PX - 2, ((dur || 30) / 30) * SLOT_PX - 2)
+const offsetFor = (iso) => {
+  const t = iso?.slice(11, 16) || '07:00'
+  const [h, m] = t.split(':').map(Number)
+  return ((h - HOUR_START) * 2 + m / 30) * SLOT_PX
+}
+const heightFor = (dur) => Math.max(SLOT_PX - 2, ((dur || 30) / 30) * SLOT_PX - 2)
 
+function TimeAxis() {
   return (
-    <div className="grid relative" style={{ gridTemplateColumns: `60px repeat(${siteCols.length}, minmax(220px, 1fr))`, minHeight: totalHeight }}>
-      {/* Time axis */}
-      <div className="border-r border-gray-200 text-[11px] text-gray-500 font-mono">
-        {slots.map((t, i) => (
-          <div key={t} className={`h-8 px-1 text-right pr-2 ${t.endsWith(':00') ? 'border-t border-gray-200 pt-0.5' : ''}`}>
-            {t.endsWith(':00') ? t : ''}
-          </div>
-        ))}
-      </div>
-      {/* Per-site columns */}
-      {siteCols.map(site => (
-        <div key={site} className="relative border-r border-gray-200 last:border-r-0">
-          {/* Hour grid lines */}
-          {slots.map((t, i) => (
-            <div key={t} className={`h-8 ${t.endsWith(':00') ? 'border-t border-gray-200' : 'border-t border-gray-50'}`} />
-          ))}
-          {/* Events */}
-          {(bySite[site] || []).map(a => {
-            const meta = examTypeMeta(a.examType)
-            const cancelled = a.status === 'cancelled' || a.status === 'no_show'
-            return (
-              <button
-                key={a._id}
-                onClick={() => onPick(a)}
-                className={`absolute left-1 right-1 rounded-md border ${meta.color} ${cancelled ? 'opacity-40 line-through' : ''} text-left px-2 py-1 hover:shadow-md hover:z-10 transition-shadow overflow-hidden`}
-                style={{ top: offsetFor(a.scheduledAt), height: heightFor(a.duration) }}
-              >
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[11px] font-mono font-semibold">{fmtTime(a.scheduledAt)}</span>
-                  <span className="text-xs font-medium truncate flex-1">{a.patientName || '—'}</span>
-                </div>
-                <div className="text-[10px] truncate opacity-80">{a.examType || a.modality || ''}</div>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className={`text-[10px] px-1 rounded ${STATUS[a.status]?.pill || 'bg-gray-100 text-gray-700'}`}>{STATUS[a.status]?.label || a.status}</span>
-                </div>
-              </button>
-            )
-          })}
+    <div className="border-r border-gray-200 text-[11px] text-gray-500 font-mono flex-shrink-0" style={{ width: 60 }}>
+      {SLOTS.map((t) => (
+        <div key={t} className={`h-8 px-1 text-right pr-2 ${t.endsWith(':00') ? 'border-t border-gray-200 pt-0.5' : ''}`}>
+          {t.endsWith(':00') ? t : ''}
         </div>
       ))}
     </div>
   )
+}
+
+function EventCard({ a, onPick, showSiteBadge }) {
+  const meta = examTypeMeta(a.examType)
+  const cancelled = a.status === 'cancelled' || a.status === 'no_show'
+  return (
+    <button
+      onClick={() => onPick(a)}
+      className={`absolute left-1 right-1 rounded-md border ${meta.color} ${cancelled ? 'opacity-40 line-through' : ''} text-left px-2 py-1 hover:shadow-md hover:z-10 transition-shadow overflow-hidden`}
+      style={{ top: offsetFor(a.scheduledAt), height: heightFor(a.duration) }}
+    >
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[11px] font-mono font-semibold">{fmtTime(a.scheduledAt)}</span>
+        <span className="text-xs font-medium truncate flex-1">{a.patientName || '—'}</span>
+      </div>
+      <div className="text-[10px] truncate opacity-80">{a.examType || a.modality || ''}</div>
+      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+        <span className={`text-[10px] px-1 rounded ${STATUS[a.status]?.pill || 'bg-gray-100 text-gray-700'}`}>{STATUS[a.status]?.label || a.status}</span>
+        {showSiteBadge && a.site && <span className="text-[10px] px-1 rounded bg-white/70 text-gray-700 border border-gray-200">{a.site}</span>}
+      </div>
+    </button>
+  )
+}
+
+function HourGridLines() {
+  return SLOTS.map((t) => (
+    <div key={t} className={`h-8 ${t.endsWith(':00') ? 'border-t border-gray-200' : 'border-t border-gray-50'}`} />
+  ))
+}
+
+// ── Day grid: single column (after site filter applied) ────
+function DayGrid({ date, appts, showSiteBadge, onPick }) {
+  return (
+    <>
+      <div className="grid border-b border-gray-200 sticky top-0 bg-gray-50 text-xs uppercase tracking-wide font-semibold text-gray-600 z-10"
+           style={{ gridTemplateColumns: '60px 1fr' }}>
+        <div className="px-2 py-2 border-r border-gray-200">Giờ</div>
+        <div className="px-3 py-2">{fmtDate(date)}</div>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <div className="flex relative" style={{ minHeight: TOTAL_GRID_HEIGHT }}>
+          <TimeAxis />
+          <div className="relative flex-1">
+            <HourGridLines />
+            {appts.map(a => <EventCard key={a._id} a={a} onPick={onPick} showSiteBadge={showSiteBadge} />)}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Week grid: 7 day columns ───────────────────────────────
+function WeekGrid({ days, appts, showSiteBadge, onPick }) {
+  const today = todayLocal()
+  const apptsByDay = useMemo(() => {
+    const map = Object.fromEntries(days.map(d => [d, []]))
+    for (const a of appts) {
+      const day = a.scheduledAt?.slice(0, 10)
+      if (map[day]) map[day].push(a)
+    }
+    return map
+  }, [days, appts])
+  return (
+    <>
+      <div className="grid border-b border-gray-200 sticky top-0 bg-gray-50 text-xs font-semibold text-gray-600 z-10"
+           style={{ gridTemplateColumns: `60px repeat(7, minmax(140px, 1fr))` }}>
+        <div className="px-2 py-2 border-r border-gray-200 uppercase tracking-wide">Giờ</div>
+        {days.map(d => {
+          const isToday = d === today
+          return (
+            <div key={d} className={`px-2 py-2 border-r border-gray-200 last:border-r-0 ${isToday ? 'bg-blue-50 text-blue-800' : ''}`}>
+              <div className="text-[10px] uppercase tracking-wide opacity-70">{weekdayLabel(d)}</div>
+              <div className="text-sm">{d.slice(8, 10)}/{d.slice(5, 7)}</div>
+            </div>
+          )
+        })}
+      </div>
+      <div className="flex-1 overflow-auto">
+        <div className="grid relative" style={{ gridTemplateColumns: `60px repeat(7, minmax(140px, 1fr))`, minHeight: TOTAL_GRID_HEIGHT }}>
+          <TimeAxis />
+          {days.map(d => (
+            <div key={d} className="relative border-r border-gray-200 last:border-r-0">
+              <HourGridLines />
+              {(apptsByDay[d] || []).map(a => <EventCard key={a._id} a={a} onPick={onPick} showSiteBadge={showSiteBadge} />)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Date helpers ──────────────────────────────────────────
+function addDays(ymd, n) {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + n)
+  return dt.toLocaleDateString('sv-SE')
+}
+function mondayOf(ymd) {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  // JS getDay(): 0 = Sunday, 1 = Monday … 6 = Saturday. Snap back to Mon.
+  const dow = dt.getDay()
+  const offset = dow === 0 ? -6 : 1 - dow
+  dt.setDate(dt.getDate() + offset)
+  return dt.toLocaleDateString('sv-SE')
+}
+function weekdayLabel(ymd) {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+  return labels[dt.getDay()]
 }
 
 // ── Reminder view (tomorrow's queue + manual đã nhắc tick) ─

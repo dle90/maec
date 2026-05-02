@@ -32,22 +32,27 @@ function buildSiteFilter(user) {
   return {}
 }
 
-// ── GET /api/appointments?date=YYYY-MM-DD&site=&status=&q= ──────────────────
-// Day-view default: omit `date` to get today (local).
+// ── GET /api/appointments?date=YYYY-MM-DD | ?from=&to= ─────────────────────
+// Single-day fetch (date) or arbitrary range (from/to inclusive). Week view
+// uses from/to with a 7-day window. Defaults to today when neither is given.
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { site, status, q, patientId } = req.query
-    const date = req.query.date || localDate()
-
+    const { site, status, q, patientId, from, to } = req.query
     const filter = { ...buildSiteFilter(req.user) }
     if (site && (req.user.role === 'admin' || req.user.role === 'giamdoc' || req.user.role === 'bacsi')) {
       filter.site = site
     }
     if (status) filter.status = status
     if (patientId) filter.patientId = patientId
-    // scheduledAt is stored as ISO string without TZ suffix — prefix-match
-    // on `${date}T` keeps the day window cheap and index-friendly.
-    filter.scheduledAt = { $gte: `${date}T00:00:00`, $lte: `${date}T23:59:59` }
+
+    if (from || to) {
+      const f = from || localDate()
+      const t = to || from || localDate()
+      filter.scheduledAt = { $gte: `${f}T00:00:00`, $lte: `${t}T23:59:59` }
+    } else {
+      const date = req.query.date || localDate()
+      filter.scheduledAt = { $gte: `${date}T00:00:00`, $lte: `${date}T23:59:59` }
+    }
 
     let appts = await Appointment.find(filter).sort({ scheduledAt: 1 }).lean()
     if (q) {
