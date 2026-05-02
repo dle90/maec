@@ -11,6 +11,9 @@ const encounterSchema = new mongoose.Schema({
   modality: String,
   bodyPart: String,
   clinicalInfo: String,
+  // Doctor's conclusion / diagnosis written after the exam. Free text.
+  // Surfaces in the encounter pane + the printed phiếu khám.
+  conclusion: String,
   site: String,
   scheduledDate: String,
   studyDate: String,

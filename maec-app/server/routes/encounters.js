@@ -252,6 +252,18 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
+// PUT /encounters/:id/conclusion — set the doctor's conclusion text.
+router.put('/:id/conclusion', requireAuth, async (req, res) => {
+  try {
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    enc.conclusion = String(req.body.conclusion || '')
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
 // PUT /encounters/:id/discount — set the bill-level discount.
 // Body: { discountAmount?: number, discountPercent?: 0..100, discountReason?: string }
 // Mutually exclusive — if discountPercent > 0 we zero discountAmount, and vice

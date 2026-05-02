@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../api'
 import { EmployeeSection, DepartmentSection, PermissionMatrix } from './HRManagement'
 import ReportTemplates from './ReportTemplates'
+import { FormView } from './Registration'
 import { CATALOG_TO_GROUP, DEFAULT_CATALOG_KEY } from '../config/catalogGroups'
 
 const LAST_CATALOG_KEY = 'maec_last_catalog'
@@ -1665,16 +1666,15 @@ function PatientsTable() {
           </div>
         )}
       </div>
-      {openPatient && <PatientDetailDrawer patient={openPatient} onClose={() => setOpenPatient(null)} />}
+      {openPatient && <PatientDetailDrawer patient={openPatient} onClose={() => setOpenPatient(null)} onSaved={load} />}
     </>
   )
 }
 
-// PatientDetailDrawer — opens from a patient row in /catalogs/patients.
-// Shows the patient's identity card + full encounter history (lifetime).
-// Each encounter row is a link to /kham?id=<encId> so the receptionist can
-// jump straight into the visit.
-function PatientDetailDrawer({ patient, onClose }) {
+// PatientDetailModal — centered popup for an existing patient row.
+// Embeds the shared FormView (full edit), shows encounter history, and lets
+// the receptionist Tiếp đón directly. Replaces the older right-side drawer.
+function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
   const { auth } = useAuth()
   const SITES = ['Trung Kính', 'Kim Giang']
   const initialSite = (() => {
@@ -1685,19 +1685,19 @@ function PatientDetailDrawer({ patient, onClose }) {
     if (SITES.includes(auth?.department)) return auth.department
     return SITES[0]
   })()
+  const [patient, setPatient] = useState(initialPatient)
   const [site, setSite] = useState(initialSite)
   const [encounters, setEncounters] = useState(null)
   const [checkingIn, setCheckingIn] = useState(false)
+
   useEffect(() => {
     let cancelled = false
     api.get('/encounters', { params: { patientId: patient.patientId || patient._id } })
       .then(r => { if (!cancelled) setEncounters(r.data || []) })
       .catch(() => { if (!cancelled) setEncounters([]) })
     return () => { cancelled = true }
-  }, [patient])
+  }, [patient._id])
 
-  // Idempotent: server returns existing open encounter if one exists.
-  // Either way we navigate into Khám to show the encounter pane.
   const checkIn = async () => {
     if (!patient._id) return
     setCheckingIn(true)
@@ -1717,6 +1717,14 @@ function PatientDetailDrawer({ patient, onClose }) {
     }
   }
 
+  // FormView's onSaved fires after PUT /registration/patients/:id.
+  // Refresh the patient state so subsequent renders + encounter list reflect
+  // the latest data, and notify parent so the catalog list reloads.
+  const handleFormSaved = (saved) => {
+    if (saved) setPatient(saved)
+    if (onSaved) onSaved()
+  }
+
   const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
   const fmtDate = (iso) => iso ? iso.slice(0, 10) : '—'
   const fmtTime = (iso) => {
@@ -1730,18 +1738,16 @@ function PatientDetailDrawer({ patient, onClose }) {
     return <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Mở</span>
   }
 
-  const addr = [patient.address, patient.street, patient.ward, patient.city].filter(Boolean).join(', ') || '—'
-  const gender = patient.gender === 'M' ? 'Nam' : patient.gender === 'F' ? 'Nữ' : '—'
-
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
-      <div className="w-full max-w-2xl bg-white h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-5xl bg-white max-h-[92vh] flex flex-col shadow-2xl rounded-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 flex-shrink-0">
           <div className="min-w-0 flex-1">
             <div className="text-base font-semibold text-gray-900 truncate">{patient.name || '—'}</div>
             <div className="text-xs text-gray-500 font-mono mt-0.5">{patient.patientId || patient._id}</div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <select value={site} onChange={e => setSite(e.target.value)} disabled={checkingIn}
               className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white"
               title="Cơ sở thực hiện lượt khám">
@@ -1751,34 +1757,22 @@ function PatientDetailDrawer({ patient, onClose }) {
               className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
               {checkingIn ? 'Đang tiếp đón…' : '+ Tiếp đón'}
             </button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none ml-1" aria-label="Đóng">×</button>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          <section>
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hồ sơ</h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-              <div><span className="text-gray-500">Giới tính:</span> {gender}</div>
-              <div><span className="text-gray-500">Ngày sinh:</span> {fmtDate(patient.dob)}</div>
-              <div><span className="text-gray-500">SĐT:</span> <span className="font-mono">{patient.phone || '—'}</span></div>
-              <div><span className="text-gray-500">Email:</span> {patient.email || '—'}</div>
-              <div><span className="text-gray-500">CCCD:</span> <span className="font-mono">{patient.idCard || '—'}</span></div>
-              <div><span className="text-gray-500">BHYT:</span> <span className="font-mono">{patient.insuranceNumber || '—'}</span></div>
-              <div className="col-span-2"><span className="text-gray-500">Địa chỉ:</span> {addr}</div>
-              {patient.clinicalInfo && <div className="col-span-2"><span className="text-gray-500">Lâm sàng:</span> {patient.clinicalInfo}</div>}
-            </div>
-          </section>
-          {(patient.guardianName || patient.guardianPhone) && (
-            <section>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Người giám hộ</h3>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                <div><span className="text-gray-500">Tên:</span> {patient.guardianName || '—'}</div>
-                <div><span className="text-gray-500">Quan hệ:</span> {patient.guardianRelation || '—'}</div>
-                <div className="col-span-2"><span className="text-gray-500">SĐT:</span> <span className="font-mono">{patient.guardianPhone || '—'}</span></div>
-              </div>
-            </section>
-          )}
-          <section>
+
+        {/* Body — editable FormView + encounter history */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="border-b border-gray-100">
+            <FormView
+              patient={patient}
+              prefill={null}
+              embedded
+              onCancel={onClose}
+              onSaved={handleFormSaved}
+            />
+          </div>
+          <section className="p-5">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lịch sử khám {encounters && `(${encounters.length})`}</h3>
               <Link to={`/kham?patientId=${encodeURIComponent(patient.patientId || patient._id)}`} className="text-xs text-blue-600 hover:text-blue-800">Mở trong Khám →</Link>

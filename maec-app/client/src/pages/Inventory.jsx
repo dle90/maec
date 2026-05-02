@@ -91,9 +91,11 @@ export default function Inventory() {
   const [warehouses, setWarehouses] = useState([])
   const [supervisor, setSupervisor] = useState(false)
   const [activeWhId, setActiveWhId] = useState(null)  // null = "all" (supervisor only)
-  // If user lands here from "Kho Kính" / "Kho Thuốc" sidebar shortcut,
-  // jump straight to the Tồn kho tab (where the productKind filter lives).
-  const [tab, setTab] = useState(urlProductKind ? 'stock' : 'overview')
+  // Default to Tồn kho — the operational starting point. Tổng quan + Tổng
+  // hợp chuỗi tabs were dropped 2026-05-02 (alerts will live on the main
+  // app Tổng quan dashboard; the supply×warehouse matrix can be revived
+  // under Khác if managers ever need it).
+  const [tab, setTab] = useState('stock')
   const [bootError, setBootError] = useState('')
 
   useEffect(() => {
@@ -133,19 +135,30 @@ export default function Inventory() {
         activeWhId={activeWhId}
       />
       <div className="max-w-[1600px] mx-auto p-6">
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <TabBtn active={tab === 'overview'} onClick={() => setTab('overview')}>Tổng quan</TabBtn>
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          {/* Prominent warehouse selector */}
+          <div className="inline-flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
+            <span className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Kho</span>
+            <select
+              className="text-sm font-semibold text-gray-900 bg-transparent outline-none cursor-pointer"
+              value={activeWhId || ''}
+              onChange={e => setActiveWhId(e.target.value || null)}
+              disabled={!supervisor && warehouses.length === 1}>
+              {supervisor && <option value="">Tất cả ({warehouses.length})</option>}
+              {warehouses.map(w => (
+                <option key={w._id} value={w._id}>{w.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-px h-8 bg-gray-200" />
           <TabBtn active={tab === 'stock'} onClick={() => setTab('stock')}>Tồn kho</TabBtn>
           <TabBtn active={tab === 'transactions'} onClick={() => setTab('transactions')}>Giao dịch</TabBtn>
           <TabBtn active={tab === 'stocktake'} onClick={() => setTab('stocktake')}>Kiểm kê</TabBtn>
-          {supervisor && <TabBtn active={tab === 'matrix'} onClick={() => setTab('matrix')}>Tổng hợp chuỗi</TabBtn>}
         </div>
 
-        {tab === 'overview' && <OverviewTab whParam={whParam} activeWh={activeWh} supervisor={supervisor} onNavigate={setTab} />}
         {tab === 'stock' && <StockTab whParam={whParam} supervisor={supervisor} activeWh={activeWh} initialProductKind={urlProductKind} />}
         {tab === 'transactions' && <TransactionsTab whParam={whParam} warehouses={warehouses} activeWh={activeWh} supervisor={supervisor} />}
         {tab === 'stocktake' && <StocktakeTab whParam={whParam} warehouses={warehouses} activeWh={activeWh} supervisor={supervisor} />}
-        {tab === 'matrix' && supervisor && <MatrixTab warehouses={warehouses} />}
       </div>
     </div>
   )
@@ -170,18 +183,6 @@ function PageHeader({ activeWh, auth, supervisor, warehouses, onSwitch, activeWh
         {scopeLabel && <span>Phạm vi: <b className="text-gray-700">{scopeLabel}</b></span>}
       </div>
       <div className="flex items-center gap-2 text-xs text-gray-500">
-        {supervisor && (
-          <select
-            className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            value={activeWhId || ''}
-            onChange={e => onSwitch(e.target.value || null)}
-          >
-            <option value="">Tất cả kho ({warehouses.length})</option>
-            {warehouses.map(w => (
-              <option key={w._id} value={w._id}>{w.name}</option>
-            ))}
-          </select>
-        )}
         {userName && <span className="px-2 py-1 bg-gray-100 rounded-md">👤 {userName}</span>}
         <span className="px-2 py-1 bg-gray-100 rounded-md">{dateStr}</span>
       </div>
@@ -591,13 +592,13 @@ function TransactionsTab({ whParam, warehouses, activeWh, supervisor }) {
           <button
             onClick={() => setCreateMenuOpen(v => !v)}
             disabled={!activeWh}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-5 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             title={!activeWh ? 'Chọn một kho để tạo phiếu' : ''}
           >
-            ＋ Tạo giao dịch ▾
+            <span className="text-base">＋</span> Tạo giao dịch <span className="text-xs">▾</span>
           </button>
           {createMenuOpen && (
-            <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[180px]">
+            <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 min-w-[200px]">
               {[
                 ['import', 'Nhập kho'],
                 ['export', 'Xuất kho'],
@@ -607,7 +608,7 @@ function TransactionsTab({ whParam, warehouses, activeWh, supervisor }) {
                 <button
                   key={k}
                   onClick={() => { setCreateKind(k); setCreateMenuOpen(false) }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50"
                 >{label}</button>
               ))}
             </div>

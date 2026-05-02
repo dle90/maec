@@ -158,6 +158,7 @@ function printVisitReport(enc) {
   .section h3 { font-size: 12px; color: #1e3a5f; margin: 0 0 6px; padding: 4px 8px; background: #eef2f7; border-left: 3px solid #1e3a5f; text-transform: uppercase; letter-spacing: 0.5px; }
   .pkgs { margin: 0; padding-left: 20px; }
   .pkgs li { padding: 2px 0; }
+  .conclusion { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: #fefce8; font-size: 12px; line-height: 1.5; min-height: 40px; white-space: pre-wrap; }
   table.data { width: 100%; border-collapse: collapse; }
   table.data th { background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600; padding: 5px 6px; border-bottom: 1.5px solid #1e3a5f; text-align: left; }
   table.data td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; font-size: 12px; vertical-align: top; }
@@ -214,6 +215,11 @@ ${paidBanner}
   </tr>` : ''}
 </tbody></table>
 
+${enc.conclusion ? `
+<div class="section">
+  <h3>Kết luận của bác sĩ</h3>
+  <div class="conclusion">${esc(enc.conclusion).replace(/\n/g, '<br>')}</div>
+</div>` : ''}
 ${packagesHtml}
 ${servicesHtml}
 ${billHtml}
@@ -749,6 +755,19 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
+        {/* Doctor's conclusion (Kết luận) — editable, persists on blur */}
+        <section>
+          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <span>📝</span> Kết luận
+          </h3>
+          <ConclusionInput
+            encounterId={enc._id}
+            value={enc.conclusion || ''}
+            disabled={isClosed}
+            onSaved={reload}
+          />
+        </section>
+
         {/* Patient history */}
         <section>
           <button onClick={() => setHistoryOpen(o => !o)} className="w-full text-left flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900">
@@ -926,6 +945,41 @@ function grandTotal(enc) {
 
 // Inline discount input — toggles between absolute (đ) and percent (%) modes,
 // commits on blur / Enter via PUT /encounters/:id/discount.
+// Inline textarea for the doctor's conclusion. Persists on blur via PUT
+// /encounters/:id/conclusion. No auto-save while typing — keeps it simple
+// and avoids burst-PUTs.
+function ConclusionInput({ encounterId, value, disabled, onSaved }) {
+  const [text, setText] = useState(value || '')
+  const [saving, setSaving] = useState(false)
+  const [savedAt, setSavedAt] = useState(null)
+  useEffect(() => { setText(value || ''); setSavedAt(null) }, [value])
+  const commit = async () => {
+    if (text === (value || '')) return
+    setSaving(true)
+    try {
+      await api.put(`/encounters/${encounterId}/conclusion`, { conclusion: text })
+      setSavedAt(new Date())
+      onSaved && onSaved()
+    } finally { setSaving(false) }
+  }
+  return (
+    <div>
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={commit}
+        disabled={disabled || saving}
+        rows={3}
+        placeholder="Kết luận lâm sàng, chẩn đoán, hướng xử trí, hẹn tái khám…"
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-gray-50"
+      />
+      <div className="text-[10px] text-gray-400 mt-0.5 text-right">
+        {saving ? 'Đang lưu…' : savedAt ? `✓ Đã lưu ${savedAt.toLocaleTimeString('vi-VN')}` : disabled ? '' : 'Lưu khi rời ô'}
+      </div>
+    </div>
+  )
+}
+
 function DiscountInput({ encounter, disabled, onSaved }) {
   const initialMode = (encounter.discountPercent || 0) > 0 ? 'percent' : 'amount'
   const [mode, setMode] = useState(initialMode)

@@ -2,6 +2,26 @@
 
 Living doc of deferred work / known limits. Append before finishing any feature; check before starting one.
 
+## Bệnh nhân — referrer typeahead with create-new (deferred 2026-05-02)
+
+The patient form ([FormView in Registration.jsx](maec-app/client/src/pages/Registration.jsx)) currently uses a 2-dropdown picker for referrers (Loại đối tác select → Đối tác giới thiệu select listing all referrers of that type). With a long referral list this gets unwieldy.
+
+User wants: type a name or phone → search referrer collection live → if a match exists, pick from a typeahead dropdown; if no match, "+ Tạo đối tác mới với '...'" inline-creates a row in the right collection (referral-doctors, partner-facilities, or salesperson user) and selects it.
+
+Design notes:
+- Replace the second select with a search input + dropdown panel (similar to PatientLookup in [Kham.jsx](maec-app/client/src/pages/Kham.jsx)).
+- Inline-create modal needs only the minimum required fields per type: doctor (name + phone), facility (name + address), salesperson (probably link to existing user instead of creating).
+- Server already supports `q=` filter on `/catalogs/referral-doctors` and `/catalogs/partner-facilities`.
+
+## Kho — dropped tabs (2026-05-02), components left as dead code
+
+Inventory tabs were trimmed to **Tồn kho / Giao dịch / Kiểm kê** (default = Tồn kho). The two dropped tabs:
+
+- **Tổng quan** — alerts (expiring lots, below-min supplies, pending transfers, auto-deduct variance) + activity-today rollup. Considered duplicative with the main app **Tổng Quan dashboard** which is slated to absorb stock alerts as widgets. `OverviewTab` function in [Inventory.jsx](maec-app/client/src/pages/Inventory.jsx) is dead code now — delete when the main dashboard's inventory widgets ship.
+- **Tổng hợp chuỗi** — supervisor-only supply×warehouse matrix. Niche. `MatrixTab` function similarly dead. Resurface under Khác or rebuild if managers ever ask.
+
+Endpoints still alive (no backend cleanup): `/inventory/alerts`, `/inventory/activity-today`, `/inventory/stock/matrix`. Delete the dead React components + the unused endpoints in a single cleanup pass once the dashboard widgets that absorb the alerts are confirmed live.
+
 ## Mobile responsive — Phase 1 done, Phase 2+ pending (2026-05-01)
 
 The native Expo/RN app (P3 in CLAUDE.md) is still not scaffolded. Until then we want the web app to be acceptably usable on mobile browsers. **Phase 1 done; first pass looked OK — user wants polish on Đăng ký services view and the rest of the data-heavy pages.**

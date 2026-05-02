@@ -366,7 +366,7 @@ function SearchView({ query, onQueryChange, results, loading, onPick, onCreateNe
 
 // ── Form view (step 1b, new/edit) ────────────────────────────────────────────
 
-function FormView({ patient, prefill, onCancel, onSaved }) {
+export function FormView({ patient, prefill, onCancel, onSaved, embedded = false }) {
   const { auth } = useAuth()
   const emptyForm = {
     name: '', dob: '', gender: 'M', phone: '', address: '', idCard: '',
@@ -713,12 +713,14 @@ function FormView({ patient, prefill, onCancel, onSaved }) {
         <div className="flex-1" />
         <button onClick={() => handleSave(false)} disabled={saving}
           className="px-4 py-2 text-sm border border-gray-300 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50">
-          Lưu &amp; tiếp tục sau
+          {embedded ? (saving ? 'Đang lưu…' : 'Lưu') : 'Lưu & tiếp tục sau'}
         </button>
-        <button onClick={() => handleSave(true)} disabled={saving}
-          className="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-          {saving ? 'Đang lưu…' : 'Lưu & chọn dịch vụ →'}
-        </button>
+        {!embedded && (
+          <button onClick={() => handleSave(true)} disabled={saving}
+            className="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {saving ? 'Đang lưu…' : 'Lưu & chọn dịch vụ →'}
+          </button>
+        )}
       </div>
     </div>
   )
