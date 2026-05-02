@@ -21,12 +21,13 @@ Tables overflow horizontally and modals exceed 375px viewports. Files flagged by
 
 Pattern for each: wrap tables in `overflow-x-auto`, cap modals to `max-w-[calc(100vw-2rem)] sm:max-w-2xl`, scale `min-w-[…]` filter inputs to `w-full sm:min-w-[240px]`.
 
-### Polish ask — Đăng ký "selecting services" (user flagged 2026-05-01)
-[`ServicesView`](maec-app/client/src/pages/Registration.jsx#L921) (active when stepper = step 2):
-- Line 969: outer `p-5` — reduce on mobile (`p-3 sm:p-5`)
-- Line 978: `grid grid-cols-[1fr_380px] gap-4 flex-1` — won't reflow. Need `grid-cols-1 lg:grid-cols-[1fr_380px]` so the cart stacks below the service picker on mobile (or model it as a tab toggle / slide-up drawer)
-- Line 1019: per-row `gridTemplateColumns: '20px 90px 1fr 70px 110px'` (5 cols: checkbox · code · name · type · price) — at 375px this crushes. Either drop the code/type columns on mobile, or switch row layout to a 2-line stacked variant (name+type on top line, code+price on bottom)
-- Cart panel (line 1037+): cap height + sticky-bottom on mobile so it's visible while scrolling the service list
+### Đăng ký step 2 simplified to pure check-in (2026-05-02) — supersedes prior polish ask
+The 2026-05-01 polish ask above was for the step-2 service picker + cart + "In phiếu chỉ định" panel. That panel has been deleted. Step 2 is now `CheckInView`: PatientSummary + a single "Tiếp đón" button that POSTs `services: []` to `/registration/check-in`, creating an empty Encounter and redirecting to Khám. No invoice / phiếu is generated at this stage; KTV/BS pick services in Khám and Thu Ngân handles billing after the visit.
+
+The mobile-responsive concerns (cart stacking, row layout at 375px) no longer apply. The print slip helper (`printOrderSlip`) was removed entirely — recover from git if needed when a print-at-checkout flow returns.
+
+### Optional: pre-select services / packages at check-in (deferred 2026-05-02)
+Some receptionists may want to attach a known package (e.g. PKG-1 Khám mắt cơ bản) at check-in time so it's already on the encounter when KTV/BS open it. Today the Đăng ký flow has zero service/package picker; assignment happens entirely in Khám via the "Gán gói" / "+ Thêm dịch vụ" buttons. If we add a pre-select step, keep it strictly optional — the empty-check-in path must remain the default.
 
 ### Phase 3 — per-page polish (lower priority)
 Login, Dashboard already responsive. Remaining: TodayDashboard chart sizing, Reports tabs, KPISales gauges, Workflow/CRM/AuditLog (already have `overflow-x-auto`).

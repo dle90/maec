@@ -240,19 +240,20 @@ router.delete('/appointments/:id', requireAuth, async (req, res) => {
   }
 })
 
-// ─── CHECK-IN (service orders + invoice) ─────────────────────────────────────
-// POST /registration/check-in — atomic bundle for the new Đăng ký flow:
-//   1 Invoice (status=draft, lands on Phiếu thu "Chờ thu")
-//   N Appointments (status=scheduled)
-//   N Studies (status=scheduled, lands on Ca chụp "Chờ thực hiện")
-// Body: { patientId, services: [{code, name, price, modality, qty}], paymentMethod, notes? }
+// ─── CHECK-IN (creates encounter; optional service orders + invoice) ─────────
+// POST /registration/check-in — atomic bundle for the Đăng ký flow:
+//   1 Encounter (always — lands on Khám queue for KTV/BS)
+//   1 Invoice (only if services provided — status=draft, lands on Phiếu thu)
+//   N Appointments + Studies (only for imaging services — lands on Ca chụp)
+// Body: { patientId, services?: [{code, name, price, modality, qty}], paymentMethod?, notes? }
+// As of 2026-05-02 the Đăng ký UI sends services=[] — receptionist just checks
+// the patient in, KTV/BS pick services later in Khám. Legacy non-empty path
+// is preserved for any caller still posting cart items.
 router.post('/check-in', requireAuth, async (req, res) => {
   try {
-    const { patientId, services, paymentMethod = 'cash', notes = '' } = req.body
+    const { patientId, paymentMethod = 'cash', notes = '' } = req.body
     if (!patientId) return res.status(400).json({ error: 'patientId required' })
-    if (!Array.isArray(services) || services.length === 0) {
-      return res.status(400).json({ error: 'At least one service required' })
-    }
+    const services = Array.isArray(req.body.services) ? req.body.services : []
 
     const patient = await Patient.findById(patientId).lean()
     if (!patient) return res.status(404).json({ error: 'Patient not found' })
@@ -342,47 +343,52 @@ router.post('/check-in', requireAuth, async (req, res) => {
         created.appointments.push(appt)
       }
 
-      // One Invoice with all items, linked to the first appointment for referral snapshot path
-      const items = services.map(s => ({
-        serviceCode: s.code || '',
-        serviceName: s.name || '',
-        quantity: s.qty || 1,
-        unitPrice: s.price || 0,
-        discountAmount: 0,
-        taxRate: 0,
-        taxAmount: 0,
-        amount: (s.price || 0) * (s.qty || 1),
-      }))
-      const subtotal = items.reduce((a, it) => a + it.amount, 0)
-      const eff = await resolveEffectiveSalesperson(patient.referralType, patient.referralId)
+      // Invoice — only when services were provided. Empty check-in (the new
+      // default Đăng ký flow) skips invoice creation; Thu Ngân handles billing
+      // after the visit completes.
+      let invoice = null
+      if (services.length > 0) {
+        const items = services.map(s => ({
+          serviceCode: s.code || '',
+          serviceName: s.name || '',
+          quantity: s.qty || 1,
+          unitPrice: s.price || 0,
+          discountAmount: 0,
+          taxRate: 0,
+          taxAmount: 0,
+          amount: (s.price || 0) * (s.qty || 1),
+        }))
+        const subtotal = items.reduce((a, it) => a + it.amount, 0)
+        const eff = await resolveEffectiveSalesperson(patient.referralType, patient.referralId)
 
-      const invoice = await new Invoice({
-        _id: `INV-${Date.now()}-${crypto.randomUUID().slice(0, 4)}`,
-        invoiceNumber: await nextInvoiceNumber(),
-        patientId: patient._id,
-        patientName: patient.name,
-        phone: patient.phone || '',
-        appointmentId: created.appointments[0]?._id || '',
-        site,
-        sourceCode: patient.sourceCode || '',
-        sourceName: patient.sourceName || '',
-        referralType: patient.referralType || '',
-        referralId: patient.referralId || '',
-        referralName: patient.referralName || '',
-        effectiveSalespersonId: eff.id,
-        effectiveSalespersonName: eff.name,
-        items,
-        subtotal,
-        totalDiscount: 0,
-        totalTax: 0,
-        grandTotal: subtotal,
-        paymentMethod: ['cash', 'transfer', 'card', 'mixed'].includes(paymentMethod) ? paymentMethod : 'cash',
-        status: 'draft',
-        createdBy: req.user.username,
-        notes,
-        createdAt: now(),
-        updatedAt: now(),
-      }).save()
+        invoice = await new Invoice({
+          _id: `INV-${Date.now()}-${crypto.randomUUID().slice(0, 4)}`,
+          invoiceNumber: await nextInvoiceNumber(),
+          patientId: patient._id,
+          patientName: patient.name,
+          phone: patient.phone || '',
+          appointmentId: created.appointments[0]?._id || '',
+          site,
+          sourceCode: patient.sourceCode || '',
+          sourceName: patient.sourceName || '',
+          referralType: patient.referralType || '',
+          referralId: patient.referralId || '',
+          referralName: patient.referralName || '',
+          effectiveSalespersonId: eff.id,
+          effectiveSalespersonName: eff.name,
+          items,
+          subtotal,
+          totalDiscount: 0,
+          totalTax: 0,
+          grandTotal: subtotal,
+          paymentMethod: ['cash', 'transfer', 'card', 'mixed'].includes(paymentMethod) ? paymentMethod : 'cash',
+          status: 'draft',
+          createdBy: req.user.username,
+          notes,
+          createdAt: now(),
+          updatedAt: now(),
+        }).save()
+      }
 
       // Create one MAEC clinical Encounter (always — separate from any Studies
       // the radiology fan-out above may produce). The cart's services become
