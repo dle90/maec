@@ -764,6 +764,17 @@ function PatientSummary({ patient, onEdit }) {
 // Khám. No invoice / phiếu chỉ định is generated at this stage; billing
 // happens at Thu Ngân after the visit.
 function CheckInView({ patient, onEdit, onBack, onCheckIn, checkingIn }) {
+  const { auth } = useAuth()
+  const SITES = ['Trung Kính', 'Kim Giang']
+  const initialSite = (() => {
+    try {
+      const remembered = localStorage.getItem('maec_last_checkin_site')
+      if (remembered && SITES.includes(remembered)) return remembered
+    } catch {}
+    if (SITES.includes(auth?.department)) return auth.department
+    return SITES[0]
+  })()
+  const [site, setSite] = useState(initialSite)
   return (
     <div className="p-3 sm:p-5 h-full flex flex-col gap-4 min-h-0">
       <PatientSummary patient={patient} onEdit={onEdit} />
@@ -773,12 +784,19 @@ function CheckInView({ patient, onEdit, onBack, onCheckIn, checkingIn }) {
         <div className="text-xs sm:text-sm text-gray-500 max-w-md mb-6">
           Khi bấm <span className="font-semibold">Tiếp đón</span>, hệ thống tạo lượt khám mới và đưa bệnh nhân vào hàng đợi của KTV / Bác sĩ ở mục <span className="font-semibold">Khám</span>. Dịch vụ được chọn ở các trạm khám.
         </div>
+        <div className="flex items-center gap-2 mb-4">
+          <label className="text-sm text-gray-600">Cơ sở:</label>
+          <select value={site} onChange={e => setSite(e.target.value)} disabled={checkingIn}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white">
+            {SITES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
         <div className="flex gap-2">
           <button onClick={onBack}
             className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
             ← Quay lại
           </button>
-          <button onClick={onCheckIn} disabled={checkingIn}
+          <button onClick={() => onCheckIn(site)} disabled={checkingIn}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-40">
             {checkingIn ? 'Đang tiếp đón…' : 'Tiếp đón →'}
           </button>
@@ -925,13 +943,15 @@ export default function Registration() {
     }
   }
 
-  const onCheckIn = async () => {
+  const onCheckIn = async (site) => {
     if (!selectedPatient?._id) return
     setCheckingIn(true)
     try {
+      if (site) { try { localStorage.setItem('maec_last_checkin_site', site) } catch {} }
       const r = await api.post('/registration/check-in', {
         patientId: selectedPatient._id,
         services: [],
+        site,
       })
       const encounterId = r.data?.encounterId
       if (encounterId) {
