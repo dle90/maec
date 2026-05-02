@@ -26,6 +26,7 @@ const NAV = [
     group: 'Danh mục',
     items: [
       { path: '/catalogs/services', label: 'Dịch vụ khám', icon: '📄', workflowOnly: true },
+      { path: '/catalogs/packages', label: 'Gói khám',     icon: '📦', workflowOnly: true },
       { path: '/catalogs/kinh',     label: 'Kính',         icon: '👓', workflowOnly: true },
       { path: '/catalogs/thuoc',    label: 'Thuốc',        icon: '💊', workflowOnly: true },
     ]
