@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api from '../api'
 
@@ -61,6 +61,12 @@ export default function Kham() {
   const [from, setFrom] = useState(searchParams.get('from') || todayISO())
   const [to, setTo] = useState(searchParams.get('to') || todayISO())
   const [site, setSite] = useState(searchParams.get('site') || '')
+  // Patient filter — when set, server returns full lifetime history for that
+  // patient and ignores from/to. Cleared by clicking the "× BN" pill.
+  const [patientFilter, setPatientFilter] = useState(() => {
+    const pid = searchParams.get('patientId')
+    return pid ? { patientId: pid, name: searchParams.get('patientName') || pid } : null
+  })
 
   // When a preset period is selected, derive from/to from it. Custom = user-set.
   useEffect(() => {
@@ -73,24 +79,34 @@ export default function Kham() {
   const load = async () => {
     setLoading(true)
     try {
-      const params = { from, to }
+      const params = {}
+      if (patientFilter) {
+        params.patientId = patientFilter.patientId
+      } else {
+        params.from = from
+        params.to = to
+      }
       if (site) params.site = site
       const r = await api.get('/encounters', { params })
       setList(r.data || [])
     } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [from, to, site])
+  useEffect(() => { load() }, [from, to, site, patientFilter])
 
   // Sync filter + open-drawer state to URL (deep-link survives refresh)
   useEffect(() => {
     const next = {}
     if (openId) next.id = openId
+    if (patientFilter) {
+      next.patientId = patientFilter.patientId
+      if (patientFilter.name) next.patientName = patientFilter.name
+    }
     if (period !== 'today') next.period = period
     if (period === 'custom') { next.from = from; next.to = to }
     if (site) next.site = site
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openId, period, from, to, site])
+  }, [openId, period, from, to, site, patientFilter])
 
   return (
     <div className="space-y-3">
@@ -107,7 +123,7 @@ export default function Kham() {
 
       {/* Filters: time + site */}
       <div className="bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1">
+        <div className={`flex gap-1 ${patientFilter ? 'opacity-40 pointer-events-none' : ''}`}>
           {Object.entries(PERIOD_LABELS).map(([k, label]) => (
             <button key={k} onClick={() => setPeriod(k)}
               className={`px-3 py-1.5 text-sm rounded-lg font-medium ${period === k ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
@@ -115,14 +131,14 @@ export default function Kham() {
             </button>
           ))}
         </div>
-        {period === 'custom' && (
+        {period === 'custom' && !patientFilter && (
           <div className="flex items-center gap-2">
             <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="border rounded px-2 py-1 text-sm" />
             <span className="text-xs text-gray-400">→</span>
             <input type="date" value={to} onChange={e => setTo(e.target.value)} className="border rounded px-2 py-1 text-sm" />
           </div>
         )}
-        {period !== 'custom' && (
+        {period !== 'custom' && !patientFilter && (
           <span className="text-xs text-gray-500">{from === to ? from : `${from} → ${to}`}</span>
         )}
         <div className="ml-auto flex items-center gap-2">
@@ -138,6 +154,23 @@ export default function Kham() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Filter: patient (when set, returns full lifetime; time filter ignored) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3 flex-wrap">
+        <span className="text-xs text-gray-500">Bệnh nhân:</span>
+        {patientFilter ? (
+          <>
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              <span className="font-semibold">{patientFilter.name}</span>
+              <span className="text-xs font-mono opacity-70">{patientFilter.patientId}</span>
+              <button onClick={() => setPatientFilter(null)} className="ml-1 text-blue-600 hover:text-blue-900 text-base leading-none" aria-label="Bỏ lọc bệnh nhân">×</button>
+            </div>
+            <span className="text-xs text-gray-400 italic">Đang xem toàn bộ lịch sử của BN — bộ lọc thời gian không áp dụng.</span>
+          </>
+        ) : (
+          <PatientLookup onPick={(p) => setPatientFilter({ patientId: p.patientId || p._id, name: p.name })} />
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -181,6 +214,62 @@ export default function Kham() {
 
       {openId && <EncounterDrawer id={openId} onClose={() => { setOpenId(null); load() }} onOpenOther={(otherId) => setOpenId(otherId)} />}
       {showCreate && <CreateEncounterModal onClose={() => setShowCreate(false)} onCreated={(id) => { setShowCreate(false); setOpenId(id); load() }} />}
+    </div>
+  )
+}
+
+// ── Patient lookup (filter row autocomplete) ──────────────
+// Debounced search against /registration/patients. On pick, parent gets the
+// patient object and sets the patientFilter (patientId + name) on the list.
+function PatientLookup({ onPick }) {
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const debounceRef = useRef(null)
+
+  useEffect(() => {
+    if (!q.trim()) { setResults([]); return }
+    setLoading(true)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const r = await api.get('/registration/patients', { params: { q, limit: 8 } })
+        setResults(r.data || [])
+        setOpen(true)
+      } catch { setResults([]) }
+      setLoading(false)
+    }, 200)
+    return () => debounceRef.current && clearTimeout(debounceRef.current)
+  }, [q])
+
+  return (
+    <div className="relative">
+      <input
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        onFocus={() => results.length && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Tìm tên / SĐT / mã BN..."
+        className="border border-gray-200 rounded-lg pl-3 pr-7 py-1.5 text-sm w-64 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+      />
+      {loading && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">…</span>}
+      {open && results.length > 0 && (
+        <div className="absolute top-full left-0 mt-1 w-80 max-h-64 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+          {results.map(p => (
+            <button key={p._id} onMouseDown={() => { onPick(p); setQ(''); setResults([]); setOpen(false) }}
+              className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+              <div className="text-sm font-medium text-gray-800">{p.name}</div>
+              <div className="text-xs text-gray-500 font-mono">{p.patientId || p._id} · {p.phone || '—'}</div>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && q && !loading && results.length === 0 && (
+        <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10 px-3 py-2 text-xs text-gray-500">
+          Không tìm thấy bệnh nhân khớp
+        </div>
+      )}
     </div>
   )
 }

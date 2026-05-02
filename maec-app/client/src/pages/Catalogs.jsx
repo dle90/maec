@@ -755,6 +755,7 @@ function PatientsTable() {
   const [searchQ, setSearchQ] = useState('')
   const [genderFilter, setGenderFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [openPatient, setOpenPatient] = useState(null)
   useEffect(() => { setPage(1) }, [searchQ, genderFilter])
   const load = useCallback(async () => {
     setLoading(true)
@@ -802,7 +803,7 @@ function PatientsTable() {
             {loading ? <tr><td colSpan={cols.length} className="px-4 py-8 text-center text-gray-400">Đang tải...</td></tr>
             : paged.length === 0 ? <tr><td colSpan={cols.length} className="px-4 py-10 text-center text-gray-400">Chưa có bệnh nhân khớp bộ lọc.</td></tr>
             : paged.map(p => (
-              <tr key={p._id} className="border-t border-gray-100 hover:bg-blue-50/50">
+              <tr key={p._id} onClick={() => setOpenPatient(p)} className="border-t border-gray-100 hover:bg-blue-50/50 cursor-pointer">
                 {cols.map(c => <td key={c.key} className={`px-4 py-2.5 text-gray-600 ${c.cls || ''}`}>{c.fmt ? c.fmt(p[c.key]) : (p[c.key] || '-')}</td>)}
               </tr>
             ))}
@@ -815,7 +816,98 @@ function PatientsTable() {
           </div>
         )}
       </div>
+      {openPatient && <PatientDetailDrawer patient={openPatient} onClose={() => setOpenPatient(null)} />}
     </>
+  )
+}
+
+// PatientDetailDrawer — opens from a patient row in /catalogs/patients.
+// Shows the patient's identity card + full encounter history (lifetime).
+// Each encounter row is a link to /kham?id=<encId> so the receptionist can
+// jump straight into the visit.
+function PatientDetailDrawer({ patient, onClose }) {
+  const [encounters, setEncounters] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    api.get('/encounters', { params: { patientId: patient.patientId || patient._id } })
+      .then(r => { if (!cancelled) setEncounters(r.data || []) })
+      .catch(() => { if (!cancelled) setEncounters([]) })
+    return () => { cancelled = true }
+  }, [patient])
+
+  const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
+  const fmtDate = (iso) => iso ? iso.slice(0, 10) : '—'
+  const fmtTime = (iso) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+  const statusBadge = (s) => {
+    if (s === 'paid')      return <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Đã trả</span>
+    if (s === 'cancelled') return <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Hủy</span>
+    return <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">Mở</span>
+  }
+
+  const addr = [patient.address, patient.street, patient.ward, patient.city].filter(Boolean).join(', ') || '—'
+  const gender = patient.gender === 'M' ? 'Nam' : patient.gender === 'F' ? 'Nữ' : '—'
+
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-white h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-gray-900 truncate">{patient.name || '—'}</div>
+            <div className="text-xs text-gray-500 font-mono mt-0.5">{patient.patientId || patient._id}</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          <section>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hồ sơ</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+              <div><span className="text-gray-500">Giới tính:</span> {gender}</div>
+              <div><span className="text-gray-500">Ngày sinh:</span> {fmtDate(patient.dob)}</div>
+              <div><span className="text-gray-500">SĐT:</span> <span className="font-mono">{patient.phone || '—'}</span></div>
+              <div><span className="text-gray-500">Email:</span> {patient.email || '—'}</div>
+              <div><span className="text-gray-500">CCCD:</span> <span className="font-mono">{patient.idCard || '—'}</span></div>
+              <div><span className="text-gray-500">BHYT:</span> <span className="font-mono">{patient.insuranceNumber || '—'}</span></div>
+              <div className="col-span-2"><span className="text-gray-500">Địa chỉ:</span> {addr}</div>
+              {patient.clinicalInfo && <div className="col-span-2"><span className="text-gray-500">Lâm sàng:</span> {patient.clinicalInfo}</div>}
+            </div>
+          </section>
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lịch sử khám {encounters && `(${encounters.length})`}</h3>
+              <Link to={`/kham?patientId=${encodeURIComponent(patient.patientId || patient._id)}`} className="text-xs text-blue-600 hover:text-blue-800">Mở trong Khám →</Link>
+            </div>
+            {encounters === null ? (
+              <div className="text-xs text-gray-400 italic">Đang tải...</div>
+            ) : encounters.length === 0 ? (
+              <div className="text-xs text-gray-400 italic px-2 py-3 bg-gray-50 rounded-lg">Bệnh nhân này chưa có lượt khám nào.</div>
+            ) : (
+              <div className="border border-gray-200 rounded-lg divide-y">
+                {encounters.map(e => (
+                  <Link key={e._id} to={`/kham?id=${encodeURIComponent(e._id)}`}
+                    className="block px-3 py-2.5 hover:bg-blue-50 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 font-mono w-20 flex-shrink-0">{fmtDate(e.createdAt)}</span>
+                      <span className="text-xs text-gray-500 font-mono w-12 flex-shrink-0">{fmtTime(e.createdAt)}</span>
+                      <span className="text-xs text-gray-500 w-24 flex-shrink-0 truncate">{e.site || '—'}</span>
+                      <span className="flex-1 truncate text-gray-700">
+                        {e.packageName || <span className="text-gray-400 italic">— chưa gán gói —</span>}
+                        {e.assignedServices?.length > 0 && <span className="text-xs text-gray-500 ml-1">({e.assignedServices.length} DV)</span>}
+                      </span>
+                      <span className="font-mono text-blue-700 text-xs flex-shrink-0">{fmtMoney(e.billTotal)}đ</span>
+                      <span className="flex-shrink-0">{statusBadge(e.status)}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
   )
 }
 
