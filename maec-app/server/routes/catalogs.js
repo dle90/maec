@@ -53,9 +53,15 @@ function catalogCRUD(Model, prefix, nameField = 'name', writePerm = null) {
   })
 
   // POST create
+  // _id defaults to req.body.code when supplied (matches seed convention —
+  // every seed script sets `_id: x.code`). UI calls PUT/DELETE with `code`
+  // as the URL param, so keeping `_id == code` makes those routes work
+  // without a separate lookup. The PREFIX-timestamp fallback only fires
+  // when the caller didn't supply a code (rare, mostly legacy callers).
   router.post(`/${prefix}`, writeGuard, async (req, res) => {
     try {
-      const data = { ...req.body, _id: `${prefix.toUpperCase()}-${Date.now()}`, createdAt: now(), updatedAt: now() }
+      const _id = req.body.code || `${prefix.toUpperCase()}-${Date.now()}`
+      const data = { ...req.body, _id, createdAt: now(), updatedAt: now() }
       if (!data.status) data.status = 'active'
       const item = new Model(data)
       await item.save()
@@ -64,20 +70,25 @@ function catalogCRUD(Model, prefix, nameField = 'name', writePerm = null) {
   })
 
   // PUT update
+  // Look up by `_id` first (covers seeded + new-correctly-keyed rows), then
+  // fall back to `{code: param}` so any pre-fix rows (where _id was set to
+  // PREFIX-timestamp but code was the user-friendly value) remain editable.
   router.put(`/${prefix}/:id`, writeGuard, async (req, res) => {
     try {
       const update = { ...req.body, updatedAt: now() }
       delete update._id
-      const item = await Model.findByIdAndUpdate(req.params.id, update, { new: true }).lean()
+      let item = await Model.findByIdAndUpdate(req.params.id, update, { new: true }).lean()
+      if (!item) item = await Model.findOneAndUpdate({ code: req.params.id }, update, { new: true }).lean()
       if (!item) return res.status(404).json({ error: 'Không tìm thấy' })
       res.json(item)
     } catch (err) { res.status(500).json({ error: err.message }) }
   })
 
-  // DELETE
+  // DELETE — same dual-lookup as PUT.
   router.delete(`/${prefix}/:id`, writeGuard, async (req, res) => {
     try {
-      await Model.findByIdAndDelete(req.params.id)
+      let r = await Model.findByIdAndDelete(req.params.id)
+      if (!r) r = await Model.findOneAndDelete({ code: req.params.id })
       res.json({ ok: true })
     } catch (err) { res.status(500).json({ error: err.message }) }
   })

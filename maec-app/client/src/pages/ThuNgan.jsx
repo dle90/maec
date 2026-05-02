@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import api from '../api'
+import { printVisitReport } from './Kham'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 const fmtTime = (iso) => {
@@ -100,9 +101,16 @@ export default function ThuNgan() {
                 <td className="px-3 py-2 text-center text-xs">{(e.billItems || []).length}</td>
                 <td className="px-3 py-2 text-right font-mono text-blue-700 font-semibold">{fmtMoney(grandTotal(e))}</td>
                 <td className="px-3 py-2 text-xs text-gray-500">{tab === 'paid' ? fmtDateTime(e.paidAt) : fmtTime(e.createdAt)}</td>
-                <td className="px-3 py-2 text-xs">
+                <td className="px-3 py-2 text-xs whitespace-nowrap">
                   {e.status === 'paid' ? (
-                    <span className="text-green-700">Xem →</span>
+                    <span className="inline-flex items-center gap-2">
+                      <button
+                        onClick={ev => { ev.stopPropagation(); printVisitReport(e) }}
+                        className="text-gray-600 hover:text-gray-900 text-xs px-1.5 py-0.5 border border-gray-200 rounded hover:bg-gray-50"
+                        title="In lại biên lai"
+                      >🖨 In lại</button>
+                      <span className="text-green-700">Xem →</span>
+                    </span>
                   ) : (
                     <span className="text-orange-600 font-semibold">Thanh toán →</span>
                   )}
@@ -178,7 +186,16 @@ function PaymentDrawer({ id, onClose }) {
               <div className="text-xs text-green-700 mt-0.5">Thu ngân: {enc.paidByName} · {fmtDateTime(enc.paidAt)} · {fmtMoney(enc.paidAmount)} đ</div>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isPaid && (
+              <button
+                onClick={() => printVisitReport(enc)}
+                className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
+                title="In lại biên lai"
+              >🖨 In lại</button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">

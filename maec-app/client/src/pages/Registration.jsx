@@ -695,7 +695,7 @@ export function FormView({ patient, prefill, onCancel, onSaved, embedded = false
 
             <Field label="Triệu chứng / Chẩn đoán" className="col-span-6">
               <textarea value={form.clinicalInfo} onChange={e => set('clinicalInfo', e.target.value)}
-                rows={2} className={`${inputCls} resize-none`} placeholder="KTSK" />
+                rows={2} className={`${inputCls} resize-none`} placeholder="VD: Khám tổng quát, viêm kết mạc, đau mắt..." />
             </Field>
             <Field label="Ghi chú" className="col-span-6">
               <input value={form.notes} onChange={e => set('notes', e.target.value)} className={inputCls} />

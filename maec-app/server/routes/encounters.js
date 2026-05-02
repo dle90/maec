@@ -314,6 +314,17 @@ router.put('/:id/services/:serviceCode', requireAuth, async (req, res) => {
       if (status === 'in_progress' && !svc.startedAt) svc.startedAt = now()
       if (status === 'done' && !svc.completedAt) svc.completedAt = now()
     }
+    // Auto-stamp performer on save (Q2 = B): if the caller didn't explicitly
+    // pass assignedTo, attribute the work to the logged-in user. Only stamp
+    // when there's actual work being recorded (output saved OR status moved
+    // off 'pending') and the slot isn't already filled.
+    if (assignedTo === undefined && !svc.assignedTo) {
+      const isWork = output !== undefined || (status && status !== 'pending')
+      if (isWork) {
+        svc.assignedTo = req.user.username
+        svc.assignedToName = req.user.displayName || req.user.username
+      }
+    }
 
     enc.markModified('assignedServices')
     enc.updatedAt = now()

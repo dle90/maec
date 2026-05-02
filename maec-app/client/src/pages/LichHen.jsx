@@ -195,21 +195,29 @@ function TimeAxis() {
 function EventCard({ a, onPick, showSiteBadge }) {
   const meta = examTypeMeta(a.examType)
   const cancelled = a.status === 'cancelled' || a.status === 'no_show'
+  // 30-min events get a single 32px slot — there's only room for the time +
+  // name row before content clips. Compact mode strips the examType subline
+  // and the status pill so the visible row is readable. ≥45-min events get
+  // the full card.
+  const compact = (a.duration || 30) <= 30
   return (
     <button
       onClick={() => onPick(a)}
-      className={`absolute left-1 right-1 rounded-md border ${meta.color} ${cancelled ? 'opacity-40 line-through' : ''} text-left px-2 py-1 hover:shadow-md hover:z-10 transition-shadow overflow-hidden`}
+      className={`absolute left-1 right-1 rounded-md border ${meta.color} ${cancelled ? 'opacity-40 line-through' : ''} text-left ${compact ? 'px-2 py-0.5' : 'px-2 py-1'} hover:shadow-md hover:z-10 transition-shadow overflow-hidden`}
       style={{ top: offsetFor(a.scheduledAt), height: heightFor(a.duration) }}
     >
       <div className="flex items-baseline gap-1.5">
         <span className="text-[11px] font-mono font-semibold">{fmtTime(a.scheduledAt)}</span>
         <span className="text-xs font-medium truncate flex-1">{a.patientName || '—'}</span>
+        {compact && showSiteBadge && a.site && <span className="text-[10px] opacity-70 whitespace-nowrap">· {a.site.split(' ').map(s => s[0]).join('')}</span>}
       </div>
-      <div className="text-[10px] truncate opacity-80">{a.examType || a.modality || ''}</div>
-      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-        <span className={`text-[10px] px-1 rounded ${STATUS[a.status]?.pill || 'bg-gray-100 text-gray-700'}`}>{STATUS[a.status]?.label || a.status}</span>
-        {showSiteBadge && a.site && <span className="text-[10px] px-1 rounded bg-white/70 text-gray-700 border border-gray-200">{a.site}</span>}
-      </div>
+      {!compact && <div className="text-[10px] truncate opacity-80">{a.examType || a.modality || ''}</div>}
+      {!compact && (
+        <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+          <span className={`text-[10px] px-1 rounded ${STATUS[a.status]?.pill || 'bg-gray-100 text-gray-700'}`}>{STATUS[a.status]?.label || a.status}</span>
+          {showSiteBadge && a.site && <span className="text-[10px] px-1 rounded bg-white/70 text-gray-700 border border-gray-200">{a.site}</span>}
+        </div>
+      )}
     </button>
   )
 }

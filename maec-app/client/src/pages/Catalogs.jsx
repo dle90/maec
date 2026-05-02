@@ -1598,7 +1598,7 @@ function PatientsTable() {
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <input
           className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full sm:w-72 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
-          placeholder="Tìm hoặc thêm BN — tên, SĐT (BN/giám hộ), mã..."
+          placeholder="Tìm BN — tên, SĐT, mã..."
           value={searchQ}
           onChange={e => setSearchQ(e.target.value)}
           autoFocus
@@ -1779,15 +1779,20 @@ function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-5xl bg-white max-h-[92vh] flex flex-col shadow-2xl rounded-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 flex-shrink-0">
-          <div className="min-w-0 flex-1">
-            <div className="text-base font-semibold text-gray-900 truncate">{patient.name || '—'}</div>
-            <div className="text-xs text-gray-500 font-mono mt-0.5">{patient.patientId || patient._id}</div>
+        {/* Header — name + BN code on its own row (BN code never wraps),
+            actions stack to a second row on mobile so they don't fight for
+            horizontal space at 375px. Desktop ≥sm keeps them on one line. */}
+        <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-gray-100 flex-shrink-0 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-gray-900 truncate">{patient.name || '—'}</div>
+              <div className="text-xs text-gray-500 font-mono mt-0.5 whitespace-nowrap">{patient.patientId || patient._id}</div>
+            </div>
+            <button onClick={onClose} className="sm:hidden text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0" aria-label="Đóng">×</button>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <select value={site} onChange={e => setSite(e.target.value)} disabled={checkingIn}
-              className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white"
+              className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white flex-1 sm:flex-none"
               title="Cơ sở thực hiện lượt khám">
               {SITES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -1795,7 +1800,7 @@ function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
               className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
               {checkingIn ? 'Đang tiếp đón…' : '+ Tiếp đón'}
             </button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none ml-1" aria-label="Đóng">×</button>
+            <button onClick={onClose} className="hidden sm:inline-block text-gray-400 hover:text-gray-700 text-2xl leading-none ml-1" aria-label="Đóng">×</button>
           </div>
         </div>
 

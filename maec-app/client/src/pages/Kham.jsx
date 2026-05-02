@@ -49,7 +49,7 @@ const PERIOD_LABELS = { today: 'Hôm nay', week: 'Tuần này', month: 'Tháng n
 // any encounter status; fields that are empty (services with no output, no
 // discount, etc.) are gracefully omitted.
 
-function printVisitReport(enc) {
+export function printVisitReport(enc) {
   const w = window.open('', '_blank', 'width=820,height=1100')
   if (!w) { alert('Trình duyệt chặn cửa sổ in — vui lòng cho phép pop-up.'); return }
   const now = new Date()
@@ -694,26 +694,32 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-5 py-3 border-b border-gray-200 flex items-start justify-between flex-shrink-0 gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            {enc.patientName} <span className="font-mono text-xs text-gray-400">{enc.patientId}</span>
-            {enc.status === 'paid' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Đã thanh toán</span>}
-            {enc.status === 'cancelled' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Đã hủy</span>}
+      {/* Header — name + BN code on its own row (BN code stays on one line),
+          actions stack below on mobile so the BN code never breaks into 3
+          vertical chunks at 375px. ≥sm keeps everything on one row. */}
+      <div className="px-3 sm:px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-start sm:justify-between flex-shrink-0 gap-2 sm:gap-3">
+        <div className="flex items-start gap-2 min-w-0">
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
+              <span className="truncate">{enc.patientName}</span>
+              <span className="font-mono text-xs text-gray-400 whitespace-nowrap">{enc.patientId}</span>
+              {enc.status === 'paid' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Đã thanh toán</span>}
+              {enc.status === 'cancelled' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Đã hủy</span>}
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5 truncate">{enc.site || '—'} · {enc._id}</div>
+            {enc.status === 'paid' && enc.paidByName && (
+              <div className="text-xs text-green-700 mt-0.5">Thu ngân: {enc.paidByName} · {enc.paidAt && new Date(enc.paidAt).toLocaleString('vi-VN')}</div>
+            )}
           </div>
-          <div className="text-xs text-gray-500 mt-0.5">{enc.site || '—'} · {enc._id}</div>
-          {enc.status === 'paid' && enc.paidByName && (
-            <div className="text-xs text-green-700 mt-0.5">Thu ngân: {enc.paidByName} · {enc.paidAt && new Date(enc.paidAt).toLocaleString('vi-VN')}</div>
-          )}
+          <button onClick={onClose} className="sm:hidden text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0" aria-label="Đóng">×</button>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
           {!isClosed && (enc.billItems || []).length > 0 && (
-            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded">Tổng bill: <b className="text-blue-700 font-mono">{fmtMoney(grandTotal(enc))} đ</b> · chuyển <b>Thu ngân</b></span>
+            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded hidden md:inline">Tổng bill: <b className="text-blue-700 font-mono">{fmtMoney(grandTotal(enc))} đ</b> · chuyển <b>Thu ngân</b></span>
           )}
           <button
             onClick={() => printVisitReport(enc)}
-            className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1"
+            className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
             title="In phiếu khám"><span>🖨</span> In phiếu</button>
           {!isClosed && (
             <button
@@ -723,10 +729,10 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
                 await api.post(`/encounters/${enc._id}/cancel`, { reason })
                 reload()
               }}
-              className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-200 rounded hover:bg-red-50"
+              className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-200 rounded hover:bg-red-50 whitespace-nowrap"
               title="Hủy lượt khám">Hủy</button>
           )}
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none" aria-label="Đóng">×</button>
+          <button onClick={onClose} className="hidden sm:inline-block text-gray-400 hover:text-gray-700 text-2xl leading-none" aria-label="Đóng">×</button>
         </div>
       </div>
 
@@ -847,6 +853,9 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.cls} flex-shrink-0`}>{badge.label}</span>
                     <button onClick={() => setOpenServiceCode(s.serviceCode)} className="text-sm flex-1 text-left truncate cursor-pointer hover:text-blue-700">
                       {s.serviceName}
+                      {s.assignedToName && (
+                        <span className="ml-1.5 text-[10px] text-gray-500 font-normal">· {s.assignedToName}</span>
+                      )}
                     </button>
                     <span className="font-mono text-[10px] text-gray-400 flex-shrink-0">{s.serviceCode}</span>
                     {s.addedByPackage && <span className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded flex-shrink-0" title={`Từ gói ${s.addedByPackage}`}>📦</span>}
