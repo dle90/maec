@@ -354,18 +354,69 @@ router.post('/users', requireAdmin, async (req, res) => {
 })
 
 // ── Patients list (read-only for catalog) ────────────────
+// Server-driven filtering + pagination so the Bệnh nhân tab scales past
+// the ~100-row cap that bit us before (advanced filters silently missed
+// anyone past row 100 because they ran client-side over the truncated
+// response). Response shape is { items, total, page, pageSize } — the
+// only consumer is PatientsTable in Catalogs.jsx.
+//
+// Search semantics: when `q` is provided it's authoritative — gender /
+// age / date filters are ignored so receptionists searching by name/SĐT
+// always see all matches regardless of which filters are toggled.
 router.get('/patients', requireAuth, async (req, res) => {
   try {
+    const { q, gender, ageMin, ageMax, createdFrom, createdTo, lastFrom, lastTo } = req.query
+    const page = Math.max(1, parseInt(req.query.page) || 1)
+    const pageSize = Math.min(500, Math.max(1, parseInt(req.query.pageSize) || 200))
+
     const filter = {}
-    if (req.query.q) filter.$or = [
-      { name: { $regex: req.query.q, $options: 'i' } },
-      { patientId: { $regex: req.query.q, $options: 'i' } },
-      { phone: { $regex: req.query.q, $options: 'i' } },
-      { guardianName: { $regex: req.query.q, $options: 'i' } },
-      { guardianPhone: { $regex: req.query.q, $options: 'i' } },
-    ]
-    const patients = await Patient.find(filter).sort({ createdAt: -1 }).limit(+(req.query.limit || 100)).lean()
-    res.json(patients)
+    if (q && q.trim()) {
+      // Escape regex specials — patient queries often include "(", "+", etc.
+      const safe = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      filter.$or = [
+        { name: { $regex: safe, $options: 'i' } },
+        { patientId: { $regex: safe, $options: 'i' } },
+        { phone: { $regex: safe, $options: 'i' } },
+        { idCard: { $regex: safe, $options: 'i' } },
+        { guardianName: { $regex: safe, $options: 'i' } },
+        { guardianPhone: { $regex: safe, $options: 'i' } },
+      ]
+    } else {
+      if (gender) filter.gender = gender
+      // Age range → dob range. dob is stored as YYYY-MM-DD string so lex
+      // compare works. age >= ageMin ↔ dob <= today minus ageMin years.
+      // age <= ageMax ↔ dob > today minus (ageMax+1) years.
+      if (ageMin !== undefined && ageMin !== '') {
+        const d = new Date(); d.setFullYear(d.getFullYear() - parseInt(ageMin))
+        filter.dob = { ...(filter.dob || {}), $lte: d.toISOString().slice(0, 10), $ne: '' }
+      }
+      if (ageMax !== undefined && ageMax !== '') {
+        const d = new Date(); d.setFullYear(d.getFullYear() - parseInt(ageMax) - 1); d.setDate(d.getDate() + 1)
+        filter.dob = { ...(filter.dob || {}), $gte: d.toISOString().slice(0, 10) }
+      }
+      if (createdFrom) {
+        filter.createdAt = { ...(filter.createdAt || {}), $gte: `${createdFrom}T00:00:00` }
+      }
+      if (createdTo) {
+        filter.createdAt = { ...(filter.createdAt || {}), $lte: `${createdTo}T23:59:59.999` }
+      }
+      if (lastFrom) {
+        filter.lastEncounterAt = { ...(filter.lastEncounterAt || {}), $gte: `${lastFrom}T00:00:00` }
+      }
+      if (lastTo) {
+        filter.lastEncounterAt = { ...(filter.lastEncounterAt || {}), $lte: `${lastTo}T23:59:59.999` }
+      }
+    }
+
+    const [total, items] = await Promise.all([
+      Patient.countDocuments(filter),
+      Patient.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * pageSize)
+        .limit(pageSize)
+        .lean(),
+    ])
+    res.json({ items, total, page, pageSize })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 

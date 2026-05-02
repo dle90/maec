@@ -1489,9 +1489,19 @@ function GenderIcon({ gender }) {
   return null
 }
 
+// Page size for the Bệnh nhân catalog. Larger than other catalogs because the
+// import-target is tens of thousands of historical patients — at 200/page,
+// 10k rows = 50 "Tải thêm" clicks. Keeping a single button (vs explicit
+// page numbers) since most users will only ever scan the first page or two
+// when not using search/filters.
+const PATIENTS_PAGE_SIZE = 200
+
 function PatientsTable() {
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState([])         // accumulated rows across pages
+  const [total, setTotal] = useState(0)          // total matching server-side
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
   const [searchQ, setSearchQ] = useState('')
   const [todayOnly, setTodayOnly] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -1502,45 +1512,70 @@ function PatientsTable() {
   const [createdTo, setCreatedTo] = useState('')
   const [lastFrom, setLastFrom] = useState('')
   const [lastTo, setLastTo] = useState('')
-  const [page, setPage] = useState(1)
   const [openPatient, setOpenPatient] = useState(null)
-  useEffect(() => { setPage(1) }, [searchQ, todayOnly, genderFilter, ageMin, ageMax, createdFrom, createdTo, lastFrom, lastTo])
-  const load = useCallback(async () => {
-    setLoading(true)
-    try { const r = await api.get('/catalogs/patients', { params: searchQ ? { q: searchQ } : {} }); setItems(r.data) } catch {}
-    setLoading(false)
-  }, [searchQ])
-  useEffect(() => { load() }, [load])
+  const [reloadKey, setReloadKey] = useState(0) // bump to force a refetch
 
-  const calcAge = (dob) => {
-    if (!dob) return null
-    const ms = Date.now() - new Date(dob).getTime()
-    if (!Number.isFinite(ms) || ms < 0) return null
-    return Math.floor(ms / (365.25 * 24 * 60 * 60 * 1000))
-  }
-  const todayStr = new Date().toISOString().slice(0, 10)
-  // Search is authoritative — when a query is active, the server result is
-  // returned as-is, regardless of site/today/advanced filters. Filters only
-  // apply when browsing (no search query).
+  // Build the server params for the current filter state. `q` is authoritative —
+  // when a search query is active, gender/age/date filters are ignored server-side
+  // (matches the prior client-side semantics).
   const isSearching = !!searchQ.trim()
-  const filtered = isSearching ? items : items.filter(p => {
-    if (todayOnly) {
-      const lastDay = (p.lastEncounterAt || '').slice(0, 10)
-      const createdDay = (p.createdAt || '').slice(0, 10)
-      if (lastDay !== todayStr && createdDay !== todayStr) return false
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const buildParams = useCallback((pageNum) => {
+    const params = { page: pageNum, pageSize: PATIENTS_PAGE_SIZE }
+    if (isSearching) {
+      params.q = searchQ.trim()
+      return params
     }
-    if (genderFilter && p.gender !== genderFilter) return false
-    const age = calcAge(p.dob)
-    if (ageMin !== '' && (age == null || age < +ageMin)) return false
-    if (ageMax !== '' && (age == null || age > +ageMax)) return false
-    if (createdFrom && (p.createdAt || '').slice(0, 10) < createdFrom) return false
-    if (createdTo && (p.createdAt || '').slice(0, 10) > createdTo) return false
-    if (lastFrom && (!p.lastEncounterAt || p.lastEncounterAt.slice(0, 10) < lastFrom)) return false
-    if (lastTo && (!p.lastEncounterAt || p.lastEncounterAt.slice(0, 10) > lastTo)) return false
-    return true
-  })
-  const paged = filtered.slice(0, page * PAGE_SIZE)
-  const hasMore = paged.length < filtered.length
+    if (genderFilter) params.gender = genderFilter
+    if (ageMin !== '') params.ageMin = ageMin
+    if (ageMax !== '') params.ageMax = ageMax
+    if (createdFrom) params.createdFrom = createdFrom
+    if (createdTo) params.createdTo = createdTo
+    if (lastFrom) params.lastFrom = lastFrom
+    if (lastTo) params.lastTo = lastTo
+    // "Hôm nay" toggle is a shortcut for "lastEncounter or createdAt = today".
+    // Server doesn't have an OR-across-fields filter for this — implement as
+    // lastFrom/lastTo when no other lastFrom/lastTo set; create-today filtering
+    // is rare enough that we accept the simplification: "Hôm nay" = checked-in
+    // today.
+    if (todayOnly && !lastFrom && !lastTo) {
+      params.lastFrom = todayStr
+      params.lastTo = todayStr
+    }
+    return params
+  }, [isSearching, searchQ, genderFilter, ageMin, ageMax, createdFrom, createdTo, lastFrom, lastTo, todayOnly, todayStr])
+
+  // Load page 1 whenever the filter set changes — debounced so typing in the
+  // search box doesn't fire a request per keystroke.
+  useEffect(() => {
+    setLoading(true)
+    setPage(1)
+    const t = setTimeout(async () => {
+      try {
+        const r = await api.get('/catalogs/patients', { params: buildParams(1) })
+        setItems(r.data?.items || [])
+        setTotal(r.data?.total || 0)
+      } catch {
+        setItems([]); setTotal(0)
+      }
+      setLoading(false)
+    }, 250)
+    return () => clearTimeout(t)
+  }, [buildParams, reloadKey])
+
+  const loadMore = async () => {
+    setLoadingMore(true)
+    try {
+      const next = page + 1
+      const r = await api.get('/catalogs/patients', { params: buildParams(next) })
+      const more = r.data?.items || []
+      setItems(prev => [...prev, ...more])
+      setPage(next)
+    } catch {}
+    setLoadingMore(false)
+  }
+
+  const hasMore = items.length < total
   const advFilterCount = (genderFilter ? 1 : 0) + (ageMin !== '' || ageMax !== '' ? 1 : 0)
     + (createdFrom || createdTo ? 1 : 0) + (lastFrom || lastTo ? 1 : 0)
   const clearAdvanced = () => {
@@ -1581,8 +1616,8 @@ function PatientsTable() {
         </div>
         <div className="flex-1 text-xs text-gray-500 text-right flex items-center justify-end gap-2">
           <span>
-            <b className="text-gray-700">{items.length}</b> {isSearching ? 'kết quả' : 'bệnh nhân'}
-            {!isSearching && filtered.length !== items.length && <span> · <b className="text-gray-700">{filtered.length}</b> hiển thị</span>}
+            <b className="text-gray-700">{total.toLocaleString('vi-VN')}</b> {isSearching ? 'kết quả' : 'bệnh nhân'}
+            {items.length < total && <span> · <b className="text-gray-700">{items.length.toLocaleString('vi-VN')}</b> hiển thị</span>}
           </span>
           <Link to={createNewHref} className="text-blue-600 hover:text-blue-800 text-xs font-semibold">
             + BN mới{trimmedQ ? '…' : ''}
@@ -1629,7 +1664,7 @@ function PatientsTable() {
           </tr></thead>
           <tbody>
             {loading ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Đang tải...</td></tr>
-            : paged.length === 0 ? (
+            : items.length === 0 ? (
               <tr><td colSpan={4} className="px-4 py-10 text-center">
                 <div className="text-gray-400 mb-3">
                   {trimmedQ ? `Không tìm thấy BN khớp "${trimmedQ}".` : 'Chưa có bệnh nhân khớp bộ lọc.'}
@@ -1642,7 +1677,7 @@ function PatientsTable() {
                 </Link>
               </td></tr>
             )
-            : paged.map(p => (
+            : items.map(p => (
               <tr key={p._id} onClick={() => setOpenPatient(p)} className="border-t border-gray-100 hover:bg-blue-50/50 cursor-pointer">
                 <td className="px-4 py-2.5 font-mono text-xs text-blue-600">{p.patientId || '-'}</td>
                 <td className="px-4 py-2.5 font-medium text-gray-900">
@@ -1661,12 +1696,15 @@ function PatientsTable() {
         </table>
         {hasMore && (
           <div className="border-t border-gray-100 px-4 py-3 flex items-center justify-between text-xs text-gray-500">
-            <span>Hiển thị {paged.length} / {filtered.length} mục</span>
-            <button onClick={() => setPage(p => p + 1)} className="px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">Tải thêm ↓</button>
+            <span>Hiển thị {items.length.toLocaleString('vi-VN')} / {total.toLocaleString('vi-VN')} mục</span>
+            <button onClick={loadMore} disabled={loadingMore}
+              className="px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50 rounded-lg transition-colors">
+              {loadingMore ? 'Đang tải…' : `Tải thêm ${PATIENTS_PAGE_SIZE} ↓`}
+            </button>
           </div>
         )}
       </div>
-      {openPatient && <PatientDetailDrawer patient={openPatient} onClose={() => setOpenPatient(null)} onSaved={load} />}
+      {openPatient && <PatientDetailDrawer patient={openPatient} onClose={() => setOpenPatient(null)} onSaved={() => setReloadKey(k => k + 1)} />}
     </>
   )
 }

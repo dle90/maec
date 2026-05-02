@@ -34,4 +34,20 @@ const patientSchema = new mongoose.Schema({
   updatedAt: String,
 }, { _id: false })
 
+// Indexes — required to scale the Bệnh nhân list past ~1k rows. Each filter
+// the catalog UI exposes (gender, age range via dob, createdAt range,
+// lastEncounterAt range) plus the default sort needs an index. Search regex
+// fields (name/phone/patientId/idCard/guardianName/guardianPhone) can't use
+// indexes for partial matches, but `name` gets one anyway since exact-match
+// dedup checks rely on it.
+patientSchema.index({ createdAt: -1 })
+patientSchema.index({ name: 1 })
+patientSchema.index({ phone: 1 })
+patientSchema.index({ patientId: 1 })
+patientSchema.index({ guardianPhone: 1 })
+patientSchema.index({ dob: 1 })
+patientSchema.index({ gender: 1 })
+patientSchema.index({ lastEncounterAt: -1 })
+patientSchema.index({ registeredSite: 1 })
+
 module.exports = mongoose.model('Patient', patientSchema)
