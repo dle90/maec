@@ -328,17 +328,20 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
           {tab === 'info' && (
-            <div className="p-5 space-y-3">
-              {error && <div className="text-sm text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-lg">{error}</div>}
-              <div className="grid grid-cols-2 gap-3">
-                {fields.map(f => (
-                  <div key={f.key} className={f.wide ? 'col-span-2' : ''}>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}{f.required ? <span className="text-rose-500"> *</span> : null}</label>
-                    <FormField f={f} form={form} setForm={setForm} userOptions={userOptions} disabled={!canEdit} />
-                  </div>
-                ))}
+            <>
+              <div className="p-5 space-y-3">
+                {error && <div className="text-sm text-rose-600 bg-rose-50 border border-rose-200 p-2 rounded-lg">{error}</div>}
+                <div className="grid grid-cols-2 gap-3">
+                  {fields.map(f => (
+                    <div key={f.key} className={f.wide ? 'col-span-2' : ''}>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}{f.required ? <span className="text-rose-500"> *</span> : null}</label>
+                      <FormField f={f} form={form} setForm={setForm} userOptions={userOptions} disabled={!canEdit} />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+              {!isNew && catalogKey === 'packages' && <PackageBundleDetails pkg={record} />}
+            </>
           )}
           {tab === 'history' && !isNew && (
             <HistoryTab catalogKey={catalogKey} resourceId={record._id} />
@@ -395,6 +398,97 @@ function FormField({ f, form, setForm, userOptions, disabled }) {
   if (f.type === 'number') return <input type="number" className={inputCls} value={form[f.key] ?? 0} onChange={e => set(+e.target.value)} disabled={disabled} />
   if (f.type === 'date') return <input type="date" className={inputCls} value={form[f.key] || ''} onChange={e => set(e.target.value)} disabled={disabled} />
   return <input className={inputCls} value={form[f.key] || ''} onChange={e => set(e.target.value)} disabled={disabled} />
+}
+
+// Read-only bundle / tier / entitlement view for a Gói khám row.
+// Resolves bundledServices codes against the live services catalog so users
+// see actual service names + the per-package price. Editing the bundle
+// itself is still seed-only — see note at the bottom of the panel.
+function PackageBundleDetails({ pkg }) {
+  const [services, setServices] = useState([])
+  useEffect(() => {
+    let cancelled = false
+    api.get('/catalogs/services').then(r => { if (!cancelled) setServices(r.data || []) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  const svcMap = Object.fromEntries(services.map(s => [s.code, s]))
+  const bundled = pkg.bundledServices || []
+  const tiers = pkg.pricingTiers || []
+  const ent = pkg.activatesEntitlement
+  return (
+    <div className="border-t border-gray-100 px-5 py-4 space-y-5 bg-gray-50">
+      <section>
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Dịch vụ trong gói ({bundled.length})</h3>
+        {bundled.length === 0 ? (
+          <div className="text-xs text-gray-400 italic">Chưa có dịch vụ nào</div>
+        ) : (
+          <ul className="space-y-1">
+            {bundled.map(code => {
+              const svc = svcMap[code]
+              const ala = svc?.basePrice ?? 0
+              const inPkg = svc?.inPackagePrice ?? ala
+              const isDiscounted = svc?.inPackagePrice != null && svc.inPackagePrice !== ala
+              return (
+                <li key={code} className="flex items-center justify-between gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-[10px] text-gray-400">{code}</div>
+                    <div className="text-gray-700 truncate">{svc?.name || <span className="italic text-gray-400">(không tìm thấy)</span>}</div>
+                  </div>
+                  {svc && (
+                    <div className="font-mono text-[11px] text-gray-700 flex-shrink-0 text-right">
+                      {fmtMoney(inPkg)}đ
+                      {isDiscounted && <div className="text-[10px] text-gray-400 line-through">{fmtMoney(ala)}đ</div>}
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
+
+      {tiers.length > 0 && (
+        <section>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Bậc giá ({tiers.length})</h3>
+          <ul className="space-y-1">
+            {tiers.map(t => (
+              <li key={t.code} className="flex items-center justify-between gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-gray-700">{t.name}</div>
+                  <div className="font-mono text-[10px] text-gray-400 truncate">{t.code}{t.extraProductSku ? ` · ${t.extraProductSku}` : ''}</div>
+                </div>
+                <div className="font-mono text-gray-700 flex-shrink-0">{fmtMoney(t.totalPrice)}đ</div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {ent?.durationMonths > 0 && (
+        <section>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Quyền lợi kèm gói</h3>
+          <div className="text-xs text-gray-600 mb-2">Thời hạn: <span className="font-semibold">{ent.durationMonths} tháng</span></div>
+          {ent.coveredServices?.length > 0 && (
+            <ul className="space-y-1">
+              {ent.coveredServices.map(c => (
+                <li key={c.serviceCode} className="flex items-center justify-between gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-[10px] text-gray-400">{c.serviceCode}</div>
+                    <div className="text-gray-700 truncate">{svcMap[c.serviceCode]?.name || <span className="italic text-gray-400">(không tìm thấy)</span>}</div>
+                  </div>
+                  <div className="text-[11px] text-gray-500 flex-shrink-0">{c.maxUses == null ? 'Không giới hạn' : `Tối đa ${c.maxUses} lần`}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      <div className="text-[11px] text-gray-400 italic">
+        Hiển thị chỉ đọc. Sửa bundle / tier / entitlement bằng cách chỉnh seed-maec-catalog.js và chạy lại seed.
+      </div>
+    </div>
+  )
 }
 
 // Lịch sử tab — pulls audit entries for this catalog row. Requires audit.view
