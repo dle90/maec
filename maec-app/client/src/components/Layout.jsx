@@ -19,8 +19,8 @@ const NAV = [
     items: [{ path: '/', label: 'Tổng quan', icon: '📊' }]
   },
   {
-    group: 'shortcut-registration', headerless: true,
-    items: [{ path: '/registration', label: 'Đăng ký', icon: '🏥', workflowOnly: true }]
+    group: 'shortcut-patients', headerless: true,
+    items: [{ path: '/catalogs/patients', label: 'Bệnh nhân', icon: '🧑', workflowOnly: true }]
   },
   {
     group: 'shortcut-kham', headerless: true,
@@ -33,10 +33,6 @@ const NAV = [
   {
     group: 'shortcut-products', headerless: true,
     items: [{ path: '/catalogs/services', label: 'Sản phẩm & Dịch vụ', icon: '🧾', workflowOnly: true }]
-  },
-  {
-    group: 'shortcut-patients', headerless: true,
-    items: [{ path: '/catalogs/patients', label: 'Bệnh nhân', icon: '🧑', workflowOnly: true }]
   },
   {
     group: 'shortcut-kho', headerless: true,

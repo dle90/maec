@@ -50,6 +50,9 @@ function AuthenticatedRoutes() {
             {isRISUser && <Route path="/ris" element={<RIS />} />}
             {isWorkflowUser && <Route path="/kham" element={<Kham />} />}
             {isWorkflowUser && <Route path="/thu-ngan" element={<ThuNgan />} />}
+            {/* Đăng ký removed from sidebar 2026-05-02 (merged into Bệnh nhân).
+                Route stays alive so "+ Bệnh nhân mới" can deep-link to the
+                FormView. Eventually extract the form into a shared modal. */}
             {isWorkflowUser && <Route path="/registration" element={<Registration />} />}
             {isWorkflowUser && <Route path="/billing" element={<Billing />} />}
 

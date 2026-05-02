@@ -11,6 +11,74 @@ const Encounter = require('../models/Encounter')
 
 const PAYMENT_LABELS = { cash: 'Tiền mặt', transfer: 'Chuyển khoản', card: 'Thẻ', mixed: 'Hỗn hợp' }
 
+// GET /reports/maec-overview — Tổng Quan dashboard payload.
+// Aggregates paid Encounter.paidAmount by site for Today / WTD / MTD / YTD,
+// plus a 12-month series and today's check-in queue. Open to all authenticated
+// users (it's the home page); per-role gating can layer on top later.
+router.get('/maec-overview', requireAuth, async (req, res) => {
+  try {
+    const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
+    const startWeek = new Date(now)
+    const dow = now.getDay() || 7
+    if (dow !== 1) startWeek.setDate(now.getDate() - (dow - 1))
+    const wtdStr = startWeek.toISOString().slice(0, 10)
+    const mtdStr = todayStr.slice(0, 8) + '01'
+    const ytdStr = todayStr.slice(0, 5) + '01-01'
+    const start12 = new Date(now); start12.setMonth(now.getMonth() - 11); start12.setDate(1)
+    const start12Str = start12.toISOString().slice(0, 10)
+
+    async function aggRange(fromDate) {
+      const docs = await Encounter.aggregate([
+        { $match: { status: 'paid', paidAt: { $gte: `${fromDate}T00:00:00.000Z` } } },
+        { $group: { _id: '$site', revenue: { $sum: '$paidAmount' }, encounters: { $sum: 1 } } },
+      ])
+      const result = { total: 0, encounters: 0, bySite: {} }
+      for (const d of docs) {
+        const site = d._id || 'unknown'
+        result.bySite[site] = d.revenue
+        result.total += d.revenue
+        result.encounters += d.encounters
+      }
+      return result
+    }
+
+    const [today, wtd, mtd, ytd, monthlyDocs, todayCheckIns] = await Promise.all([
+      aggRange(todayStr),
+      aggRange(wtdStr),
+      aggRange(mtdStr),
+      aggRange(ytdStr),
+      Encounter.aggregate([
+        { $match: { status: 'paid', paidAt: { $gte: `${start12Str}T00:00:00.000Z` } } },
+        { $group: { _id: { month: { $substr: ['$paidAt', 0, 7] }, site: '$site' }, revenue: { $sum: '$paidAmount' } } },
+        { $sort: { '_id.month': 1 } },
+      ]),
+      Encounter.find({ createdAt: { $gte: `${todayStr}T00:00:00.000Z`, $lte: `${todayStr}T23:59:59.999Z` } })
+        .sort({ createdAt: -1 }).limit(20).lean(),
+    ])
+
+    // Reshape monthly: one row per month with per-site columns + total
+    const monthMap = {}
+    for (const r of monthlyDocs) {
+      const m = r._id.month
+      if (!monthMap[m]) monthMap[m] = { month: m, total: 0, bySite: {} }
+      const site = r._id.site || 'unknown'
+      monthMap[m].bySite[site] = r.revenue
+      monthMap[m].total += r.revenue
+    }
+    const monthly = []
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now); d.setMonth(now.getMonth() - i); d.setDate(1)
+      const m = d.toISOString().slice(0, 7)
+      monthly.push(monthMap[m] || { month: m, total: 0, bySite: {} })
+    }
+
+    res.json({ today, wtd, mtd, ytd, monthly, todayCheckIns })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // GET /reports/revenue-detail
 router.get('/revenue-detail', requireAuth, requirePermission('reports.view'), async (req, res) => {
   try {

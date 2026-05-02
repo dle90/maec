@@ -207,18 +207,30 @@ Two wipe passes against production Atlas on 2026-05-02:
 
 Both wipe scripts are idempotent and safe to re-run if state drifts again.
 
-## Tổng quan dashboard — content TBD (placeholder live 2026-05-02)
+## Đăng ký → Bệnh nhân merge — partial done 2026-05-02; partner referrals still pending
 
-The sidebar's first item ("Tổng quan" 📊) currently routes to [Dashboard.jsx](maec-app/client/src/pages/Dashboard.jsx) which is just a welcome card ("Xin chào, ..."). The user asked for a real Tổng quan but said "we'll go over what should be in there later." When that conversation happens, candidates to surface:
+The Đăng ký sidebar entry was removed 2026-05-02. Bệnh nhân now hosts the reception flow:
+- **+ Bệnh nhân mới** → navigates to `/registration` (existing FormView page).
+- **+ Tiếp đón** on the patient drawer → calls `POST /registration/check-in` with `services: []` (idempotent — returns existing open encounter if one exists, else creates a new one).
+- The `/registration` route is still registered in [App.jsx](maec-app/client/src/App.jsx) so the FormView is reachable for patient creation.
 
-- Today: # check-ins, # đang khám, # hoàn thành, doanh thu
-- Per-site split (Trung Kính vs Kim Giang)
-- Inventory red flags: items below min stock, lots near expiry
-- Pending: BN chờ thanh toán (status='completed' không in [paid, cancelled])
-- Quick links to Đăng ký / Khám / Thu ngân
-- Possibly per-role variants (Lễ tân sees check-in queue, BS sees clinical queue, Kho sees stock alerts)
+**Still TODO:**
+- **Partner-referral inbox** — currently lives inside [Registration.jsx](maec-app/client/src/pages/Registration.jsx) (`TodayRail` + `ReferralDetailDrawer` + `AcceptDialog` + `RejectDialog`). Receptionists can still reach it by navigating to `/registration` directly, but it's no longer surfaced anywhere in the new sidebar. Plan: extract the inbox + accept/reject flow into a standalone panel/page on the **Bệnh nhân** route (e.g. a "Đối tác chuyển gửi (N)" badge + popout panel showing the pending list). Until then, document the workaround.
+- **FormView extraction** — the current "+ Bệnh nhân mới" navigates away from Bệnh nhân to a separate page. Cleaner: extract `FormView` (and its dependencies `Field`, `ADDR_SHORTCUTS`, `GENDERS`, `REFERRAL_TYPES`, etc.) from [Registration.jsx](maec-app/client/src/pages/Registration.jsx) into `client/src/components/PatientForm.jsx`, render as a modal on Bệnh nhân, then `/registration` and `Registration.jsx` can be deleted entirely.
+- **TodayRail discoverability** — Tổng Quan now shows "Lượt khám hôm nay" widget which covers most of what TodayRail did. Once partner referrals also live in Bệnh nhân, Registration.jsx can go.
 
-There are existing unfinished dashboards ([TodayDashboard.jsx](maec-app/client/src/pages/TodayDashboard.jsx), [DashboardClinical.jsx](maec-app/client/src/pages/DashboardClinical.jsx), [DashboardOps.jsx](maec-app/client/src/pages/DashboardOps.jsx)) that may have salvageable patterns — currently routed under Khác → Inactive or accessible via /reports redirects.
+## Tổng quan dashboard — v1 live 2026-05-02 (revenue + check-ins)
+
+[Dashboard.jsx](maec-app/client/src/pages/Dashboard.jsx) now renders 4 KPI cards (Today / WTD / MTD / YTD) with per-site split, a 12-month stacked bar chart of paid Encounter revenue per site, and a "Lượt khám hôm nay" sidebar widget linking each row to its `/kham?id=...`. Backend: [GET /reports/maec-overview](maec-app/server/routes/reports.js) — single roundtrip.
+
+**Future improvements (not requested yet):**
+- Inventory red flags card (items below min stock, lots near expiry within N days).
+- "BN chờ thanh toán" widget (encounter status NOT IN [paid, cancelled, scheduled] AND has bill items — i.e. clinical work done but not yet through Thu ngân).
+- Per-role variants (Lễ tân sees check-in queue, BS sees clinical queue, Kho sees stock alerts).
+- Drill-down links from each KPI card to the matching `/reports/...` filtered view.
+- Compare-to-prior-period delta (Today vs Yesterday, WTD vs prior week, etc.).
+
+The legacy radiology dashboards ([TodayDashboard.jsx](maec-app/client/src/pages/TodayDashboard.jsx), [DashboardClinical.jsx](maec-app/client/src/pages/DashboardClinical.jsx), [DashboardOps.jsx](maec-app/client/src/pages/DashboardOps.jsx)) still exist under Khác → Inactive — salvage patterns from them when adding the inventory / clinical-queue widgets.
 
 ## Devices module — deferred (split out of Service 2026-05-02)
 

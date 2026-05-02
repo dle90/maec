@@ -759,34 +759,132 @@ function PatientsTable() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQ, setSearchQ] = useState('')
+  const [todayOnly, setTodayOnly] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [genderFilter, setGenderFilter] = useState('')
+  const [ageMin, setAgeMin] = useState('')
+  const [ageMax, setAgeMax] = useState('')
+  const [createdFrom, setCreatedFrom] = useState('')
+  const [createdTo, setCreatedTo] = useState('')
+  const [lastFrom, setLastFrom] = useState('')
+  const [lastTo, setLastTo] = useState('')
   const [page, setPage] = useState(1)
   const [openPatient, setOpenPatient] = useState(null)
-  useEffect(() => { setPage(1) }, [searchQ, genderFilter])
+  useEffect(() => { setPage(1) }, [searchQ, todayOnly, genderFilter, ageMin, ageMax, createdFrom, createdTo, lastFrom, lastTo])
   const load = useCallback(async () => {
     setLoading(true)
     try { const r = await api.get('/catalogs/patients', { params: searchQ ? { q: searchQ } : {} }); setItems(r.data) } catch {}
     setLoading(false)
   }, [searchQ])
   useEffect(() => { load() }, [load])
-  const filtered = items.filter(p => !genderFilter || p.gender === genderFilter)
+
+  const calcAge = (dob) => {
+    if (!dob) return null
+    const ms = Date.now() - new Date(dob).getTime()
+    if (!Number.isFinite(ms) || ms < 0) return null
+    return Math.floor(ms / (365.25 * 24 * 60 * 60 * 1000))
+  }
+  const todayStr = new Date().toISOString().slice(0, 10)
+  // Search is authoritative — when a query is active, the server result is
+  // returned as-is, regardless of site/today/advanced filters. Filters only
+  // apply when browsing (no search query).
+  const isSearching = !!searchQ.trim()
+  const filtered = isSearching ? items : items.filter(p => {
+    if (todayOnly) {
+      const lastDay = (p.lastEncounterAt || '').slice(0, 10)
+      const createdDay = (p.createdAt || '').slice(0, 10)
+      if (lastDay !== todayStr && createdDay !== todayStr) return false
+    }
+    if (genderFilter && p.gender !== genderFilter) return false
+    const age = calcAge(p.dob)
+    if (ageMin !== '' && (age == null || age < +ageMin)) return false
+    if (ageMax !== '' && (age == null || age > +ageMax)) return false
+    if (createdFrom && (p.createdAt || '').slice(0, 10) < createdFrom) return false
+    if (createdTo && (p.createdAt || '').slice(0, 10) > createdTo) return false
+    if (lastFrom && (!p.lastEncounterAt || p.lastEncounterAt.slice(0, 10) < lastFrom)) return false
+    if (lastTo && (!p.lastEncounterAt || p.lastEncounterAt.slice(0, 10) > lastTo)) return false
+    return true
+  })
   const paged = filtered.slice(0, page * PAGE_SIZE)
   const hasMore = paged.length < filtered.length
+  const advFilterCount = (genderFilter ? 1 : 0) + (ageMin !== '' || ageMax !== '' ? 1 : 0)
+    + (createdFrom || createdTo ? 1 : 0) + (lastFrom || lastTo ? 1 : 0)
+  const clearAdvanced = () => {
+    setGenderFilter(''); setAgeMin(''); setAgeMax('')
+    setCreatedFrom(''); setCreatedTo(''); setLastFrom(''); setLastTo('')
+  }
+
+  // "Create new patient" CTA — visible when there's a search query and no
+  // results match. Heuristic: digits/spaces/+/-/() ≥ 3 chars looks like a
+  // phone number, else treat as a name. Deep-links to /registration with
+  // a prefill URL param so FormView pre-fills + skips the search step.
+  const trimmedQ = searchQ.trim()
+  const isPhoneLike = /^[\d\s+()-]{3,}$/.test(trimmedQ)
+  const createNewHref = trimmedQ
+    ? `/registration?${isPhoneLike ? 'prefillPhone' : 'prefillName'}=${encodeURIComponent(trimmedQ)}`
+    : '/registration'
+
   return (
     <>
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
         <input
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
-          placeholder="Tìm bệnh nhân (tên, mã, SĐT)..." value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-72 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50"
+          placeholder="Tìm hoặc thêm BN — tên, SĐT (BN/giám hộ), mã..."
+          value={searchQ}
+          onChange={e => setSearchQ(e.target.value)}
+          autoFocus
         />
-        <select className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white" value={genderFilter} onChange={e => setGenderFilter(e.target.value)}>
-          <option value="">Tất cả giới tính</option><option value="M">Nam</option><option value="F">Nữ</option>
-        </select>
-        <div className="flex-1 text-xs text-gray-500">
-          <b className="text-gray-700">{items.length}</b> bệnh nhân
-          {filtered.length !== items.length && <span> · <b className="text-gray-700">{filtered.length}</b> hiển thị</span>}
+        <div className={`flex items-center gap-2 ${isSearching ? 'opacity-40' : ''}`} title={isSearching ? 'Bộ lọc tạm tắt khi đang tìm kiếm' : undefined}>
+          <button onClick={() => setTodayOnly(t => !t)} disabled={isSearching}
+            className={`px-3 py-1.5 text-sm rounded-lg font-medium border transition-colors ${todayOnly ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+            title="Bấm để chuyển giữa 'Tất cả' và 'Hôm nay'">
+            {todayOnly ? '📅 Hôm nay' : '👥 Tất cả'}
+          </button>
+          <button onClick={() => setAdvancedOpen(o => !o)} disabled={isSearching}
+            className="text-xs text-gray-600 hover:text-gray-900 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">
+            {advancedOpen ? '▾' : '▸'} Bộ lọc nâng cao{advFilterCount > 0 && ` (${advFilterCount})`}
+          </button>
+        </div>
+        <div className="flex-1 text-xs text-gray-500 text-right flex items-center justify-end gap-2">
+          <span>
+            <b className="text-gray-700">{items.length}</b> {isSearching ? 'kết quả' : 'bệnh nhân'}
+            {!isSearching && filtered.length !== items.length && <span> · <b className="text-gray-700">{filtered.length}</b> hiển thị</span>}
+          </span>
+          <Link to={createNewHref} className="text-blue-600 hover:text-blue-800 text-xs font-semibold">
+            + BN mới{trimmedQ ? '…' : ''}
+          </Link>
         </div>
       </div>
+      {advancedOpen && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 flex items-center gap-2 flex-wrap">
+          <select className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white" value={genderFilter} onChange={e => setGenderFilter(e.target.value)}>
+            <option value="">Giới tính: Tất cả</option><option value="M">Nam</option><option value="F">Nữ</option>
+          </select>
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white">
+            <span className="text-xs text-gray-500">Tuổi</span>
+            <input type="number" min="0" placeholder="từ" value={ageMin} onChange={e => setAgeMin(e.target.value)}
+              className="w-12 text-sm focus:outline-none" />
+            <span className="text-gray-400">–</span>
+            <input type="number" min="0" placeholder="đến" value={ageMax} onChange={e => setAgeMax(e.target.value)}
+              className="w-12 text-sm focus:outline-none" />
+          </div>
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white">
+            <span className="text-xs text-gray-500" title="Ngày tạo hồ sơ">Tạo</span>
+            <input type="date" value={createdFrom} onChange={e => setCreatedFrom(e.target.value)} className="text-xs focus:outline-none" />
+            <span className="text-gray-400">–</span>
+            <input type="date" value={createdTo} onChange={e => setCreatedTo(e.target.value)} className="text-xs focus:outline-none" />
+          </div>
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white">
+            <span className="text-xs text-gray-500" title="Lượt khám gần nhất">Khám gần nhất</span>
+            <input type="date" value={lastFrom} onChange={e => setLastFrom(e.target.value)} className="text-xs focus:outline-none" />
+            <span className="text-gray-400">–</span>
+            <input type="date" value={lastTo} onChange={e => setLastTo(e.target.value)} className="text-xs focus:outline-none" />
+          </div>
+          {advFilterCount > 0 && (
+            <button onClick={clearAdvanced} className="text-xs text-gray-500 hover:text-gray-800 underline">Xóa lọc nâng cao</button>
+          )}
+        </div>
+      )}
       <div className="bg-white rounded-xl border border-gray-200 overflow-auto">
         <table className="w-full text-sm whitespace-nowrap">
           <thead><tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide text-left">
@@ -797,7 +895,19 @@ function PatientsTable() {
           </tr></thead>
           <tbody>
             {loading ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Đang tải...</td></tr>
-            : paged.length === 0 ? <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">Chưa có bệnh nhân khớp bộ lọc.</td></tr>
+            : paged.length === 0 ? (
+              <tr><td colSpan={4} className="px-4 py-10 text-center">
+                <div className="text-gray-400 mb-3">
+                  {trimmedQ ? `Không tìm thấy BN khớp "${trimmedQ}".` : 'Chưa có bệnh nhân khớp bộ lọc.'}
+                </div>
+                <Link to={createNewHref}
+                  className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">
+                  {trimmedQ
+                    ? `+ Tạo BN mới với ${isPhoneLike ? 'SĐT' : 'tên'} "${trimmedQ}"`
+                    : '+ Bệnh nhân mới'}
+                </Link>
+              </td></tr>
+            )
             : paged.map(p => (
               <tr key={p._id} onClick={() => setOpenPatient(p)} className="border-t border-gray-100 hover:bg-blue-50/50 cursor-pointer">
                 <td className="px-4 py-2.5 font-mono text-xs text-blue-600">{p.patientId || '-'}</td>
@@ -832,7 +942,19 @@ function PatientsTable() {
 // Each encounter row is a link to /kham?id=<encId> so the receptionist can
 // jump straight into the visit.
 function PatientDetailDrawer({ patient, onClose }) {
+  const { auth } = useAuth()
+  const SITES = ['Trung Kính', 'Kim Giang']
+  const initialSite = (() => {
+    try {
+      const remembered = localStorage.getItem('maec_last_checkin_site')
+      if (remembered && SITES.includes(remembered)) return remembered
+    } catch {}
+    if (SITES.includes(auth?.department)) return auth.department
+    return SITES[0]
+  })()
+  const [site, setSite] = useState(initialSite)
   const [encounters, setEncounters] = useState(null)
+  const [checkingIn, setCheckingIn] = useState(false)
   useEffect(() => {
     let cancelled = false
     api.get('/encounters', { params: { patientId: patient.patientId || patient._id } })
@@ -840,6 +962,27 @@ function PatientDetailDrawer({ patient, onClose }) {
       .catch(() => { if (!cancelled) setEncounters([]) })
     return () => { cancelled = true }
   }, [patient])
+
+  // Idempotent: server returns existing open encounter if one exists.
+  // Either way we navigate into Khám to show the encounter pane.
+  const checkIn = async () => {
+    if (!patient._id) return
+    setCheckingIn(true)
+    try {
+      try { localStorage.setItem('maec_last_checkin_site', site) } catch {}
+      const r = await api.post('/registration/check-in', { patientId: patient._id, services: [], site })
+      const id = r.data?.encounterId
+      const existing = r.data?.existing
+      if (id) {
+        const params = new URLSearchParams({ id })
+        if (existing) params.set('existing', '1')
+        window.location.href = `/kham?${params.toString()}`
+      }
+    } catch (e) {
+      alert(e.response?.data?.error || 'Không tạo được lượt khám')
+      setCheckingIn(false)
+    }
+  }
 
   const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
   const fmtDate = (iso) => iso ? iso.slice(0, 10) : '—'
@@ -860,10 +1003,21 @@ function PatientDetailDrawer({ patient, onClose }) {
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
       <div className="w-full max-w-2xl bg-white h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between">
-          <div className="min-w-0">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <div className="text-base font-semibold text-gray-900 truncate">{patient.name || '—'}</div>
             <div className="text-xs text-gray-500 font-mono mt-0.5">{patient.patientId || patient._id}</div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <select value={site} onChange={e => setSite(e.target.value)} disabled={checkingIn}
+              className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white"
+              title="Cơ sở thực hiện lượt khám">
+              {SITES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button onClick={checkIn} disabled={checkingIn}
+              className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
+              {checkingIn ? 'Đang tiếp đón…' : '+ Tiếp đón'}
+            </button>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
         </div>
@@ -910,7 +1064,9 @@ function PatientDetailDrawer({ patient, onClose }) {
                       <span className="text-xs text-gray-500 font-mono w-12 flex-shrink-0">{fmtTime(e.createdAt)}</span>
                       <span className="text-xs text-gray-500 w-24 flex-shrink-0 truncate">{e.site || '—'}</span>
                       <span className="flex-1 truncate text-gray-700">
-                        {e.packageName || <span className="text-gray-400 italic">— chưa gán gói —</span>}
+                        {(e.packages || []).length === 0
+                          ? <span className="text-gray-400 italic">— chưa gán gói —</span>
+                          : (e.packages || []).map(p => p.name).join(' + ')}
                         {e.assignedServices?.length > 0 && <span className="text-xs text-gray-500 ml-1">({e.assignedServices.length} DV)</span>}
                       </span>
                       <span className="font-mono text-blue-700 text-xs flex-shrink-0">{fmtMoney(e.billTotal)}đ</span>

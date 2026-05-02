@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const Encounter = require('../models/Encounter')
+const Patient = require('../models/Patient')
 const Package = require('../models/Package')
 const Service = require('../models/Service')
 const Entitlement = require('../models/Entitlement')
@@ -39,6 +40,8 @@ router.post('/', requireAuth, async (req, res) => {
       createdAt: now(),
       updatedAt: now(),
     }).save()
+    // Denormalize lastEncounterAt on the patient (best-effort)
+    await Patient.updateOne({ patientId }, { $set: { lastEncounterAt: enc.createdAt, updatedAt: now() } }).catch(() => {})
     res.status(201).json(enc.toObject())
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
@@ -104,7 +107,10 @@ router.get('/:id/service-fields/:serviceCode', requireAuth, async (req, res) => 
   res.json({ serviceCode: req.params.serviceCode, fields })
 })
 
-// POST /encounters/:id/assign-package — assign a package, populate services + bill line
+// POST /encounters/:id/assign-package — APPEND a package to the encounter.
+// Multi-package: each call adds to packages[], bundles services (dedupes
+// against any already present, tracks lineage via addedByPackage), and adds
+// one bill line for the package. Use DELETE /packages/:code to remove.
 router.post('/:id/assign-package', requireAuth, async (req, res) => {
   try {
     const { packageCode, tierCode } = req.body
@@ -113,23 +119,38 @@ router.post('/:id/assign-package', requireAuth, async (req, res) => {
     const pkg = await Package.findOne({ code: packageCode }).lean()
     if (!pkg) return res.status(400).json({ error: `Không có gói ${packageCode}` })
 
+    if ((enc.packages || []).some(p => p.code === packageCode)) {
+      return res.status(400).json({ error: `Gói ${packageCode} đã được gán cho lượt khám này` })
+    }
+
     const tier = (pkg.pricingTiers || []).find(t => t.code === tierCode) || null
-    const services = await Service.find({ code: { $in: [...(pkg.bundledServices || []), ...(tier?.extraServices || [])] } }).lean()
+    const allServiceCodes = [...new Set([...(pkg.bundledServices || []), ...(tier?.extraServices || [])])]
+    const services = await Service.find({ code: { $in: allServiceCodes } }).lean()
     const serviceMap = Object.fromEntries(services.map(s => [s.code, s]))
 
-    const allServiceCodes = [...new Set([...(pkg.bundledServices || []), ...(tier?.extraServices || [])])]
-    const newAssigned = allServiceCodes.map(code => ({
-      serviceCode: code,
-      serviceName: serviceMap[code]?.name || code,
-      status: 'pending',
-      output: {},
-    }))
+    // Append package metadata
+    enc.packages.push({
+      code: pkg.code,
+      name: pkg.name,
+      tier: tierCode || '',
+      addedAt: now(),
+      addedBy: req.user.username,
+    })
 
-    enc.packageCode = pkg.code
-    enc.packageName = pkg.name
-    enc.packageTier = tierCode || ''
-    enc.assignedServices = newAssigned
+    // Append bundled services that aren't already on the encounter
+    const existingCodes = new Set((enc.assignedServices || []).map(s => s.serviceCode))
+    for (const code of allServiceCodes) {
+      if (existingCodes.has(code)) continue
+      enc.assignedServices.push({
+        serviceCode: code,
+        serviceName: serviceMap[code]?.name || code,
+        status: 'pending',
+        output: {},
+        addedByPackage: pkg.code,
+      })
+    }
 
+    // Resolve package price (tier > pricingRules > basePrice)
     let pkgPrice = pkg.basePrice || 0
     if (tier) pkgPrice = tier.totalPrice || pkgPrice
     if (pkg.pricingRules?.length) {
@@ -157,7 +178,6 @@ router.post('/:id/assign-package', requireAuth, async (req, res) => {
       }
     }
 
-    enc.billItems = (enc.billItems || []).filter(b => b.kind !== 'package')
     enc.billItems.push({
       kind: 'package',
       code: pkg.code,
@@ -174,6 +194,97 @@ router.post('/:id/assign-package', requireAuth, async (req, res) => {
     res.json(enc.toObject())
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
+
+// DELETE /encounters/:id/packages/:code — remove a package: drop from packages[],
+// drop its bill line, drop its bundled assignedServices (but keep services
+// the user added manually or that came from a different package).
+router.delete('/:id/packages/:code', requireAuth, async (req, res) => {
+  try {
+    const code = req.params.code
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (!(enc.packages || []).some(p => p.code === code)) {
+      return res.status(404).json({ error: `Gói ${code} không có trong lượt khám này` })
+    }
+    enc.packages = (enc.packages || []).filter(p => p.code !== code)
+    enc.assignedServices = (enc.assignedServices || []).filter(s => s.addedByPackage !== code)
+    enc.billItems = (enc.billItems || []).filter(b => !(b.kind === 'package' && b.code === code))
+    enc.billTotal = sumBill(enc.billItems)
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// DELETE /encounters/:id/services/:serviceCode — remove a service from the
+// encounter and the matching service line on the bill. Doesn't touch
+// package bill lines (use DELETE /packages/:code to remove a whole package).
+router.delete('/:id/services/:serviceCode', requireAuth, async (req, res) => {
+  try {
+    const code = req.params.serviceCode
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    enc.assignedServices = (enc.assignedServices || []).filter(s => s.serviceCode !== code)
+    enc.billItems = (enc.billItems || []).filter(b => !(b.kind === 'service' && b.code === code))
+    enc.billTotal = sumBill(enc.billItems)
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// POST /encounters/:id/cancel — soft-delete: marks the encounter cancelled,
+// records who/when/why. Cancelled encounters keep their bill items + history
+// for audit but drop out of the "Đang khám" queue.
+router.post('/:id/cancel', requireAuth, async (req, res) => {
+  try {
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (enc.status === 'paid') return res.status(400).json({ error: 'Không thể hủy lượt khám đã thanh toán' })
+    if (enc.status === 'cancelled') return res.status(400).json({ error: 'Lượt khám đã bị hủy trước đó' })
+    enc.status = 'cancelled'
+    enc.cancelledAt = now()
+    enc.cancelledBy = req.user.username
+    enc.cancelReason = req.body.reason || ''
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// PUT /encounters/:id/discount — set the bill-level discount.
+// Body: { discountAmount?: number, discountPercent?: 0..100, discountReason?: string }
+// Mutually exclusive — if discountPercent > 0 we zero discountAmount, and vice
+// versa. Computing the effective discount (when needed for grand total /
+// paidAmount) lives in server lib + mirrored client-side.
+router.put('/:id/discount', requireAuth, async (req, res) => {
+  try {
+    const { discountAmount, discountPercent, discountReason } = req.body
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    const amt = Math.max(0, Number(discountAmount) || 0)
+    const pct = Math.max(0, Math.min(100, Number(discountPercent) || 0))
+    if (pct > 0) {
+      enc.discountPercent = pct
+      enc.discountAmount = 0
+    } else {
+      enc.discountAmount = amt
+      enc.discountPercent = 0
+    }
+    if (discountReason !== undefined) enc.discountReason = discountReason
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// Helper to compute the effective discount in VND for an encounter doc.
+// Mirrored on the client (Kham.jsx + ThuNgan.jsx).
+function effectiveDiscount(enc) {
+  const pct = enc.discountPercent || 0
+  if (pct > 0) return Math.round((enc.billTotal || 0) * pct / 100)
+  return enc.discountAmount || 0
+}
 
 // PUT /encounters/:id/services/:serviceCode — update one service (status / output / assignedTo)
 router.put('/:id/services/:serviceCode', requireAuth, async (req, res) => {
@@ -375,7 +486,8 @@ router.post('/:id/checkout', requireAuth, async (req, res) => {
     enc.paidAt = now()
     enc.paidBy = req.user.username
     enc.paidByName = req.user.displayName || req.user.username
-    enc.paidAmount = enc.billTotal
+    // Grand total = bill subtotal minus bill-level discount (amount or percent)
+    enc.paidAmount = Math.max(0, (enc.billTotal || 0) - effectiveDiscount(enc))
     if (txId) enc.consumablesTransactionId = txId
     enc.consumablesDeductedAt = now()
     enc.updatedAt = now()

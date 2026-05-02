@@ -16,6 +16,18 @@ const KIND_BADGE = {
   thuoc:   { label: 'Thuốc',    cls: 'bg-amber-100 text-amber-700' },
 }
 
+// Mirrors server-side helper. Discount is either absolute (discountAmount)
+// or percent (discountPercent, takes precedence when > 0).
+function effectiveDiscount(enc) {
+  if (!enc) return 0
+  const pct = enc.discountPercent || 0
+  if (pct > 0) return Math.round((enc.billTotal || 0) * pct / 100)
+  return enc.discountAmount || 0
+}
+function grandTotal(enc) {
+  return Math.max(0, (enc?.billTotal || 0) - effectiveDiscount(enc))
+}
+
 export default function ThuNgan() {
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
@@ -84,9 +96,9 @@ export default function ThuNgan() {
                 <td className="px-3 py-2 font-medium text-gray-800">{e.patientName || '—'}</td>
                 <td className="px-3 py-2 font-mono text-xs text-gray-500">{e.patientId || '—'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600">{e.site || '—'}</td>
-                <td className="px-3 py-2 text-xs">{e.packageName || <span className="text-gray-300 italic">—</span>}</td>
+                <td className="px-3 py-2 text-xs">{(e.packages || []).length === 0 ? <span className="text-gray-300 italic">—</span> : (e.packages || []).map(p => p.name).join(' + ')}</td>
                 <td className="px-3 py-2 text-center text-xs">{(e.billItems || []).length}</td>
-                <td className="px-3 py-2 text-right font-mono text-blue-700 font-semibold">{fmtMoney(e.billTotal)}</td>
+                <td className="px-3 py-2 text-right font-mono text-blue-700 font-semibold">{fmtMoney(grandTotal(e))}</td>
                 <td className="px-3 py-2 text-xs text-gray-500">{tab === 'paid' ? fmtDateTime(e.paidAt) : fmtTime(e.createdAt)}</td>
                 <td className="px-3 py-2 text-xs">
                   {e.status === 'paid' ? (
@@ -129,7 +141,8 @@ function PaymentDrawer({ id, onClose }) {
   useEffect(() => { load() }, [id])
 
   const checkout = async () => {
-    if (!confirm(`Xác nhận thu ${fmtMoney(enc.billTotal)} đ từ ${enc.patientName}?\nSau khi xác nhận không thể chỉnh sửa bill.`)) return
+    const grand = grandTotal(enc)
+    if (!confirm(`Xác nhận thu ${fmtMoney(grand)} đ từ ${enc.patientName}?\nSau khi xác nhận không thể chỉnh sửa bill.`)) return
     setPaying(true)
     try {
       await api.post(`/encounters/${id}/checkout`, { paymentMethod })
@@ -169,9 +182,13 @@ function PaymentDrawer({ id, onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {enc.packageName && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm">
-              <div className="font-semibold text-purple-900">{enc.packageName} {enc.packageTier && <span className="text-xs font-normal text-purple-700">— {enc.packageTier}</span>}</div>
+          {(enc.packages || []).length > 0 && (
+            <div className="space-y-1.5">
+              {enc.packages.map(p => (
+                <div key={p.code} className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm">
+                  <div className="font-semibold text-purple-900">{p.name} {p.tier && <span className="text-xs font-normal text-purple-700">— {p.tier}</span>}</div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -238,10 +255,22 @@ function PaymentDrawer({ id, onClose }) {
                     )
                   })}
                 </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-300 font-semibold text-base">
-                    <td colSpan={4} className="py-3 text-right">Tổng cộng</td>
-                    <td className="py-3 text-right font-mono text-blue-700">{fmtMoney(enc.billTotal)} đ</td>
+                <tfoot className="text-sm">
+                  <tr className="border-t-2 border-gray-300">
+                    <td colSpan={4} className="py-1.5 text-right text-gray-500">Tạm tính</td>
+                    <td className="py-1.5 text-right font-mono text-gray-700">{fmtMoney(enc.billTotal)} đ</td>
+                  </tr>
+                  {effectiveDiscount(enc) > 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-1.5 text-right text-gray-500">
+                        Giảm giá{(enc.discountPercent || 0) > 0 ? ` (${enc.discountPercent}%)` : ''}{enc.discountReason ? ` — ${enc.discountReason}` : ''}
+                      </td>
+                      <td className="py-1.5 text-right font-mono text-rose-600">−{fmtMoney(effectiveDiscount(enc))} đ</td>
+                    </tr>
+                  )}
+                  <tr className="border-t border-gray-200 font-bold text-base">
+                    <td colSpan={4} className="py-2 text-right">Tổng cộng</td>
+                    <td className="py-2 text-right font-mono text-blue-700">{fmtMoney(grandTotal(enc))} đ</td>
                   </tr>
                 </tfoot>
               </table>
@@ -271,7 +300,7 @@ function PaymentDrawer({ id, onClose }) {
               className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg text-base disabled:opacity-50">
               {paying ? 'Đang xử lý...'
                 : preview?.hasStockIssues ? 'Không đủ tồn kho — xử lý trước'
-                : `Xác nhận thu ${fmtMoney(enc.billTotal)} đ`}
+                : `Xác nhận thu ${fmtMoney(grandTotal(enc))} đ`}
             </button>
           </div>
         )}

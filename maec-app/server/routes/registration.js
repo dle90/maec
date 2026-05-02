@@ -264,6 +264,33 @@ router.post('/check-in', requireAuth, async (req, res) => {
     const patient = await Patient.findById(patientId).lean()
     if (!patient) return res.status(404).json({ error: 'Patient not found' })
 
+    // Idempotent check-in: if this patient already has an open encounter
+    // (anything not yet paid or cancelled), return that one instead of
+    // creating a duplicate. Prevents accidental double check-ins from the
+    // Đăng ký flow when a patient is still being seen by KTV/BS.
+    // If the caller explicitly picked a site that differs from the existing
+    // encounter, sync the existing encounter's site over so the BN appears
+    // in the right Khám site filter (otherwise the old default-site value
+    // stays and the BN can't be found by site).
+    const existing = await Encounter.findOne({
+      patientId: patient.patientId || patient._id,
+      status: { $nin: ['paid', 'cancelled'] },
+    }).lean()
+    if (existing) {
+      if (req.body.site && existing.site !== req.body.site) {
+        await Encounter.updateOne(
+          { _id: existing._id },
+          { $set: { site: req.body.site, updatedAt: now() } }
+        )
+      }
+      return res.status(200).json({
+        encounterId: existing._id,
+        existing: true,
+        siteUpdated: !!(req.body.site && existing.site !== req.body.site),
+        message: 'Bệnh nhân đã có lượt khám đang mở',
+      })
+    }
+
     // Site precedence: body override → patient's registered site → user's
     // department → distinct existing site → 'default'. Appointment.site is
     // required by Mongoose, so we must always have something non-empty.
@@ -449,6 +476,13 @@ router.post('/check-in', requireAuth, async (req, res) => {
         createdAt: now(),
         updatedAt: now(),
       }).save()
+
+      // Denormalize last-encounter timestamp on the Patient — drives the
+      // "Last visit" filter on the Bệnh Nhân catalog without aggregation.
+      await Patient.updateOne(
+        { _id: patient._id },
+        { $set: { lastEncounterAt: encounter.createdAt, updatedAt: now() } }
+      ).catch(() => {})
 
       res.status(201).json({ invoice, appointments: created.appointments, studies: created.studies, encounterId: encounter._id })
     } catch (inner) {

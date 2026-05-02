@@ -793,10 +793,22 @@ function CheckInView({ patient, onEdit, onBack, onCheckIn, checkingIn }) {
 export default function Registration() {
   const { auth } = useAuth()
 
+  // Deep-link from Bệnh nhân: ?prefillName=... or ?prefillPhone=... jumps
+  // straight into FormView with the value pre-filled, skipping the search.
+  const initialPrefill = (() => {
+    if (typeof window === 'undefined') return null
+    const sp = new URLSearchParams(window.location.search)
+    const name = sp.get('prefillName')
+    const phone = sp.get('prefillPhone')
+    if (name) return { name }
+    if (phone) return { phone }
+    return null
+  })()
+
   // View state machine: 'search' | 'form' | 'checkin'
-  const [view, setView] = useState('search')
+  const [view, setView] = useState(initialPrefill ? 'form' : 'search')
   const [selectedPatient, setSelectedPatient] = useState(null)
-  const [formPrefill, setFormPrefill] = useState(null)
+  const [formPrefill, setFormPrefill] = useState(initialPrefill)
 
   // Left rail — merges real patients + pending partner referrals
   const [todayList, setTodayList] = useState([])
@@ -923,7 +935,9 @@ export default function Registration() {
       })
       const encounterId = r.data?.encounterId
       if (encounterId) {
-        window.location.href = `/kham?id=${encodeURIComponent(encounterId)}`
+        const params = new URLSearchParams({ id: encounterId })
+        if (r.data?.existing) params.set('existing', '1')
+        window.location.href = `/kham?${params.toString()}`
         return
       }
       goSearch()

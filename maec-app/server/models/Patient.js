@@ -26,6 +26,10 @@ const patientSchema = new mongoose.Schema({
   referralId: String,
   referralName: String,
   notes: String,
+  // Denormalized timestamp of the patient's most recent Encounter — updated by
+  // the check-in flow. Powers the "last encounter" filter on the Bệnh Nhân
+  // catalog without needing an aggregation per row.
+  lastEncounterAt: String,
   createdAt: String,
   updatedAt: String,
 }, { _id: false })

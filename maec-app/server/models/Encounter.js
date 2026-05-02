@@ -23,6 +23,9 @@ const encounterSchema = new mongoose.Schema({
   paidBy: String,
   paidByName: String,
   paidAmount: Number,
+  cancelledAt: String,
+  cancelledBy: String,
+  cancelReason: String,
   priority: {
     type: String,
     enum: ['routine', 'urgent', 'stat'],
@@ -58,9 +61,19 @@ const encounterSchema = new mongoose.Schema({
   consumablesDeductedAt: String,
   consumablesTransactionId: String,
 
-  packageCode: String,
-  packageName: String,
-  packageTier: String,
+  // Multiple packages per encounter — a package is a combo of services that
+  // can stack (e.g. Khám mắt cơ bản + Atropin myopia control). Replaces the
+  // old single packageCode/Name/Tier triple as of 2026-05-02.
+  packages: {
+    type: [{
+      code: String,
+      name: String,
+      tier: String,
+      addedAt: String,
+      addedBy: String,
+    }],
+    default: [],
+  },
 
   assignedServices: {
     type: [{
@@ -74,6 +87,9 @@ const encounterSchema = new mongoose.Schema({
       output: { type: mongoose.Schema.Types.Mixed, default: {} },
       coveredByEntitlement: { type: Boolean, default: false },
       entitlementId: String,
+      // When non-empty, identifies the package that added this service so
+      // removing the package can clean up its services.
+      addedByPackage: String,
     }],
     default: [],
   },
@@ -93,7 +109,14 @@ const encounterSchema = new mongoose.Schema({
     default: [],
   },
 
+  // Sum of billItems totalPrice (no discount applied).
   billTotal: { type: Number, default: 0 },
+  // Bill-level discount. Either absolute (discountAmount, in VND) OR percent
+  // (discountPercent, 0-100) — mutually exclusive. When discountPercent > 0
+  // it takes precedence; effective discount = round(billTotal * percent/100).
+  discountAmount: { type: Number, default: 0 },
+  discountPercent: { type: Number, default: 0 },
+  discountReason: String,
 
   createdAt: String,
   updatedAt: String,
