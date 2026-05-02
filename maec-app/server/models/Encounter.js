@@ -19,13 +19,39 @@ const encounterSchema = new mongoose.Schema({
   studyDate: String,
   status: {
     type: String,
-    enum: ['scheduled', 'in_progress', 'pending_read', 'reading', 'reported', 'verified', 'completed', 'paid', 'cancelled'],
+    enum: ['scheduled', 'in_progress', 'pending_read', 'reading', 'reported', 'verified', 'completed', 'partial', 'paid', 'cancelled'],
     default: 'scheduled',
   },
+  // First-payment denormalised fields — kept for backward compatibility with
+  // existing rows + simple report queries. Source of truth going forward is
+  // the `payments[]` ledger below; these fields mirror its first 'payment'
+  // entry (paidAt = first payment's `at`, paidByName = first payment's
+  // `byName`, paidAmount = net positive sum across all payments / refunds).
   paidAt: String,
   paidBy: String,
   paidByName: String,
   paidAmount: Number,
+  // Q3 — Payment ledger. Each entry is a positive `amount`; the discriminator
+  // `kind` distinguishes 'payment' (cashier collected money) from 'refund'
+  // (cashier returned money). Net paid = sum(payment) - sum(refund). When net
+  // ≥ grandTotal, status = 'paid'; partial otherwise. Stock-return reversals
+  // for kính/thuốc trên bill are handled by a separate inventory transaction
+  // referenced via stockReturnTxId.
+  payments: {
+    type: [{
+      at: String,
+      by: String,
+      byName: String,
+      amount: { type: Number, default: 0 },
+      method: { type: String, enum: ['cash', 'transfer', 'card', 'mixed', ''], default: '' },
+      kind: { type: String, enum: ['payment', 'refund'], default: 'payment' },
+      reason: String,
+      // Inventory transaction created when refund opted to return stock.
+      // Only set on refund entries; null on payment entries.
+      stockReturnTxId: String,
+    }],
+    default: [],
+  },
   cancelledAt: String,
   cancelledBy: String,
   cancelReason: String,

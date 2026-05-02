@@ -28,9 +28,14 @@ router.get('/maec-overview', requireAuth, async (req, res) => {
     const start12 = new Date(now); start12.setMonth(now.getMonth() - 11); start12.setDate(1)
     const start12Str = start12.toISOString().slice(0, 10)
 
+    // Q3 — paidAmount is now denormalized as the NET (positive payments minus
+    // refunds), and an encounter that's been fully refunded ends up in
+    // status='completed'. Widen the status filter to capture partial + fully
+    // refunded encounters; paidAmount > 0 keeps the zero-revenue rows out.
+    const REVENUE_STATUSES = ['paid', 'partial', 'completed']
     async function aggRange(fromDate) {
       const docs = await Encounter.aggregate([
-        { $match: { status: 'paid', paidAt: { $gte: `${fromDate}T00:00:00.000Z` } } },
+        { $match: { status: { $in: REVENUE_STATUSES }, paidAmount: { $gt: 0 }, paidAt: { $gte: `${fromDate}T00:00:00.000Z` } } },
         { $group: { _id: '$site', revenue: { $sum: '$paidAmount' }, encounters: { $sum: 1 } } },
       ])
       const result = { total: 0, encounters: 0, bySite: {} }
@@ -49,7 +54,7 @@ router.get('/maec-overview', requireAuth, async (req, res) => {
       aggRange(mtdStr),
       aggRange(ytdStr),
       Encounter.aggregate([
-        { $match: { status: 'paid', paidAt: { $gte: `${start12Str}T00:00:00.000Z` } } },
+        { $match: { status: { $in: REVENUE_STATUSES }, paidAmount: { $gt: 0 }, paidAt: { $gte: `${start12Str}T00:00:00.000Z` } } },
         { $group: { _id: { month: { $substr: ['$paidAt', 0, 7] }, site: '$site' }, revenue: { $sum: '$paidAmount' } } },
         { $sort: { '_id.month': 1 } },
       ]),

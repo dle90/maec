@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api from '../api'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 const fmtTime = (iso) => {
@@ -570,6 +571,7 @@ function PatientLookup({ onPick }) {
 // ── Create encounter (Lễ tân quick-create) ────────────────
 
 function CreateEncounterModal({ onClose, onCreated }) {
+  useEscapeKey(onClose)
   const [q, setQ] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -721,6 +723,30 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
             onClick={() => printVisitReport(enc)}
             className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
             title="In phiếu khám"><span>🖨</span> In phiếu</button>
+          {!isClosed && (
+            <button
+              onClick={async () => {
+                // Q7 — site swap before checkout. Pick the OTHER site so a
+                // single click flips between Trung Kính ↔ Kim Giang. Prompt
+                // for any custom site value as fallback.
+                const SITES = ['Trung Kính', 'Kim Giang']
+                let next = SITES.find(s => s !== enc.site) || ''
+                if (!next) {
+                  const v = prompt(`Đổi cơ sở của ${enc.patientName}?\nNhập tên cơ sở mới:`, enc.site)
+                  if (v === null || !v.trim()) return
+                  next = v.trim()
+                }
+                if (!confirm(`Chuyển ${enc.patientName} từ "${enc.site || '—'}" sang "${next}"?`)) return
+                try {
+                  await api.put(`/encounters/${enc._id}/site`, { site: next })
+                  reload()
+                } catch (e) {
+                  alert(e.response?.data?.error || 'Lỗi đổi cơ sở')
+                }
+              }}
+              className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 whitespace-nowrap"
+              title="Đổi cơ sở thực hiện lượt khám">📍 Đổi cơ sở</button>
+          )}
           {!isClosed && (
             <button
               onClick={async () => {
@@ -1052,6 +1078,7 @@ function DiscountInput({ encounter, disabled, onSaved }) {
 
 // Mobile / small-screen wrapper — renders EncounterPane in a fixed modal.
 function EncounterDrawer({ id, onClose, onOpenOther }) {
+  useEscapeKey(onClose)
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
       <div className="w-full max-w-3xl bg-white h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -1133,6 +1160,7 @@ function AssignPackageModal({ encounterId, onClose, onDone }) {
 // ── Service result form modal ─────────────────────────────
 
 function ServiceFormModal({ encounterId, serviceCode, onClose, onDone }) {
+  useEscapeKey(onClose)
   const [fields, setFields] = useState([])
   const [output, setOutput] = useState({})
   const [status, setStatus] = useState('in_progress')
@@ -1213,6 +1241,7 @@ function FieldInput({ field, value, onChange }) {
 // ── Add bill item (service à la carte / kinh / thuoc) ────
 
 function AddItemModal({ encounterId, kind, onClose, onDone }) {
+  useEscapeKey(onClose)
   // Catalog endpoints per kind. 'service' uses /catalogs/services with
   // basePrice; 'kinh' / 'thuoc' use their dedicated catalogs with sellPrice.
   const catalogPath = kind === 'service' ? '/catalogs/services' : kind === 'kinh' ? '/catalogs/kinh' : '/catalogs/thuoc'

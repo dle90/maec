@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 // ─── constants ──────────────────────────────────────────────────────────────
 const TX_TYPES = {
@@ -745,6 +746,7 @@ const Field = ({ label, children, full }) => (
 
 // ─── Create Transaction Modal (Nhập / Xuất / Điều chỉnh / Điều chuyển) ─────
 function CreateTransactionModal({ kind, warehouse, warehouses, onClose, onSaved }) {
+  useEscapeKey(onClose)
   const isImport = kind === 'import'
   const isExport = kind === 'export'
   const isTransfer = kind === 'transfer'

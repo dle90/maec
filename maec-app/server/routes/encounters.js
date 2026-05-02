@@ -8,6 +8,7 @@ const Entitlement = require('../models/Entitlement')
 const Warehouse = require('../models/Warehouse')
 const Supply = require('../models/Supply')
 const InventoryTransaction = require('../models/InventoryTransaction')
+const InventoryLot = require('../models/InventoryLot')
 const { requireAuth } = require('../middleware/auth')
 const { fifoDeduct, stockCheck } = require('../lib/fifoDeduct')
 const SERVICE_OUTPUT_FIELDS = require('../config/serviceOutputFields')
@@ -252,6 +253,26 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
+// Q7 — PUT /encounters/:id/site — change the encounter's site (Trung Kính ↔
+// Kim Giang). Locked once paid/cancelled. Useful when receptionist tiếp đón
+// a BN under the wrong site by mistake; without this, bill stock-deduct
+// would route to the wrong warehouse at checkout.
+router.put('/:id/site', requireAuth, async (req, res) => {
+  try {
+    const site = String(req.body.site || '').trim()
+    if (!site) return res.status(400).json({ error: 'Thiếu cơ sở mới' })
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (enc.status === 'paid' || enc.status === 'cancelled' || enc.status === 'completed') {
+      return res.status(400).json({ error: 'Lượt khám đã đóng — không đổi cơ sở được' })
+    }
+    enc.site = site
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
 // PUT /encounters/:id/conclusion — set the doctor's conclusion text.
 router.put('/:id/conclusion', requireAuth, async (req, res) => {
   try {
@@ -296,6 +317,23 @@ function effectiveDiscount(enc) {
   const pct = enc.discountPercent || 0
   if (pct > 0) return Math.round((enc.billTotal || 0) * pct / 100)
   return enc.discountAmount || 0
+}
+
+// Q3 — net paid amount across the payments[] ledger (positive sum minus
+// refunded sum). Used to decide encounter status (partial vs paid) and to
+// surface the cumulative collected amount to the cashier + reports.
+function netPaidAmount(enc) {
+  const pays = enc.payments || []
+  let net = 0
+  for (const p of pays) {
+    const sign = p.kind === 'refund' ? -1 : 1
+    net += sign * (p.amount || 0)
+  }
+  return Math.max(0, net)
+}
+
+function grandTotalForEnc(enc) {
+  return Math.max(0, (enc.billTotal || 0) - effectiveDiscount(enc))
 }
 
 // PUT /encounters/:id/services/:serviceCode — update one service (status / output / assignedTo)
@@ -432,87 +470,245 @@ router.get('/:id/checkout-preview', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// POST /encounters/:id/checkout — Thu Ngân confirms bill.
-// Auto-deducts inventory (FIFO) for thuoc/kinh bill items, creates one
-// auto_deduct transaction, then marks encounter paid. Stock shortfall
-// blocks checkout entirely (rollback any partial deductions).
+// Q3 — Stock-deduct on first payment. Extracted from the legacy /checkout
+// path so /payment can call it on the first (and only first) payment to a
+// previously-unpaid encounter. Returns { txId } on success or throws an Error
+// with a user-facing message on failure (caller should send 400).
+async function deductStockForFirstPayment(enc, user) {
+  const stockItems = (enc.billItems || []).filter(b => (b.kind === 'thuoc' || b.kind === 'kinh') && b.code)
+  if (stockItems.length === 0) return { txId: null }
+
+  const wh = await Warehouse.findOne({ site: enc.site, status: 'active' }).lean()
+  if (!wh) throw new Error(`Không có kho cho cơ sở "${enc.site}". Tạo Warehouse trước khi thanh toán.`)
+
+  // Pre-flight stock check (no mutations) so we fail before deducting anything.
+  const preChecks = []
+  for (const b of stockItems) {
+    const exists = await Supply.exists({ _id: b.code })
+    if (!exists) throw new Error(`"${b.name}" không có trong Inventory — tạo Supply trước.`)
+    const r = await stockCheck({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
+    if (!r.satisfied) {
+      throw new Error(`Không đủ tồn kho cho "${b.name}" tại ${wh.name} — cần ${b.qty}, còn ${r.totalAvailable}. Nhập kho thêm hoặc bỏ mục khỏi bill.`)
+    }
+    preChecks.push({ b, plan: r.plan })
+  }
+
+  const txItems = []
+  for (const { b } of preChecks) {
+    const result = await fifoDeduct({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
+    const supply = await Supply.findById(b.code).lean()
+    for (const c of result.consumed) {
+      txItems.push({
+        supplyId: b.code, supplyName: b.name, supplyCode: b.code,
+        unit: supply?.unit || 'cái', packagingSpec: supply?.packagingSpec || '',
+        lotId: c.lotId, lotNumber: c.lotNumber, expiryDate: c.expiryDate || '',
+        quantity: c.quantity, unitPrice: b.unitPrice,
+        amount: c.quantity * b.unitPrice,
+      })
+    }
+  }
+
+  const txId = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+  await new InventoryTransaction({
+    _id: txId, transactionNumber: txId, type: 'auto_deduct',
+    warehouseId: wh._id, warehouseName: wh.name, warehouseCode: wh.code, site: wh.site,
+    items: txItems,
+    totalAmount: txItems.reduce((s, i) => s + (i.amount || 0), 0),
+    relatedVisitId: enc._id,
+    notes: `Thu ngân ${user.displayName || user.username} — ${enc.patientName}`,
+    status: 'confirmed', confirmedBy: user.username, confirmedAt: now(),
+    createdBy: user.username, createdAt: now(), updatedAt: now(),
+  }).save()
+  return { txId }
+}
+
+// POST /encounters/:id/payment — record a payment (cash collected). First
+// non-refund payment triggers stock deduct. Subsequent payments just add to
+// the ledger. Body: { amount, method?, note? }. Status flips to 'partial'
+// when paidAmount > 0 but < grandTotal, and 'paid' when paidAmount ≥
+// grandTotal. Replaces /checkout (which is kept as a thin wrapper for
+// backward compat — full grand-total payment in one call).
+router.post('/:id/payment', requireAuth, async (req, res) => {
+  try {
+    const amount = Number(req.body.amount)
+    if (!(amount > 0)) return res.status(400).json({ error: 'Số tiền phải lớn hơn 0' })
+
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (enc.status === 'cancelled') return res.status(400).json({ error: 'Lượt khám đã hủy' })
+
+    const grand = grandTotalForEnc(enc)
+    if (grand <= 0) return res.status(400).json({ error: 'Bill chưa có mục để thanh toán' })
+
+    const isFirstPayment = (enc.payments || []).filter(p => p.kind !== 'refund').length === 0
+
+    let txId = null
+    if (isFirstPayment) {
+      try { ({ txId } = await deductStockForFirstPayment(enc, req.user)) }
+      catch (e) { return res.status(400).json({ error: e.message }) }
+      if (txId) {
+        enc.consumablesTransactionId = txId
+        enc.consumablesDeductedAt = now()
+      }
+    }
+
+    const at = now()
+    const entry = {
+      at, by: req.user.username, byName: req.user.displayName || req.user.username,
+      amount, method: req.body.method || 'cash', kind: 'payment',
+      reason: req.body.note || '',
+    }
+    if (!enc.payments) enc.payments = []
+    enc.payments.push(entry)
+
+    enc.paidAmount = netPaidAmount(enc)
+    enc.status = enc.paidAmount >= grand ? 'paid' : 'partial'
+    if (isFirstPayment) {
+      enc.paidAt = at
+      enc.paidBy = req.user.username
+      enc.paidByName = req.user.displayName || req.user.username
+    }
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// POST /encounters/:id/refund — record a refund. Optionally creates a
+// reverse 'import' inventory transaction to put returned kính/thuốc stock
+// back on the shelf (when `returnStock=true` AND the encounter has a
+// previous auto_deduct transaction to mirror). Body: { amount, method?,
+// reason?, returnStock?: bool }.
+router.post('/:id/refund', requireAuth, async (req, res) => {
+  try {
+    const amount = Number(req.body.amount)
+    if (!(amount > 0)) return res.status(400).json({ error: 'Số tiền hoàn phải lớn hơn 0' })
+
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+
+    const currentPaid = netPaidAmount(enc)
+    if (currentPaid <= 0) return res.status(400).json({ error: 'Lượt khám chưa có thu — không thể hoàn' })
+    if (amount > currentPaid) return res.status(400).json({ error: `Số tiền hoàn vượt mức đã thu (${currentPaid.toLocaleString('vi-VN')}đ)` })
+
+    // Optional stock return: clone the original auto_deduct transaction as a
+    // positive 'import' that recreates the same lots' qty. Only meaningful
+    // when there's a consumablesTransactionId AND the caller opts in.
+    let stockReturnTxId = null
+    if (req.body.returnStock && enc.consumablesTransactionId) {
+      const origTx = await InventoryTransaction.findById(enc.consumablesTransactionId).lean()
+      if (!origTx) return res.status(400).json({ error: 'Không tìm thấy phiếu trừ kho gốc — không thể hoàn kho.' })
+      // Recreate a lot per item (manufacturingDate inferred from origTx item if present)
+      const wh = await Warehouse.findOne({ _id: origTx.warehouseId }).lean()
+      const txItems = origTx.items.map(it => ({
+        supplyId: it.supplyId, supplyName: it.supplyName, supplyCode: it.supplyCode,
+        unit: it.unit, packagingSpec: it.packagingSpec || '',
+        lotNumber: it.lotNumber, expiryDate: it.expiryDate || '',
+        quantity: it.quantity, unitPrice: it.unitPrice || 0,
+        amount: (it.quantity || 0) * (it.unitPrice || 0),
+      }))
+      stockReturnTxId = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+      const importTx = new InventoryTransaction({
+        _id: stockReturnTxId, transactionNumber: stockReturnTxId, type: 'import',
+        warehouseId: origTx.warehouseId, warehouseName: origTx.warehouseName,
+        warehouseCode: origTx.warehouseCode, site: origTx.site,
+        items: txItems,
+        totalAmount: txItems.reduce((s, i) => s + (i.amount || 0), 0),
+        relatedVisitId: enc._id,
+        notes: `Hoàn kho — ${enc.patientName} (${enc._id}). Lý do: ${req.body.reason || 'không ghi'}`,
+        status: 'draft',
+        createdBy: req.user.username, createdAt: now(), updatedAt: now(),
+      })
+      await importTx.save()
+      // Inline confirm to actually create the lots + bump Supply.currentStock.
+      for (const item of importTx.items) {
+        const supply = await Supply.findById(item.supplyId)
+        if (!supply) continue
+        const lot = new InventoryLot({
+          _id: `LOT-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          supplyId: item.supplyId, warehouseId: importTx.warehouseId,
+          site: importTx.site || '',
+          lotNumber: item.lotNumber || `RET-${Date.now().toString().slice(-6)}`,
+          manufacturingDate: '', expiryDate: item.expiryDate || '',
+          importTransactionId: importTx._id, importDate: now().slice(0, 10),
+          initialQuantity: item.quantity, currentQuantity: item.quantity,
+          unitPrice: item.unitPrice || 0, status: 'available', createdAt: now(),
+        })
+        await lot.save()
+        supply.currentStock += item.quantity
+        supply.updatedAt = now()
+        await supply.save()
+      }
+      importTx.status = 'confirmed'
+      importTx.confirmedBy = req.user.username
+      importTx.confirmedAt = now()
+      importTx.updatedAt = now()
+      await importTx.save()
+    }
+
+    const entry = {
+      at: now(), by: req.user.username, byName: req.user.displayName || req.user.username,
+      amount, method: req.body.method || 'cash', kind: 'refund',
+      reason: req.body.reason || '', stockReturnTxId,
+    }
+    if (!enc.payments) enc.payments = []
+    enc.payments.push(entry)
+
+    enc.paidAmount = netPaidAmount(enc)
+    // Status semantics on refund: leave 'paid' if any positive remains
+    // (cashier can see it's been a paid encounter even after partial refund);
+    // drop to 'completed' when fully refunded so the encounter is no longer
+    // counted as paid in revenue queries that filter status === 'paid'. But
+    // we still net out the refund in reports for safety, so this is mostly
+    // cosmetic. Use 'partial' if there's a leftover < grandTotal but > 0.
+    const grand = grandTotalForEnc(enc)
+    enc.status = enc.paidAmount === 0 ? 'completed'
+      : enc.paidAmount < grand ? 'partial'
+      : 'paid'
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// POST /encounters/:id/checkout — full-payment shortcut, kept for backward
+// compatibility with the legacy Thu Ngân UI. Internally delegates to
+// /payment with amount = remaining grand-total. New code should call
+// /payment directly so partial payments are first-class.
 router.post('/:id/checkout', requireAuth, async (req, res) => {
   try {
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
     if (enc.status === 'paid') return res.status(400).json({ error: 'Lượt khám đã được thanh toán' })
 
-    const stockItems = (enc.billItems || []).filter(b => (b.kind === 'thuoc' || b.kind === 'kinh') && b.code)
+    const remaining = Math.max(0, grandTotalForEnc(enc) - netPaidAmount(enc))
+    if (remaining <= 0) return res.status(400).json({ error: 'Bill chưa có mục để thanh toán' })
+
+    const isFirstPayment = (enc.payments || []).filter(p => p.kind !== 'refund').length === 0
     let txId = null
-
-    if (stockItems.length > 0) {
-      const wh = await Warehouse.findOne({ site: enc.site, status: 'active' }).lean()
-      if (!wh) return res.status(400).json({ error: `Không có kho cho cơ sở "${enc.site}". Tạo Warehouse trước khi thanh toán.` })
-
-      // Pre-flight stock check (no mutations) so we fail before deducting anything.
-      const preChecks = []
-      for (const b of stockItems) {
-        const exists = await Supply.exists({ _id: b.code })
-        if (!exists) return res.status(400).json({ error: `"${b.name}" không có trong Inventory — tạo Supply trước.` })
-        const r = await stockCheck({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
-        if (!r.satisfied) {
-          return res.status(400).json({ error: `Không đủ tồn kho cho "${b.name}" tại ${wh.name} — cần ${b.qty}, còn ${r.totalAvailable}. Nhập kho thêm hoặc bỏ mục khỏi bill.` })
-        }
-        preChecks.push({ b, plan: r.plan })
+    if (isFirstPayment) {
+      try { ({ txId } = await deductStockForFirstPayment(enc, req.user)) }
+      catch (e) { return res.status(400).json({ error: e.message }) }
+      if (txId) {
+        enc.consumablesTransactionId = txId
+        enc.consumablesDeductedAt = now()
       }
-
-      // Commit FIFO deduction for each item.
-      const txItems = []
-      for (const { b } of preChecks) {
-        const result = await fifoDeduct({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
-        const supply = await Supply.findById(b.code).lean()
-        for (const c of result.consumed) {
-          txItems.push({
-            supplyId: b.code,
-            supplyName: b.name,
-            supplyCode: b.code,
-            unit: supply?.unit || 'cái',
-            packagingSpec: supply?.packagingSpec || '',
-            lotId: c.lotId,
-            lotNumber: c.lotNumber,
-            expiryDate: c.expiryDate || '',
-            quantity: c.quantity,
-            unitPrice: b.unitPrice,
-            amount: c.quantity * b.unitPrice,
-          })
-        }
-      }
-
-      txId = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-      await new InventoryTransaction({
-        _id: txId,
-        transactionNumber: txId,
-        type: 'auto_deduct',
-        warehouseId: wh._id,
-        warehouseName: wh.name,
-        warehouseCode: wh.code,
-        site: wh.site,
-        items: txItems,
-        totalAmount: txItems.reduce((s, i) => s + (i.amount || 0), 0),
-        relatedVisitId: enc._id,
-        notes: `Thu ngân ${req.user.displayName || req.user.username} — ${enc.patientName}`,
-        status: 'confirmed',
-        confirmedBy: req.user.username,
-        confirmedAt: now(),
-        createdBy: req.user.username,
-        createdAt: now(),
-        updatedAt: now(),
-      }).save()
     }
 
+    const at = now()
+    if (!enc.payments) enc.payments = []
+    enc.payments.push({
+      at, by: req.user.username, byName: req.user.displayName || req.user.username,
+      amount: remaining, method: req.body.paymentMethod || req.body.method || 'cash',
+      kind: 'payment', reason: '',
+    })
+    enc.paidAmount = netPaidAmount(enc)
     enc.status = 'paid'
-    enc.paidAt = now()
-    enc.paidBy = req.user.username
-    enc.paidByName = req.user.displayName || req.user.username
-    // Grand total = bill subtotal minus bill-level discount (amount or percent)
-    enc.paidAmount = Math.max(0, (enc.billTotal || 0) - effectiveDiscount(enc))
-    if (txId) enc.consumablesTransactionId = txId
-    enc.consumablesDeductedAt = now()
+    if (isFirstPayment) {
+      enc.paidAt = at
+      enc.paidBy = req.user.username
+      enc.paidByName = req.user.displayName || req.user.username
+    }
     enc.updatedAt = now()
     await enc.save()
     res.json(enc.toObject())

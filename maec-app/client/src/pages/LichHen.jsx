@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const SITES = ['Trung Kính', 'Kim Giang']
 
@@ -488,6 +489,7 @@ function PatientPicker({ value, onPick, onClear }) {
 
 // ── Đặt lịch / Sửa lịch form ───────────────────────────────
 function AppointmentForm({ mode, defaultDate, defaultSite, existing, onClose, onSaved }) {
+  useEscapeKey(onClose)
   const isEdit = mode === 'edit'
   const [picked, setPicked] = useState(existing?.patientId ? { _id: existing.patientId, patientId: existing.patientId, name: existing.patientName, phone: existing.phone } : null)
   const [walkInName, setWalkInName] = useState(existing?.patientName || '')
@@ -608,6 +610,9 @@ function AppointmentDetail({ appointment, onClose, onMutated }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [editing, setEditing] = useState(false)
+  // Disable Esc when the embedded edit form is open — that form has its own
+  // listener and we don't want a single Esc to close both layers.
+  useEscapeKey(onClose, !editing)
 
   const meta = examTypeMeta(appt.examType)
   const status = STATUS[appt.status] || { label: appt.status, pill: 'bg-gray-100 text-gray-700' }

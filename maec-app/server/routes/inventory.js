@@ -473,7 +473,11 @@ async function fifoDeduct({ warehouseId, supplyId, quantity }) {
     lot.currentQuantity -= take
     if (lot.currentQuantity <= 0) lot.status = 'depleted'
     await lot.save()
-    consumed.push({ lotId: lot._id, lotNumber: lot.lotNumber, quantity: take, expiryDate: lot.expiryDate })
+    consumed.push({
+      lotId: lot._id, lotNumber: lot.lotNumber, quantity: take,
+      expiryDate: lot.expiryDate, manufacturingDate: lot.manufacturingDate || '',
+      unitPrice: lot.unitPrice || 0,
+    })
     remaining -= take
   }
   return { satisfied: remaining <= 0, shortfall: Math.max(0, remaining), consumed }
@@ -485,6 +489,11 @@ router.put('/transactions/:id/confirm', requireAuth, async (req, res) => {
     const tx = await InventoryTransaction.findById(req.params.id)
     if (!tx) return res.status(404).json({ error: 'Không tìm thấy phiếu' })
     if (tx.status !== 'draft') return res.status(400).json({ error: 'Phiếu đã xác nhận hoặc đã hủy' })
+
+    // For transfer_out: capture the consumed-lot metadata per supply so we
+    // can propagate it to the paired transfer_in after the loop. Mongoose
+    // strict-mode would strip a _consumed field added directly on the subdoc.
+    const consumedBySupply = new Map()
 
     for (const item of tx.items) {
       const supply = await Supply.findById(item.supplyId)
@@ -513,6 +522,15 @@ router.put('/transactions/:id/confirm', requireAuth, async (req, res) => {
         const result = await fifoDeduct({ warehouseId: tx.warehouseId, supplyId: item.supplyId, quantity: item.quantity })
         if (result.consumed.length) item.lotId = result.consumed[0].lotId
         supply.currentStock = Math.max(0, supply.currentStock - (item.quantity - (result.shortfall || 0)))
+        // For transfer_out: stash the consumed-lot metadata so the paired
+        // transfer_in (handled after this loop) can copy expiryDate /
+        // unitPrice / manufacturingDate onto its own items before its lots
+        // are created. Without this, the destination warehouse's transfer_in
+        // lot would be created with empty expiryDate → FEFO would treat it
+        // as never-expiring forever.
+        if (tx.type === 'transfer_out') {
+          consumedBySupply.set(item.supplyId, result.consumed)
+        }
       } else if (tx.type === 'adjustment') {
         // Positive variance → create a lot; negative → FIFO deduct
         if (item.quantity > 0) {
@@ -547,7 +565,80 @@ router.put('/transactions/:id/confirm', requireAuth, async (req, res) => {
     tx.confirmedAt = now()
     tx.updatedAt = now()
     await tx.save()
-    res.json(tx)
+
+    // Transfer pairing: when a transfer_out is confirmed, find the paired
+    // transfer_in (same transferId), copy each consumed lot's expiryDate +
+    // manufacturingDate + unitPrice onto its matching item, then auto-confirm
+    // it. Single confirm action moves stock from source to destination —
+    // without this, the transfer_in would sit `draft` forever and the
+    // destination warehouse would never see its stock arrive.
+    let pairedIn = null
+    if (tx.type === 'transfer_out' && tx.transferId) {
+      pairedIn = await InventoryTransaction.findOne({
+        transferId: tx.transferId, type: 'transfer_in', status: 'draft',
+      })
+      if (pairedIn) {
+        for (const inItem of pairedIn.items) {
+          const consumed = consumedBySupply.get(inItem.supplyId) || []
+          // For multi-lot deduction, prefer the soonest-expiring lot's expiry —
+          // it's the safer FEFO bound to track at the destination. unitPrice
+          // weighted-average across the consumed slices preserves cost basis.
+          if (consumed.length) {
+            const earliestExpiry = consumed
+              .map(c => c.expiryDate)
+              .filter(Boolean)
+              .sort()[0] || ''
+            const totalQty = consumed.reduce((s, c) => s + c.quantity, 0)
+            const wAvgPrice = totalQty > 0
+              ? Math.round(consumed.reduce((s, c) => s + c.unitPrice * c.quantity, 0) / totalQty)
+              : 0
+            const earliestMfg = consumed
+              .map(c => c.manufacturingDate)
+              .filter(Boolean)
+              .sort()[0] || ''
+            inItem.expiryDate = inItem.expiryDate || earliestExpiry
+            inItem.manufacturingDate = inItem.manufacturingDate || earliestMfg
+            inItem.unitPrice = inItem.unitPrice || wAvgPrice
+            inItem.amount = (inItem.unitPrice || 0) * (inItem.quantity || 0)
+          }
+        }
+        pairedIn.totalAmount = pairedIn.items.reduce((s, it) => s + (it.amount || 0), 0)
+
+        // Inline confirm of pairedIn — same logic as the type==='import'
+        // branch above, but factored so it also writes its own lots.
+        for (const item of pairedIn.items) {
+          const supply = await Supply.findById(item.supplyId)
+          if (!supply) continue
+          const lot = new InventoryLot({
+            _id: rid('LOT'),
+            supplyId: item.supplyId,
+            warehouseId: pairedIn.warehouseId,
+            site: pairedIn.site || '',
+            lotNumber: item.lotNumber || `L-${Date.now().toString().slice(-6)}`,
+            manufacturingDate: item.manufacturingDate || '',
+            expiryDate: item.expiryDate || '',
+            importTransactionId: pairedIn._id,
+            importDate: today(),
+            initialQuantity: item.quantity,
+            currentQuantity: item.quantity,
+            unitPrice: item.unitPrice || 0,
+            status: 'available',
+            createdAt: now(),
+          })
+          await lot.save()
+          supply.currentStock += item.quantity
+          supply.updatedAt = now()
+          await supply.save()
+        }
+        pairedIn.status = 'confirmed'
+        pairedIn.confirmedBy = req.user.username
+        pairedIn.confirmedAt = now()
+        pairedIn.updatedAt = now()
+        await pairedIn.save()
+      }
+    }
+
+    res.json({ ...tx.toObject(), pairedTransferIn: pairedIn ? pairedIn._id : null })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 

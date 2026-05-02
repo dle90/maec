@@ -6,6 +6,7 @@ import { EmployeeSection, DepartmentSection, PermissionMatrix } from './HRManage
 import ReportTemplates from './ReportTemplates'
 import { FormView } from './Registration'
 import { CATALOG_TO_GROUP, DEFAULT_CATALOG_KEY } from '../config/catalogGroups'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const LAST_CATALOG_KEY = 'maec_last_catalog'
 
@@ -1713,6 +1714,7 @@ function PatientsTable() {
 // Embeds the shared FormView (full edit), shows encounter history, and lets
 // the receptionist Tiếp đón directly. Replaces the older right-side drawer.
 function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
+  useEscapeKey(onClose)
   const { auth } = useAuth()
   const SITES = ['Trung Kính', 'Kim Giang']
   const initialSite = (() => {
