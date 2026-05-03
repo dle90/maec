@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
@@ -663,6 +663,7 @@ function CreateEncounterModal({ onClose, onCreated }) {
 // modal with backdrop). All the encounter detail UI lives here.
 
 function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }) {
+  const navigate = useNavigate()
   const [enc, setEnc] = useState(null)
   const [history, setHistory] = useState([])
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -787,13 +788,29 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-        {/* Hồ sơ bệnh án — 5 self-saving textareas. Each persists on blur via
-            PUT /encounters/:id/clinical-notes with only its own field. */}
+        {/* Hồ sơ bệnh án — 5 collapsible self-saving textareas. Each persists
+            on blur via PUT /encounters/:id/clinical-notes with only its own
+            field. Closed by default to keep the section compact. */}
         <section>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <span>📝</span> Hồ sơ bệnh án
-          </h3>
-          <div className="space-y-3">
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <span>📝</span> Hồ sơ bệnh án
+            </h3>
+            <button
+              onClick={() => {
+                const params = new URLSearchParams({
+                  newAppt: '1',
+                  patientId: enc.patientId || '',
+                  patientName: enc.patientName || '',
+                })
+                if (enc.site) params.set('site', enc.site)
+                navigate(`/lich-hen?${params.toString()}`)
+              }}
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center gap-1 whitespace-nowrap"
+              title="Mở Lịch hẹn và đặt lịch tái khám cho bệnh nhân này"
+            >📅 Đặt lịch hẹn tái khám</button>
+          </div>
+          <div className="space-y-2">
             {[
               { field: 'clinicalInfo',   label: 'Lý do đến khám',     rows: 2, placeholder: 'Triệu chứng chính khi đến khám…' },
               { field: 'presentIllness', label: 'Quá trình bệnh lý',  rows: 3, placeholder: 'Diễn biến triệu chứng, thời gian khởi phát, các yếu tố tăng/giảm…' },
@@ -1004,14 +1021,18 @@ function grandTotal(enc) {
   return Math.max(0, (enc?.billTotal || 0) - effectiveDiscount(enc))
 }
 
-// Inline textarea for one clinical-note field on an encounter. Persists on
-// blur via PUT /encounters/:id/clinical-notes with only its own field key —
-// other fields are untouched. No auto-save while typing.
+// Collapsible inline textarea for one clinical-note field. Closed by default
+// to keep the Hồ sơ bệnh án section compact; header shows a ✓ pill + first-
+// line preview when content exists. Save-on-blur via PUT /:id/clinical-notes
+// with only its own field key — other fields are untouched.
 function ClinicalNoteInput({ encounterId, field, label, value, rows = 2, placeholder, disabled, onSaved }) {
   const [text, setText] = useState(value || '')
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState(null)
+  const [open, setOpen] = useState(false)
+  const taRef = useRef(null)
   useEffect(() => { setText(value || ''); setSavedAt(null) }, [value])
+  useEffect(() => { if (open) taRef.current?.focus() }, [open])
   const commit = async () => {
     if (text === (value || '')) return
     setSaving(true)
@@ -1021,21 +1042,43 @@ function ClinicalNoteInput({ encounterId, field, label, value, rows = 2, placeho
       onSaved && onSaved()
     } finally { setSaving(false) }
   }
+  const hasContent = !!(text || value || '').trim()
+  const preview = (text || value || '').split('\n')[0].slice(0, 80)
   return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <textarea
-        value={text}
-        onChange={e => setText(e.target.value)}
-        onBlur={commit}
-        disabled={disabled || saving}
-        rows={rows}
-        placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-gray-50"
-      />
-      <div className="text-[10px] text-gray-400 mt-0.5 text-right">
-        {saving ? 'Đang lưu…' : savedAt ? `✓ Đã lưu ${savedAt.toLocaleTimeString('vi-VN')}` : disabled ? '' : 'Lưu khi rời ô'}
-      </div>
+    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50"
+      >
+        <span className="text-xs text-gray-400 flex-shrink-0">{open ? '▾' : '▸'}</span>
+        <span className="text-sm font-medium text-gray-700 flex-shrink-0">{label}</span>
+        {hasContent && !open && (
+          <span className="text-xs text-gray-500 truncate flex-1 italic">— {preview}{(text || value || '').length > 80 ? '…' : ''}</span>
+        )}
+        {!open && <span className="ml-auto flex-shrink-0">
+          {hasContent
+            ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">✓ có</span>
+            : <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-400">trống</span>}
+        </span>}
+      </button>
+      {open && (
+        <div className="px-3 pb-2 border-t border-gray-100">
+          <textarea
+            ref={taRef}
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onBlur={commit}
+            disabled={disabled || saving}
+            rows={rows}
+            placeholder={placeholder}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 mt-2 text-sm leading-relaxed focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-gray-50"
+          />
+          <div className="text-[10px] text-gray-400 mt-0.5 text-right">
+            {saving ? 'Đang lưu…' : savedAt ? `✓ Đã lưu ${savedAt.toLocaleTimeString('vi-VN')}` : disabled ? '' : 'Lưu khi rời ô'}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

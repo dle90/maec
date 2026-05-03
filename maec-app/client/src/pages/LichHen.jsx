@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
@@ -72,13 +72,35 @@ export default function LichHen() {
 
 // ── Calendar (day or week view, with site filter) ────────
 function CalendarView() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState('day') // day | week
   const [anchor, setAnchor] = useState(todayLocal()) // anchor date — week derives 7 days from this Monday
-  const [site, setSite] = useState('') // '' = all
+  const [site, setSite] = useState(searchParams.get('site') || '') // '' = all
   const [appts, setAppts] = useState([])
   const [loading, setLoading] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
+  const [prefillPatient, setPrefillPatient] = useState(null)
   const [openAppt, setOpenAppt] = useState(null)
+
+  // When the user lands here from Khám "Đặt lịch hẹn tái khám", auto-open
+  // the create form with the patient pre-selected. Strip the params so a
+  // page refresh doesn't keep re-popping the modal.
+  useEffect(() => {
+    const newAppt = searchParams.get('newAppt')
+    const patientId = searchParams.get('patientId')
+    if (newAppt === '1' && patientId) {
+      setPrefillPatient({
+        _id: patientId,
+        patientId,
+        name: searchParams.get('patientName') || patientId,
+      })
+      setShowCreate(true)
+      const next = new URLSearchParams(searchParams)
+      next.delete('newAppt'); next.delete('patientId'); next.delete('patientName')
+      setSearchParams(next, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // For week view: snap anchor to the Monday of the containing week.
   const weekStart = useMemo(() => mondayOf(anchor), [anchor])
@@ -145,8 +167,9 @@ function CalendarView() {
           mode="create"
           defaultDate={view === 'day' ? anchor : weekStart}
           defaultSite={site || undefined}
-          onClose={() => setShowCreate(false)}
-          onSaved={() => { setShowCreate(false); load() }}
+          prefillPatient={prefillPatient}
+          onClose={() => { setShowCreate(false); setPrefillPatient(null) }}
+          onSaved={() => { setShowCreate(false); setPrefillPatient(null); load() }}
         />
       )}
       {openAppt && (
@@ -488,10 +511,16 @@ function PatientPicker({ value, onPick, onClear }) {
 }
 
 // ── Đặt lịch / Sửa lịch form ───────────────────────────────
-function AppointmentForm({ mode, defaultDate, defaultSite, existing, onClose, onSaved }) {
+function AppointmentForm({ mode, defaultDate, defaultSite, existing, prefillPatient, onClose, onSaved }) {
   useEscapeKey(onClose)
   const isEdit = mode === 'edit'
-  const [picked, setPicked] = useState(existing?.patientId ? { _id: existing.patientId, patientId: existing.patientId, name: existing.patientName, phone: existing.phone } : null)
+  const [picked, setPicked] = useState(
+    existing?.patientId
+      ? { _id: existing.patientId, patientId: existing.patientId, name: existing.patientName, phone: existing.phone }
+      : prefillPatient
+        ? prefillPatient
+        : null
+  )
   const [walkInName, setWalkInName] = useState(existing?.patientName || '')
   const [walkInPhone, setWalkInPhone] = useState(existing?.phone || '')
   const [site, setSite] = useState(existing?.site || defaultSite || SITES[0])
