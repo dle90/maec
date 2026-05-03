@@ -524,18 +524,18 @@ function AppointmentForm({ mode, defaultDate, defaultSite, existing, prefillPati
   const [walkInName, setWalkInName] = useState(existing?.patientName || '')
   const [walkInPhone, setWalkInPhone] = useState(existing?.phone || '')
   const [site, setSite] = useState(existing?.site || defaultSite || SITES[0])
-  const [examType, setExamType] = useState(existing?.examType || EXAM_TYPES[0].value)
+  const [examType, setExamType] = useState(existing?.examType || '')
   const [date, setDate] = useState(existing?.scheduledAt?.slice(0, 10) || defaultDate || todayLocal())
   const [time, setTime] = useState(existing?.scheduledAt?.slice(11, 16) || '09:00')
-  const [duration, setDuration] = useState(existing?.duration || examTypeMeta(EXAM_TYPES[0].value).dur)
+  const [duration, setDuration] = useState(existing?.duration || 30)
   const [notes, setNotes] = useState(existing?.notes || '')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
-  // Auto-update duration when examType changes (unless user has manually
-  // overridden — we only sync from the canonical EXAM_TYPES default)
+  // Auto-update duration when examType changes — only when an examType is
+  // selected. Blank stays at whatever the user last set (default 30).
   useEffect(() => {
-    setDuration(examTypeMeta(examType).dur)
+    if (examType) setDuration(examTypeMeta(examType).dur)
   }, [examType])
 
   const submit = async () => {
@@ -596,6 +596,7 @@ function AppointmentForm({ mode, defaultDate, defaultSite, existing, prefillPati
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Loại khám</label>
               <select value={examType} onChange={e => setExamType(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <option value="">— Chọn loại khám —</option>
                 {EXAM_TYPES.map(t => <option key={t.value} value={t.value}>{t.value}</option>)}
               </select>
             </div>
