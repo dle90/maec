@@ -848,18 +848,18 @@ function ServiceOutputFieldsEditor({ service, canEdit, stateRef }) {
         </div>
       ) : (
         <div className="space-y-2">
-          <div className="grid grid-cols-[24px_1fr_1.4fr_140px_1fr_60px_60px_28px] gap-2 text-[10px] uppercase tracking-wide text-gray-400 px-1">
+          <div className="grid grid-cols-[24px_1fr_1.4fr_140px_1fr_60px_72px_28px] gap-2 text-[10px] uppercase tracking-wide text-gray-400 px-1">
             <div></div>
             <div>Khóa (key)</div>
             <div>Nhãn hiển thị</div>
             <div>Loại</div>
             <div>Tuỳ chọn / placeholder</div>
             <div className="text-center">Step</div>
-            <div className="text-center">BB</div>
+            <div className="text-center" title="Bắt buộc — BS phải điền trường này khi làm dịch vụ">Bắt buộc</div>
             <div></div>
           </div>
           {rows.map((r, i) => (
-            <div key={i} className="grid grid-cols-[24px_1fr_1.4fr_140px_1fr_60px_60px_28px] gap-2 items-center bg-white border border-gray-100 rounded-lg p-1.5">
+            <div key={i} className="grid grid-cols-[24px_1fr_1.4fr_140px_1fr_60px_72px_28px] gap-2 items-center bg-white border border-gray-100 rounded-lg p-1.5">
               <div className="flex flex-col items-center text-gray-400">
                 <button onClick={() => move(i, -1)} disabled={!canEdit || i === 0} className="hover:text-gray-700 disabled:opacity-30" title="Lên">▲</button>
                 <button onClick={() => move(i, 1)} disabled={!canEdit || i === rows.length - 1} className="hover:text-gray-700 disabled:opacity-30" title="Xuống">▼</button>
