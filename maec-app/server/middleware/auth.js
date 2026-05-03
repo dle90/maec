@@ -87,7 +87,16 @@ function userHasPermissionAtSite(user, permKey, siteId) {
 }
 
 const requirePermission = (permKey) => async (req, res, next) => {
-  if (!req.user) return res.status(401).json({ error: 'Vui lòng đăng nhập' })
+  // Self-verify the token if requireAuth wasn't chained before us. Some
+  // routers (e.g. inventory) attach permission middleware directly without
+  // requireAuth — without this, req.user would be undefined and we'd 401
+  // a perfectly valid logged-in user.
+  if (!req.user) {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '')
+    const session = token ? verify(token) : null
+    if (!session) return res.status(401).json({ error: 'Vui lòng đăng nhập' })
+    req.user = session
+  }
   if (userHasPermission(req.user, permKey)) return next()
   // Fallback for tokens issued before the new schema — refresh from DB
   const perms = await getRolePerms(req.user.role)
