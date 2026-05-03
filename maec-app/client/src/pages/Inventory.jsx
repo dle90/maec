@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api'
@@ -755,6 +755,173 @@ const Field = ({ label, children, full }) => (
   </div>
 )
 
+// ─── Searchable input with create-new option (combobox) ────────────────────
+// Generic typeahead: filters `options` by typed text, picks one on click, or
+// fires onCreate(name) when no exact match exists. onCreate must return the
+// new option (auto-picked) or null (parent handles pick separately, e.g. via
+// a follow-up modal).
+function SearchableCreatableInput({
+  value, options, getLabel, getSubLabel,
+  onPick, onCreate, placeholder, size = 'md', className = '',
+}) {
+  const [q, setQ] = useState('')
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const inputRef = useRef(null)
+  const picked = value ? options.find(o => o._id === value) : null
+  const norm = (s) => (s || '').toString().toLowerCase().trim()
+  const display = open ? q : (picked ? getLabel(picked) : '')
+  const filtered = q.trim()
+    ? options.filter(o => norm(getLabel(o)).includes(norm(q)) || norm(getSubLabel?.(o)).includes(norm(q)))
+    : options
+  const exact = q.trim() && options.some(o => norm(getLabel(o)) === norm(q))
+  const showCreate = !!onCreate && !!q.trim() && !exact
+
+  const handleCreate = async () => {
+    setBusy(true)
+    try {
+      const created = await onCreate(q.trim())
+      if (created) onPick(created)
+      setQ(''); setOpen(false)
+    } catch (e) {
+      alert(e?.response?.data?.error || 'Lỗi tạo mới')
+    } finally { setBusy(false) }
+  }
+  const padCls = size === 'sm' ? 'px-2 py-1.5 text-sm' : 'px-3 py-2 text-sm'
+
+  return (
+    <div className={`relative ${className}`}>
+      <input
+        ref={inputRef}
+        className={`w-full border border-gray-300 rounded-lg ${padCls} bg-white ${picked && !open ? 'pr-7' : ''}`}
+        placeholder={placeholder}
+        value={display}
+        onChange={e => { setQ(e.target.value); setOpen(true) }}
+        onFocus={() => { setQ(''); setOpen(true) }}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+      />
+      {picked && !open && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onMouseDown={e => { e.preventDefault(); onPick(null); setQ(''); inputRef.current?.focus() }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 leading-none"
+        >×</button>
+      )}
+      {open && (
+        <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          {filtered.slice(0, 50).map(o => (
+            <button
+              key={o._id}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); onPick(o); setQ(''); setOpen(false) }}
+              className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-50 last:border-0"
+            >
+              <div className="text-gray-900">{getLabel(o)}</div>
+              {getSubLabel?.(o) && <div className="text-xs text-gray-500">{getSubLabel(o)}</div>}
+            </button>
+          ))}
+          {filtered.length === 0 && !showCreate && (
+            <div className="px-3 py-2 text-sm text-gray-400">Không có kết quả</div>
+          )}
+          {showCreate && (
+            <button
+              type="button"
+              onMouseDown={e => { e.preventDefault(); handleCreate() }}
+              disabled={busy}
+              className="w-full text-left px-3 py-2 text-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-t border-emerald-200 disabled:opacity-50"
+            >
+              {busy ? 'Đang tạo...' : <>＋ Tạo mới: <span className="font-semibold">"{q.trim()}"</span></>}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Quick-create Supply modal (used from CreateTransactionModal line input) ─
+// Supplies need at least a unit since transaction lines display it. Keep the
+// form minimal — user can refine details from Danh mục later.
+const SUPPLY_UNIT_PRESETS = ['cái', 'hộp', 'chai', 'ống', 'gói', 'lọ', 'viên', 'tuýp', 'cuộn', 'bộ']
+function QuickCreateSupplyModal({ initialName, onClose, onCreated }) {
+  useEscapeKey(onClose)
+  const [name, setName] = useState(initialName || '')
+  const [unit, setUnit] = useState('cái')
+  const [productKind, setProductKind] = useState('supply')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const save = async () => {
+    if (!name.trim()) { setErr('Tên vật tư là bắt buộc'); return }
+    setSaving(true); setErr('')
+    try {
+      const { data } = await api.post('/inventory/supplies', {
+        name: name.trim(),
+        unit: unit.trim() || 'cái',
+        productKind,
+      })
+      onCreated(data)
+    } catch (e) {
+      setErr(e?.response?.data?.error || 'Lỗi tạo mới')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center">
+          <div className="font-semibold text-gray-900">Tạo vật tư mới</div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
+        </div>
+        <div className="p-5 space-y-3">
+          {err && <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">{err}</div>}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Tên vật tư *</label>
+            <input
+              autoFocus
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              value={name} onChange={e => setName(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Đơn vị *</label>
+              <input
+                list="supply-unit-presets"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                value={unit} onChange={e => setUnit(e.target.value)}
+              />
+              <datalist id="supply-unit-presets">
+                {SUPPLY_UNIT_PRESETS.map(u => <option key={u} value={u} />)}
+              </datalist>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Loại</label>
+              <select
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                value={productKind} onChange={e => setProductKind(e.target.value)}
+              >
+                <option value="supply">Vật tư</option>
+                <option value="thuoc">Thuốc</option>
+                <option value="kinh">Kính</option>
+              </select>
+            </div>
+          </div>
+          <div className="text-[11px] text-gray-500">Mã + chi tiết khác có thể chỉnh sửa sau ở Danh mục.</div>
+        </div>
+        <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2">
+          <button onClick={onClose} className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg">Hủy</button>
+          <button onClick={save} disabled={saving || !name.trim()} className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40">
+            {saving ? 'Đang lưu...' : 'Tạo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Create Transaction Modal (Nhập / Xuất / Điều chỉnh / Điều chuyển) ─────
 function CreateTransactionModal({ kind, warehouse, warehouses, onClose, onSaved }) {
   useEscapeKey(onClose)
@@ -772,6 +939,7 @@ function CreateTransactionModal({ kind, warehouse, warehouses, onClose, onSaved 
   const [items, setItems] = useState([emptyLine()])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [newSupplyForLine, setNewSupplyForLine] = useState(null)  // { lineIdx, name }
 
   useEffect(() => {
     api.get('/inventory/supplies?status=active').then(({ data }) => setSupplies(data || []))
@@ -846,10 +1014,19 @@ function CreateTransactionModal({ kind, warehouse, warehouses, onClose, onSaved 
               {isImport && (
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs text-gray-500 mb-1">Nhà cung cấp *</label>
-                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white" value={supplierId} onChange={e => setSupplierId(e.target.value)}>
-                    <option value="">-- Chọn NCC --</option>
-                    {suppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-                  </select>
+                  <SearchableCreatableInput
+                    value={supplierId}
+                    options={suppliers}
+                    getLabel={s => s.name}
+                    getSubLabel={s => s.code || ''}
+                    placeholder="Tìm hoặc tạo NCC..."
+                    onPick={s => setSupplierId(s?._id || '')}
+                    onCreate={async (name) => {
+                      const { data } = await api.post('/inventory/suppliers', { name })
+                      setSuppliers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name, 'vi')))
+                      return data
+                    }}
+                  />
                 </div>
               )}
               {(isExport || isAdjustment) && (
@@ -887,10 +1064,19 @@ function CreateTransactionModal({ kind, warehouse, warehouses, onClose, onSaved 
               {items.map((it, i) => (
                 <div key={i} className="grid grid-cols-[1fr_100px_100px_100px_80px_30px] gap-2 items-start">
                   <div>
-                    <select className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm bg-white" value={it.supplyId} onChange={e => pickSupply(i, e.target.value)}>
-                      <option value="">-- Chọn vật tư --</option>
-                      {supplies.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
-                    </select>
+                    <SearchableCreatableInput
+                      value={it.supplyId}
+                      options={supplies}
+                      getLabel={s => s.name}
+                      getSubLabel={s => [s.code, s.unit].filter(Boolean).join(' · ')}
+                      placeholder="Tìm hoặc tạo vật tư..."
+                      size="sm"
+                      onPick={s => pickSupply(i, s?._id || '')}
+                      onCreate={async (name) => {
+                        setNewSupplyForLine({ lineIdx: i, name })
+                        return null
+                      }}
+                    />
                   </div>
                   <input
                     className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
@@ -932,6 +1118,22 @@ function CreateTransactionModal({ kind, warehouse, warehouses, onClose, onSaved 
           </button>
         </div>
       </div>
+      {newSupplyForLine && (
+        <QuickCreateSupplyModal
+          initialName={newSupplyForLine.name}
+          onClose={() => setNewSupplyForLine(null)}
+          onCreated={(supply) => {
+            setSupplies(prev => [...prev, supply].sort((a, b) => a.name.localeCompare(b.name, 'vi')))
+            updateItem(newSupplyForLine.lineIdx, {
+              supplyId: supply._id,
+              supplyName: supply.name,
+              supplyCode: supply.code || '',
+              unit: supply.unit || '',
+            })
+            setNewSupplyForLine(null)
+          }}
+        />
+      )}
     </div>
   )
 }
