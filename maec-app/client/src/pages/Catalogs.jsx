@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api'
@@ -291,6 +291,11 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
   const [form, setForm] = useState(record || {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // PackageBuilder publishes its current bundle/tier/entitlement state here so
+  // the drawer's single Lưu button saves both the form fields and the builder
+  // state in one PUT. Without this, two separate save buttons let one
+  // overwrite the other's changes.
+  const builderStateRef = useRef(null)
 
   // Async-loaded option lists keyed by role for userSelect fields
   const [userOptions, setUserOptions] = useState({})
@@ -307,7 +312,16 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
   const handleSave = async () => {
     for (const f of fields) { if (f.required && !form[f.key]?.toString().trim()) return setError(`${f.label} là bắt buộc`) }
     setSaving(true); setError('')
-    try { await onSave(form) } catch (err) { setError(err.response?.data?.error || 'Lỗi'); setSaving(false) }
+    // For packages, the PackageBuilder section publishes its current
+    // bundle/tier/entitlement state via builderStateRef. Merge it in so a
+    // single Lưu commits both the info fields AND the builder state in one
+    // PUT — otherwise the form's stale snapshot of bundledServices clobbers
+    // any bundle edits made via PackageBuilder.
+    let body = form
+    if (catalogKey === 'packages' && builderStateRef.current) {
+      body = { ...form, ...builderStateRef.current }
+    }
+    try { await onSave(body) } catch (err) { setError(err.response?.data?.error || 'Lỗi'); setSaving(false) }
   }
 
   const title = isNew ? 'Thêm mới' : (record.name || record.displayName || record.code || record._id)
@@ -355,7 +369,7 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
                   ))}
                 </div>
               </div>
-              {!isNew && catalogKey === 'packages' && <PackageBuilder pkg={record} canEdit={canEdit} />}
+              {!isNew && catalogKey === 'packages' && <PackageBuilder pkg={record} canEdit={canEdit} stateRef={builderStateRef} />}
             </>
           )}
           {tab === 'history' && !isNew && (
@@ -419,8 +433,9 @@ function FormField({ f, form, setForm, userOptions, disabled }) {
 // Each service in the bundle has a price-mode toggle [Giá lẻ / Trong gói] that
 // determines what it contributes to the package's suggested total. Tiers can
 // optionally attach a Kính SKU (e.g. Ortho-K lens). Entitlement covers
-// services + maxUses. "Lưu thay đổi" persists via PUT /catalogs/packages/:id.
-function PackageBuilder({ pkg, canEdit }) {
+// services + maxUses. State is published to the parent drawer via stateRef
+// so the drawer's single Lưu button commits everything in one PUT.
+function PackageBuilder({ pkg, canEdit, stateRef }) {
   const [services, setServices] = useState([])
   const [kinhList, setKinhList] = useState([])
   const [bundled, setBundled] = useState(() => normalizeBundle(pkg))
@@ -429,9 +444,8 @@ function PackageBuilder({ pkg, canEdit }) {
   const [entMonths, setEntMonths] = useState(pkg.activatesEntitlement?.durationMonths || 12)
   const [entCovered, setEntCovered] = useState(() => (pkg.activatesEntitlement?.coveredServices || []).map(c => ({ ...c })))
   const [picking, setPicking] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-  const [savedAt, setSavedAt] = useState(null)
+  const [saving, setSaving] = useState(false)  // splitTiers in-flight
+  const [err, setErr] = useState('')           // splitTiers error surface
 
   useEffect(() => {
     setBundled(normalizeBundle(pkg))
@@ -439,9 +453,23 @@ function PackageBuilder({ pkg, canEdit }) {
     setEntOpen(!!pkg.activatesEntitlement?.durationMonths)
     setEntMonths(pkg.activatesEntitlement?.durationMonths || 12)
     setEntCovered((pkg.activatesEntitlement?.coveredServices || []).map(c => ({ ...c })))
-    setSavedAt(null)
     setErr('')
   }, [pkg._id])
+
+  // Publish current state up to the drawer on every change. The drawer's
+  // Lưu button reads from this ref to merge bundle/tier/entitlement into
+  // the PUT body alongside the form fields.
+  useEffect(() => {
+    if (!stateRef) return
+    stateRef.current = {
+      bundledServices: bundled.map(b => b.code),
+      bundledServiceModes: bundled.map(b => ({ code: b.code, priceMode: b.priceMode, customPrice: b.customPrice || 0 })),
+      pricingTiers: tiers,
+      activatesEntitlement: entOpen
+        ? { durationMonths: +entMonths || 12, coveredServices: entCovered }
+        : undefined,
+    }
+  }, [bundled, tiers, entOpen, entMonths, entCovered, stateRef])
 
   useEffect(() => {
     let cancelled = false
@@ -493,26 +521,8 @@ function PackageBuilder({ pkg, canEdit }) {
     ? { ...c, maxUses: val === '' ? null : Math.max(0, +val) }
     : c))
 
-  const save = async () => {
-    setSaving(true); setErr('')
-    try {
-      const body = {
-        ...pkg,
-        bundledServices: bundled.map(b => b.code),
-        bundledServiceModes: bundled.map(b => ({ code: b.code, priceMode: b.priceMode })),
-        pricingTiers: tiers,
-        activatesEntitlement: entOpen
-          ? { durationMonths: +entMonths || 12, coveredServices: entCovered }
-          : undefined,
-      }
-      delete body._id
-      await api.put(`/catalogs/packages/${pkg.code}`, body)
-      setSavedAt(new Date())
-    } catch (e) {
-      setErr(e.response?.data?.error || 'Lỗi lưu')
-    }
-    setSaving(false)
-  }
+  // Save flow lives on the parent drawer's Lưu button — see stateRef
+  // publication above. This component only edits + reports state.
 
   const dirty = JSON.stringify({ b: bundled, t: tiers, e: entOpen, em: entMonths, ec: entCovered })
     !== JSON.stringify({ b: normalizeBundle(pkg), t: pkg.pricingTiers || [], e: !!pkg.activatesEntitlement?.durationMonths, em: pkg.activatesEntitlement?.durationMonths || 12, ec: pkg.activatesEntitlement?.coveredServices || [] })
@@ -728,14 +738,14 @@ function PackageBuilder({ pkg, canEdit }) {
         )}
       </section>
 
-      {canEdit && (
+      {canEdit && (dirty || err) && (
         <div className="border-t border-gray-200 pt-3 flex items-center justify-end gap-2">
-          {err && <div className="flex-1 text-xs text-rose-600">{err}</div>}
-          {savedAt && !dirty && <div className="flex-1 text-xs text-emerald-600">✓ Đã lưu lúc {savedAt.toLocaleTimeString('vi-VN')}</div>}
-          <button onClick={save} disabled={saving || !dirty}
-            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-            {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
-          </button>
+          {err && <div className="text-xs text-rose-600">{err}</div>}
+          {dirty && !err && (
+            <div className="text-xs text-amber-700 italic">
+              Có thay đổi chưa lưu — bấm <b>Lưu</b> ở dưới để lưu cùng các trường thông tin.
+            </div>
+          )}
         </div>
       )}
     </div>
