@@ -53,52 +53,44 @@ const PACKAGES = [
     pricingRules: [],
     activatesEntitlement: null,
   },
+  // ── Ortho-K — split into khám / kính / theo dõi (2026-05-04) ─────────
+  // Legacy PKG-3A and PKG-3B were replaced by:
+  //   1. Two khám packages (PKG-OK-EXAM-NOOCT / -OCT) — 6 or 8 services
+  //   2. Three Kính SKUs (OK-LENS-STD / -TORIC / -CUST) seeded by
+  //      migrate-ortho-k-split.js since this seed file doesn't manage Kinh
+  //   3. Six follow-up packages (PKG-OK-FU-1W..-12M) — empty bundles, the
+  //      clinic configures services + price for each milestone via the UI
+  // Sums match the legacy totals (Std no-OCT = 1.5M + 11M + 3M = 15.5M etc).
+  // Old PKG-3A / PKG-3B are NOT seeded here; the migration script flips them
+  // to status='inactive' so historical encounters keep their references.
   {
-    code: 'PKG-3A',
-    name: 'Khám CL Ortho-K (không OCT)',
-    description: 'Khám fit ortho-K + 1 đôi lens. 3 tier theo lens. Activates entitlement 1 năm cho 5 services free unlimited.',
+    code: 'PKG-OK-EXAM-NOOCT',
+    name: 'Khám Ortho-K (không OCT)',
+    description: 'Khám fit Ortho-K — 6 dịch vụ. Không bao gồm kính (chọn riêng từ Kính) hoặc theo dõi (chọn từ PKG-OK-FU-*).',
     bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-TOPO', 'SVC-CL-FIT-RGP'],
-    basePrice: 0,
-    pricingTiers: [
-      { code: 'standard',   name: 'Standard',   extraServices: [], extraProductSku: 'OK-LENS-STD',  totalPrice: 15500000 },
-      { code: 'toric',      name: 'Toric',      extraServices: [], extraProductSku: 'OK-LENS-TORIC', totalPrice: 18500000 },
-      { code: 'customized', name: 'Customized', extraServices: [], extraProductSku: 'OK-LENS-CUST', totalPrice: 22500000 },
-    ],
+    basePrice: 1500000,
+    pricingTiers: [],
     pricingRules: [],
-    activatesEntitlement: {
-      durationMonths: 12,
-      coveredServices: [
-        { serviceCode: 'SVC-AUTOREF', maxUses: null },
-        { serviceCode: 'SVC-REFRACT', maxUses: null },
-        { serviceCode: 'SVC-SLIT',    maxUses: null },
-        { serviceCode: 'SVC-TOPO',         maxUses: null },
-        { serviceCode: 'SVC-CL-FIT-RGP',   maxUses: null },
-      ],
-    },
+    activatesEntitlement: null,
   },
   {
-    code: 'PKG-3B',
-    name: 'Khám CL Ortho-K (có OCT trước + sau)',
-    description: 'Như PKG-3A + OCT bán phần trước + OCT bán phần sau. +600k khám phí so với PKG-3A.',
+    code: 'PKG-OK-EXAM-OCT',
+    name: 'Khám Ortho-K (có OCT trước + sau)',
+    description: 'Khám fit Ortho-K — 8 dịch vụ (gồm OCT bán phần trước + sau). Không bao gồm kính hoặc theo dõi.',
     bundledServices: ['SVC-AUTOREF', 'SVC-REFRACT', 'SVC-IOP', 'SVC-SLIT', 'SVC-TOPO', 'SVC-CL-FIT-RGP', 'SVC-OCT-ANT', 'SVC-OCT-POST'],
-    basePrice: 0,
-    pricingTiers: [
-      { code: 'standard',   name: 'Standard',   extraServices: [], extraProductSku: 'OK-LENS-STD',  totalPrice: 16100000 },
-      { code: 'toric',      name: 'Toric',      extraServices: [], extraProductSku: 'OK-LENS-TORIC', totalPrice: 19100000 },
-      { code: 'customized', name: 'Customized', extraServices: [], extraProductSku: 'OK-LENS-CUST', totalPrice: 23100000 },
-    ],
+    basePrice: 2100000,
+    pricingTiers: [],
     pricingRules: [],
-    activatesEntitlement: {
-      durationMonths: 12,
-      coveredServices: [
-        { serviceCode: 'SVC-AUTOREF', maxUses: null },
-        { serviceCode: 'SVC-REFRACT', maxUses: null },
-        { serviceCode: 'SVC-SLIT',    maxUses: null },
-        { serviceCode: 'SVC-TOPO',         maxUses: null },
-        { serviceCode: 'SVC-CL-FIT-RGP',   maxUses: null },
-      ],
-    },
+    activatesEntitlement: null,
   },
+  // 6 follow-up milestones — empty placeholders, clinic configures bundle +
+  // price per milestone in the Danh mục UI.
+  { code: 'PKG-OK-FU-1W',  name: 'Theo dõi Ortho-K — sau 1 tuần',  description: 'Cấu hình dịch vụ + giá ở Danh mục.', bundledServices: [], basePrice: 0, pricingTiers: [], pricingRules: [], activatesEntitlement: null },
+  { code: 'PKG-OK-FU-1M',  name: 'Theo dõi Ortho-K — sau 1 tháng', description: 'Cấu hình dịch vụ + giá ở Danh mục.', bundledServices: [], basePrice: 0, pricingTiers: [], pricingRules: [], activatesEntitlement: null },
+  { code: 'PKG-OK-FU-3M',  name: 'Theo dõi Ortho-K — sau 3 tháng', description: 'Cấu hình dịch vụ + giá ở Danh mục.', bundledServices: [], basePrice: 0, pricingTiers: [], pricingRules: [], activatesEntitlement: null },
+  { code: 'PKG-OK-FU-6M',  name: 'Theo dõi Ortho-K — sau 6 tháng', description: 'Cấu hình dịch vụ + giá ở Danh mục.', bundledServices: [], basePrice: 0, pricingTiers: [], pricingRules: [], activatesEntitlement: null },
+  { code: 'PKG-OK-FU-9M',  name: 'Theo dõi Ortho-K — sau 9 tháng', description: 'Cấu hình dịch vụ + giá ở Danh mục.', bundledServices: [], basePrice: 0, pricingTiers: [], pricingRules: [], activatesEntitlement: null },
+  { code: 'PKG-OK-FU-12M', name: 'Theo dõi Ortho-K — sau 12 tháng', description: 'Cấu hình dịch vụ + giá ở Danh mục.', bundledServices: [], basePrice: 0, pricingTiers: [], pricingRules: [], activatesEntitlement: null },
   {
     code: 'PKG-2A',
     name: 'Khám mắt trẻ em có Cyclogyl 1%',
