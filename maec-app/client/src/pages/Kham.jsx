@@ -472,13 +472,15 @@ function EncounterListRail({ list, loading, openId, onPick }) {
               ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Hủy</span>
               : null
           // DV pill — only shown for non-terminal encounters. Suppressed for
-          // paid/cancelled where service state is no longer actionable.
+          // paid/cancelled where service state is no longer actionable. Color
+          // signals progress: gray for no services, red for partial (work
+          // remaining), green for fully done.
           const dvPill = isTerminal ? null
             : services.length === 0
               ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Chưa có DV</span>
               : done === services.length
-                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">Hoàn thành DV</span>
-                : null
+                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">Hoàn thành DV {done}/{services.length}</span>
+                : <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Hoàn thành DV {done}/{services.length}</span>
           return (
             <button key={e._id} onClick={() => onPick(e._id)}
               className={`w-full text-left px-3 py-2.5 transition-colors border-l-4 ${isActive ? 'bg-blue-50 border-blue-500' : 'border-transparent hover:bg-gray-50'}`}>
@@ -494,10 +496,6 @@ function EncounterListRail({ list, loading, openId, onPick }) {
                     : (e.packages || []).length === 1
                       ? <>{e.packages[0].name}{e.packages[0].tier && ` · ${e.packages[0].tier}`}</>
                       : <>{e.packages.length} gói: {e.packages.map(p => p.name).join(' + ')}</>}
-                  {/* Inline x/y DV only for partial progress — the two edge cases get a pill above. */}
-                  {!isTerminal && services.length > 0 && done < services.length && (
-                    <span className="ml-1 text-gray-400">· {done}/{services.length} DV</span>
-                  )}
                 </span>
                 <span className="font-mono text-blue-700 flex-shrink-0">{fmtMoney(e.billTotal)}đ</span>
               </div>
@@ -672,8 +670,11 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
   const [showAddItem, setShowAddItem] = useState(null) // 'service' | 'kinh' | 'thuoc'
   const [showAssignPackage, setShowAssignPackage] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
+  // `silent` skips the loading state so post-save reloads don't blank the
+  // whole pane back to "Đang tải..." while the GET roundtrips. The initial
+  // mount fetch leaves it false so the spinner shows on cold open.
+  const load = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
     try {
       const r = await api.get(`/encounters/${id}`)
       setEnc(r.data)
@@ -682,12 +683,14 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
           .then(h => setHistory(h.data || []))
           .catch(() => setHistory([]))
       }
-    } finally { setLoading(false) }
+    } finally { if (!silent) setLoading(false) }
   }
   useEffect(() => { load() }, [id])
 
-  // Notify parent when underlying data changes so the rail can refresh too
-  const reload = async () => { await load(); if (onMutated) onMutated() }
+  // Notify parent when underlying data changes so the rail can refresh too.
+  // Silent so the pane stays in place — the user just saw their save succeed,
+  // they shouldn't see a loading spinner immediately afterwards.
+  const reload = async () => { await load({ silent: true }); if (onMutated) onMutated() }
 
   if (loading || !enc) {
     return <div className="h-full flex items-center justify-center text-gray-400">Đang tải...</div>
