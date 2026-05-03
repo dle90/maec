@@ -669,6 +669,7 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
   const [openServiceCode, setOpenServiceCode] = useState(null)
   const [showAddItem, setShowAddItem] = useState(null) // 'service' | 'kinh' | 'thuoc'
   const [showAssignPackage, setShowAssignPackage] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
 
   // `silent` skips the loading state so post-save reloads don't blank the
   // whole pane back to "Đang tải..." while the GET roundtrips. The initial
@@ -791,14 +792,35 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-        {/* Hồ sơ bệnh án — 5 collapsible self-saving textareas. Each persists
-            on blur via PUT /encounters/:id/clinical-notes with only its own
-            field. Closed by default to keep the section compact. */}
+        {/* Hồ sơ bệnh án — top-level collapsible section wrapping 5 also-
+            collapsible self-saving textareas. Each child persists on blur
+            via PUT /encounters/:id/clinical-notes with only its own field.
+            Section starts closed; header counter shows how many fields
+            already have content so the doctor can scan without expanding. */}
+        {(() => {
+          const NOTE_FIELDS = [
+            { field: 'clinicalInfo',   label: 'Lý do đến khám',     rows: 2, placeholder: 'Triệu chứng chính khi đến khám…' },
+            { field: 'presentIllness', label: 'Quá trình bệnh lý',  rows: 3, placeholder: 'Diễn biến triệu chứng, thời gian khởi phát, các yếu tố tăng/giảm…' },
+            { field: 'pastHistory',    label: 'Tiền sử người bệnh', rows: 2, placeholder: 'Bệnh đã mắc, phẫu thuật, dị ứng, gia đình, dùng thuốc…' },
+            { field: 'diagnosis',      label: 'Chẩn đoán',          rows: 2, placeholder: 'Chẩn đoán xác định / sơ bộ…' },
+            { field: 'conclusion',     label: 'Kết luận',           rows: 2, placeholder: 'Hướng xử trí, đơn thuốc, hẹn tái khám…' },
+          ]
+          const filledCount = NOTE_FIELDS.filter(cfg => (enc[cfg.field] || '').trim()).length
+          return (
         <section>
           <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-              <span>📝</span> Hồ sơ bệnh án
-            </h3>
+            <button
+              type="button"
+              onClick={() => setNotesOpen(o => !o)}
+              className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
+            >
+              <span className="text-xs text-gray-400">{notesOpen ? '▾' : '▸'}</span>
+              <span>📝</span>
+              <span>Hồ sơ bệnh án</span>
+              <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${filledCount === 0 ? 'bg-gray-100 text-gray-500' : filledCount === NOTE_FIELDS.length ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {filledCount}/{NOTE_FIELDS.length} đã ghi
+              </span>
+            </button>
             <button
               onClick={() => {
                 const params = new URLSearchParams({
@@ -813,14 +835,8 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
               title="Mở Lịch hẹn và đặt lịch tái khám cho bệnh nhân này"
             >📅 Đặt lịch hẹn tái khám</button>
           </div>
-          <div className="space-y-2">
-            {[
-              { field: 'clinicalInfo',   label: 'Lý do đến khám',     rows: 2, placeholder: 'Triệu chứng chính khi đến khám…' },
-              { field: 'presentIllness', label: 'Quá trình bệnh lý',  rows: 3, placeholder: 'Diễn biến triệu chứng, thời gian khởi phát, các yếu tố tăng/giảm…' },
-              { field: 'pastHistory',    label: 'Tiền sử người bệnh', rows: 2, placeholder: 'Bệnh đã mắc, phẫu thuật, dị ứng, gia đình, dùng thuốc…' },
-              { field: 'diagnosis',      label: 'Chẩn đoán',          rows: 2, placeholder: 'Chẩn đoán xác định / sơ bộ…' },
-              { field: 'conclusion',     label: 'Kết luận',           rows: 2, placeholder: 'Hướng xử trí, đơn thuốc, hẹn tái khám…' },
-            ].map(cfg => (
+          {notesOpen && <div className="space-y-2">
+            {NOTE_FIELDS.map(cfg => (
               <ClinicalNoteInput
                 key={cfg.field}
                 encounterId={enc._id}
@@ -833,8 +849,10 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
                 onSaved={reload}
               />
             ))}
-          </div>
+          </div>}
         </section>
+          )
+        })()}
 
         {/* Patient history */}
         <section>
