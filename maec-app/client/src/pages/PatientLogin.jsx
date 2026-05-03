@@ -3,17 +3,9 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
 
-const DEMO_ACCOUNTS = [
-  { phone: '0901000001', dob: '1975-04-12', name: 'Nguyễn Văn Nam' },
-  { phone: '0901000002', dob: '1988-09-23', name: 'Trần Thị Hoa' },
-  { phone: '0901000003', dob: '1965-02-28', name: 'Lê Văn Đức' },
-  { phone: '0901000004', dob: '1992-07-15', name: 'Phạm Thị Mai' },
-  { phone: '0901000005', dob: '1958-11-03', name: 'Hoàng Văn Minh' },
-]
-
 export default function PatientLogin() {
-  const [phone, setPhone] = useState(DEMO_ACCOUNTS[0].phone)
-  const [dob, setDob] = useState(DEMO_ACCOUNTS[0].dob)
+  const [phone, setPhone] = useState('')
+  const [dob, setDob] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -81,26 +73,6 @@ export default function PatientLogin() {
 
         <div className="mt-6 text-xs text-gray-400 text-center">
           Nhập số điện thoại và ngày sinh đã đăng ký khám
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="text-[10px] uppercase tracking-wider text-gray-400 mb-1.5">Tài khoản demo</div>
-          <div className="flex flex-wrap gap-1">
-            {DEMO_ACCOUNTS.map(a => {
-              const selected = a.phone === phone
-              return (
-                <button
-                  key={a.phone}
-                  type="button"
-                  onClick={() => { setPhone(a.phone); setDob(a.dob); setError('') }}
-                  className={`text-[10px] px-2 py-1 rounded border transition-colors ${selected ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 hover:border-green-300 hover:bg-green-50 text-gray-600'}`}
-                  title={`${a.phone} • ${a.dob}`}
-                >
-                  {a.name}
-                </button>
-              )
-            })}
-          </div>
         </div>
       </div>
     </div>

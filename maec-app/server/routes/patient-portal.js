@@ -5,13 +5,27 @@ const { sign } = require('./auth')
 const { requirePatient } = require('../middleware/auth')
 const Patient = require('../models/Patient')
 const PatientAccount = require('../models/PatientAccount')
-const Appointment = require('../models/Appointment')
 const Encounter = require('../models/Encounter')
-const Report = require('../models/Report')
-const Invoice = require('../models/Invoice')
 const PatientFeedback = require('../models/PatientFeedback')
 
 const now = () => new Date().toISOString()
+
+// Net paid across the payments[] ledger (positive payments minus refunds).
+// Mirrors the helper used by Khám / Thu Ngân pages.
+function netPaid(enc) {
+  let sum = 0
+  for (const p of (enc.payments || [])) sum += (p.kind === 'refund' ? -1 : 1) * (p.amount || 0)
+  return Math.max(0, sum)
+}
+function effectiveDiscount(enc) {
+  const subtotal = enc.billTotal || 0
+  const pct = enc.discountPercent || 0
+  if (pct > 0) return Math.round(subtotal * pct / 100)
+  return enc.discountAmount || 0
+}
+function grandTotal(enc) {
+  return Math.max(0, (enc.billTotal || 0) - effectiveDiscount(enc))
+}
 
 // ── Public: patient login (phone + dob) ─────────────────
 router.post('/login', async (req, res) => {
@@ -20,19 +34,13 @@ router.post('/login', async (req, res) => {
     if (!phone || !dob) {
       return res.status(400).json({ error: 'Vui lòng nhập số điện thoại và ngày sinh' })
     }
-
-    // Find patient by phone
     const patient = await Patient.findOne({ phone }).lean()
     if (!patient) {
       return res.status(401).json({ error: 'Không tìm thấy bệnh nhân với số điện thoại này' })
     }
-
-    // Verify DOB matches
     if (patient.dob !== dob) {
       return res.status(401).json({ error: 'Ngày sinh không đúng' })
     }
-
-    // Create or update PatientAccount
     await PatientAccount.findOneAndUpdate(
       { phone },
       {
@@ -41,7 +49,6 @@ router.post('/login', async (req, res) => {
       },
       { upsert: true }
     )
-
     const token = sign({ type: 'patient', patientId: patient._id, phone })
     res.json({ token, patientName: patient.name, phone: patient.phone })
   } catch (err) {
@@ -57,127 +64,132 @@ router.get('/profile', requirePatient, async (req, res) => {
     res.json({
       name: patient.name, phone: patient.phone, dob: patient.dob,
       gender: patient.gender, address: patient.address,
-      patientId: patient.patientId,
+      patientId: patient.patientId || patient._id,
     })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ── Protected: visit history ────────────────────────────
+// ── Protected: visit history (encounter list, summary view) ─────────────────
+// One row per Encounter for this patient. Compact: counts + bill totals only;
+// full clinical detail (service outputs, bill items, payments ledger) lives
+// behind GET /visits/:encounterId. Sorted newest first.
 router.get('/visits', requirePatient, async (req, res) => {
   try {
     const patientId = req.patient.patientId
+    const encounters = await Encounter.find({ patientId })
+      .sort({ createdAt: -1 })
+      .lean()
+    const ids = encounters.map(e => e._id)
+    const feedbacks = await PatientFeedback.find({ encounterId: { $in: ids } }).lean()
+    const fbByEnc = {}
+    for (const f of feedbacks) fbByEnc[f.encounterId] = f
 
-    // Get all appointments for this patient
-    const appointments = await Appointment.find({ patientId })
-      .sort({ scheduledAt: -1 }).lean()
-
-    // Get linked data in parallel
-    const aptIds = appointments.map(a => a._id)
-    const studyIds = appointments.map(a => a.studyId).filter(Boolean)
-
-    const [invoices, studies, feedbacks] = await Promise.all([
-      Invoice.find({ appointmentId: { $in: aptIds } }).lean(),
-      Encounter.find({ _id: { $in: studyIds } }).lean(),
-      PatientFeedback.find({ appointmentId: { $in: aptIds } }).lean(),
-    ])
-
-    const invoiceMap = {}
-    for (const inv of invoices) invoiceMap[inv.appointmentId] = inv
-    const studyMap = {}
-    for (const s of studies) studyMap[s._id] = s
-    const feedbackMap = {}
-    for (const f of feedbacks) feedbackMap[f.appointmentId] = f
-
-    const visits = appointments.map(apt => {
-      const inv = invoiceMap[apt._id]
-      const study = apt.studyId ? studyMap[apt.studyId] : null
-      const fb = feedbackMap[apt._id]
+    const visits = encounters.map(e => {
+      const subtotal = e.billTotal || 0
+      const disc = effectiveDiscount(e)
+      const grand = grandTotal(e)
+      const paid = netPaid(e)
+      const services = e.assignedServices || []
+      const doneCount = services.filter(s => s.status === 'done').length
+      const hasResults =
+        !!(e.conclusion && e.conclusion.trim()) ||
+        services.some(s => s.status === 'done' && s.output && Object.keys(s.output).length > 0)
+      const fb = fbByEnc[e._id]
       return {
-        appointmentId: apt._id,
-        date: apt.scheduledAt,
-        site: apt.site,
-        modality: apt.modality,
-        status: apt.status,
-        clinicalInfo: apt.clinicalInfo,
-        invoice: inv ? {
-          grandTotal: inv.grandTotal, paidAmount: inv.paidAmount,
-          status: inv.status, items: inv.items,
-        } : null,
-        study: study ? {
-          studyId: study._id, status: study.status,
-          hasReport: !!(study.reportText || study.reportId),
-          modality: study.modality, bodyPart: study.bodyPart,
-        } : null,
+        encounterId: e._id,
+        date: e.createdAt,
+        site: e.site || '',
+        examType: e.examType || '',
+        status: e.status,
+        clinicalInfo: e.clinicalInfo || '',
+        packages: (e.packages || []).map(p => ({ code: p.code, name: p.name, tier: p.tier })),
+        servicesSummary: { total: services.length, done: doneCount },
+        hasResults,
+        bill: {
+          subtotal,
+          discountAmount: disc,
+          discountPercent: e.discountPercent || 0,
+          grandTotal: grand,
+          paidAmount: paid,
+          remaining: Math.max(0, grand - paid),
+        },
         feedback: fb ? { rating: fb.rating, comment: fb.comment } : null,
       }
     })
-
     res.json(visits)
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ── Protected: view report for a visit ──────────────────
-router.get('/visits/:appointmentId/report', requirePatient, async (req, res) => {
+// ── Protected: visit detail (full clinical + bill + payments) ───────────────
+// Patient must own the encounter. Shape matches what the print "Phiếu Khám"
+// and "Phiếu Thu" surface internally, minus admin-only fields.
+router.get('/visits/:encounterId', requirePatient, async (req, res) => {
   try {
-    const apt = await Appointment.findById(req.params.appointmentId).lean()
-    if (!apt || apt.patientId !== req.patient.patientId) {
-      return res.status(404).json({ error: 'Không tìm thấy lịch hẹn' })
+    const enc = await Encounter.findById(req.params.encounterId).lean()
+    if (!enc || enc.patientId !== req.patient.patientId) {
+      return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
     }
-    if (!apt.studyId) {
-      return res.status(404).json({ error: 'Chưa có ca chụp liên kết' })
-    }
-
-    const study = await Encounter.findById(apt.studyId).lean()
-    if (!study) return res.status(404).json({ error: 'Không tìm thấy ca chụp' })
-
-    // Try to find a formal Report document first
-    const report = await Report.findOne({ studyId: study._id }).lean()
-
-    if (report && (report.status === 'final' || report.status === 'preliminary')) {
-      return res.json({
-        technique: report.technique, clinicalInfo: report.clinicalInfo,
-        findings: report.findings, impression: report.impression,
-        recommendation: report.recommendation, status: report.status,
-        reportedAt: report.finalizedAt || report.updatedAt,
-      })
-    }
-
-    // Fallback: use reportText from Study
-    if (study.reportText) {
-      return res.json({
-        findings: study.reportText, impression: '',
-        status: study.status === 'verified' ? 'final' : 'preliminary',
-        reportedAt: study.reportedAt || study.updatedAt,
-      })
-    }
-
-    res.status(404).json({ error: 'Chưa có kết quả' })
+    const subtotal = enc.billTotal || 0
+    const disc = effectiveDiscount(enc)
+    const grand = grandTotal(enc)
+    const paid = netPaid(enc)
+    res.json({
+      encounterId: enc._id,
+      date: enc.createdAt,
+      site: enc.site || '',
+      status: enc.status,
+      examType: enc.examType || '',
+      clinicalInfo: enc.clinicalInfo || '',
+      conclusion: enc.conclusion || '',
+      packages: (enc.packages || []).map(p => ({ code: p.code, name: p.name, tier: p.tier })),
+      services: (enc.assignedServices || []).map(s => ({
+        code: s.serviceCode,
+        name: s.serviceName,
+        status: s.status,
+        completedAt: s.completedAt,
+        output: s.output || {},
+      })),
+      bill: {
+        items: (enc.billItems || []).map(b => ({
+          kind: b.kind, code: b.code, name: b.name,
+          qty: b.qty || 1, unitPrice: b.unitPrice || 0, totalPrice: b.totalPrice || 0,
+        })),
+        subtotal,
+        discountAmount: disc,
+        discountPercent: enc.discountPercent || 0,
+        discountReason: enc.discountReason || '',
+        grandTotal: grand,
+        paidAmount: paid,
+        remaining: Math.max(0, grand - paid),
+      },
+      payments: (enc.payments || []).map(p => ({
+        at: p.at, amount: p.amount || 0, method: p.method || '',
+        kind: p.kind || 'payment', byName: p.byName || p.by || '',
+      })),
+    })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ── Protected: submit feedback ──────────────────────────
+// ── Protected: submit feedback for an encounter ─────────────────────────────
+// Idempotent — re-submitting the same encounterId updates the existing entry.
 router.post('/feedback', requirePatient, async (req, res) => {
   try {
-    const { appointmentId, rating, comment } = req.body
-    if (!appointmentId || !rating) {
+    const { encounterId, rating, comment } = req.body
+    if (!encounterId || !rating) {
       return res.status(400).json({ error: 'Vui lòng chọn đánh giá' })
     }
-
-    // Verify appointment belongs to patient
-    const apt = await Appointment.findById(appointmentId).lean()
-    if (!apt || apt.patientId !== req.patient.patientId) {
-      return res.status(403).json({ error: 'Không có quyền đánh giá lịch hẹn này' })
+    const enc = await Encounter.findById(encounterId).lean()
+    if (!enc || enc.patientId !== req.patient.patientId) {
+      return res.status(403).json({ error: 'Không có quyền đánh giá lượt khám này' })
     }
-
     const feedback = await PatientFeedback.findOneAndUpdate(
-      { appointmentId },
+      { encounterId },
       {
         $setOnInsert: { _id: crypto.randomUUID(), patientId: req.patient.patientId },
         $set: { rating, comment: comment || '', createdAt: now() },
       },
       { upsert: true, new: true }
     )
-
     res.status(201).json({ ok: true, feedback })
   } catch (err) { res.status(500).json({ error: err.message }) }
 })

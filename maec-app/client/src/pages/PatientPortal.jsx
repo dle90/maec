@@ -30,17 +30,28 @@ function createApi() {
   return instance
 }
 
+// Encounter status — mirrors the enum used by Khám / Thu Ngân.
 const STATUS_LABEL = {
-  scheduled: 'Đã đặt lịch', confirmed: 'Đã xác nhận', arrived: 'Đã đến',
-  in_progress: 'Đang thực hiện', completed: 'Hoàn thành', cancelled: 'Đã hủy', no_show: 'Không đến',
+  scheduled: 'Đã đặt lịch', in_progress: 'Đang khám',
+  pending_read: 'Chờ đọc', reading: 'Đang đọc', reported: 'Đã có kết quả',
+  verified: 'Đã duyệt', completed: 'Đã hoàn',
+  partial: 'Thu một phần', paid: 'Đã thanh toán', cancelled: 'Đã hủy',
 }
 const STATUS_COLOR = {
-  scheduled: 'bg-blue-100 text-blue-700', confirmed: 'bg-cyan-100 text-cyan-700',
-  arrived: 'bg-yellow-100 text-yellow-700', in_progress: 'bg-orange-100 text-orange-700',
-  completed: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-700', no_show: 'bg-gray-100 text-gray-500',
+  scheduled: 'bg-blue-100 text-blue-700',
+  in_progress: 'bg-yellow-100 text-yellow-700',
+  pending_read: 'bg-cyan-100 text-cyan-700',
+  reading: 'bg-cyan-100 text-cyan-700',
+  reported: 'bg-emerald-100 text-emerald-700',
+  verified: 'bg-emerald-100 text-emerald-700',
+  completed: 'bg-rose-100 text-rose-700',
+  partial: 'bg-amber-100 text-amber-700',
+  paid: 'bg-green-100 text-green-700',
+  cancelled: 'bg-red-100 text-red-700',
 }
-const PAY_LABEL = { draft: 'Chờ thanh toán', issued: 'Đã xuất', paid: 'Đã thanh toán', partially_paid: 'Thanh toán một phần', cancelled: 'Đã hủy', refunded: 'Hoàn trả' }
-const PAY_COLOR = { draft: 'bg-yellow-100 text-yellow-700', paid: 'bg-green-100 text-green-700', partially_paid: 'bg-orange-100 text-orange-700', cancelled: 'bg-red-100 text-red-700', refunded: 'bg-purple-100 text-purple-700' }
+const KIND_LABEL = { service: 'Dịch vụ', package: 'Gói khám', kinh: 'Kính', thuoc: 'Thuốc' }
+const SVC_STATUS_LABEL = { pending: 'Chờ', in_progress: 'Đang làm', done: 'Hoàn thành', skipped: 'Bỏ qua' }
+const PAY_METHOD_LABEL = { cash: 'Tiền mặt', transfer: 'Chuyển khoản', card: 'Thẻ', mixed: 'Hỗn hợp' }
 
 // ── Star Rating Component ───────────────────────────────
 function StarRating({ value, onChange, readonly }) {
@@ -61,28 +72,41 @@ function StarRating({ value, onChange, readonly }) {
   )
 }
 
+// Render the free-form `output` map of a service line.
+function ServiceOutput({ output }) {
+  const entries = Object.entries(output || {}).filter(([, v]) => v != null && v !== '')
+  if (entries.length === 0) return <span className="text-gray-400">—</span>
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-700">
+      {entries.map(([k, v]) => (
+        <span key={k}><span className="text-gray-500">{k}:</span> <span className="font-mono">{String(v)}</span></span>
+      ))}
+    </div>
+  )
+}
+
 // ── Visit Card ──────────────────────────────────────────
 function VisitCard({ visit, api, onFeedbackSaved }) {
   const [expanded, setExpanded] = useState(false)
-  const [report, setReport] = useState(null)
-  const [loadingReport, setLoadingReport] = useState(false)
+  const [detail, setDetail] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [rating, setRating] = useState(visit.feedback?.rating || 0)
   const [comment, setComment] = useState(visit.feedback?.comment || '')
   const [submitting, setSubmitting] = useState(false)
   const [fbSaved, setFbSaved] = useState(!!visit.feedback)
 
-  const loadReport = async () => {
-    if (report || !visit.study?.hasReport) return
-    setLoadingReport(true)
+  const loadDetail = async () => {
+    if (detail) return
+    setLoadingDetail(true)
     try {
-      const { data } = await api.get(`/visits/${visit.appointmentId}/report`)
-      setReport(data)
-    } catch { setReport({ error: true }) }
-    setLoadingReport(false)
+      const { data } = await api.get(`/visits/${visit.encounterId}`)
+      setDetail(data)
+    } catch { setDetail({ error: true }) }
+    setLoadingDetail(false)
   }
 
   const toggleExpand = () => {
-    if (!expanded) loadReport()
+    if (!expanded) loadDetail()
     setExpanded(!expanded)
   }
 
@@ -90,31 +114,34 @@ function VisitCard({ visit, api, onFeedbackSaved }) {
     if (!rating) return
     setSubmitting(true)
     try {
-      await api.post('/feedback', { appointmentId: visit.appointmentId, rating, comment })
+      await api.post('/feedback', { encounterId: visit.encounterId, rating, comment })
       setFbSaved(true)
       onFeedbackSaved?.()
     } catch {}
     setSubmitting(false)
   }
 
+  const billPill = visit.bill?.grandTotal > 0 && (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${visit.bill.remaining === 0 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+      {fmtMoney(visit.bill.grandTotal)}đ
+      {visit.bill.remaining > 0 && ` · còn ${fmtMoney(visit.bill.remaining)}`}
+    </span>
+  )
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50" onClick={toggleExpand}>
-        <div className="flex items-center gap-3">
-          <div className="text-sm font-medium text-gray-800">{fmtDateTime(visit.date)}</div>
+        <div className="flex items-center gap-3 min-w-0 flex-wrap">
+          <div className="text-sm font-medium text-gray-800 whitespace-nowrap">{fmtDateTime(visit.date)}</div>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[visit.status] || 'bg-gray-100 text-gray-600'}`}>
             {STATUS_LABEL[visit.status] || visit.status}
           </span>
-          <span className="text-xs text-gray-500">{visit.modality}</span>
-          <span className="text-xs text-gray-400">{visit.site}</span>
+          {visit.examType && <span className="text-xs text-gray-600 truncate">{visit.examType}</span>}
+          {visit.site && <span className="text-xs text-gray-400">{visit.site}</span>}
         </div>
-        <div className="flex items-center gap-3">
-          {visit.invoice && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PAY_COLOR[visit.invoice.status] || 'bg-gray-100'}`}>
-              {fmtMoney(visit.invoice.grandTotal)}đ — {PAY_LABEL[visit.invoice.status] || visit.invoice.status}
-            </span>
-          )}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {billPill}
           {visit.feedback && <span className="text-yellow-400 text-sm">{'★'.repeat(visit.feedback.rating)}</span>}
           <svg className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -125,65 +152,113 @@ function VisitCard({ visit, api, onFeedbackSaved }) {
       {/* Expanded details */}
       {expanded && (
         <div className="border-t border-gray-100 px-4 py-4 space-y-4">
-          {/* Clinical info */}
-          {visit.clinicalInfo && (
-            <div className="text-sm"><span className="font-medium text-gray-600">Lý do khám:</span> {visit.clinicalInfo}</div>
-          )}
+          {loadingDetail ? (
+            <div className="text-sm text-gray-400">Đang tải chi tiết...</div>
+          ) : detail?.error ? (
+            <div className="text-sm text-red-500">Không thể tải chi tiết</div>
+          ) : detail ? (
+            <>
+              {detail.clinicalInfo && (
+                <div className="text-sm"><span className="font-medium text-gray-600">Lý do khám:</span> {detail.clinicalInfo}</div>
+              )}
 
-          {/* Invoice items */}
-          {visit.invoice?.items && (
-            <div>
-              <div className="text-sm font-medium text-gray-600 mb-2">Dịch vụ:</div>
-              <table className="w-full text-sm">
-                <thead><tr className="text-left text-gray-500 text-xs">
-                  <th className="pb-1">Tên dịch vụ</th><th className="pb-1 text-right">Đơn giá</th><th className="pb-1 text-right">SL</th><th className="pb-1 text-right">Thành tiền</th>
-                </tr></thead>
-                <tbody>
-                  {visit.invoice.items.map((item, i) => (
-                    <tr key={i} className="border-t border-gray-50">
-                      <td className="py-1">{item.serviceName}</td>
-                      <td className="py-1 text-right">{fmtMoney(item.unitPrice)}</td>
-                      <td className="py-1 text-right">{item.quantity}</td>
-                      <td className="py-1 text-right font-medium">{fmtMoney(item.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="text-right mt-2 text-sm font-semibold text-gray-800">
-                Tổng: {fmtMoney(visit.invoice.grandTotal)}đ
-                {visit.invoice.paidAmount > 0 && visit.invoice.paidAmount < visit.invoice.grandTotal &&
-                  <span className="text-orange-600 ml-2">(Đã trả: {fmtMoney(visit.invoice.paidAmount)}đ)</span>}
-              </div>
-            </div>
-          )}
+              {detail.packages?.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600 mb-1.5">Gói khám</div>
+                  <ul className="text-sm space-y-1 list-disc list-inside text-gray-700">
+                    {detail.packages.map(p => (
+                      <li key={p.code}>{p.name}{p.tier ? ` — ${p.tier}` : ''}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-          {/* Report */}
-          {visit.study?.hasReport && (
-            <div>
-              <div className="text-sm font-medium text-gray-600 mb-2">Kết quả:</div>
-              {loadingReport ? (
-                <div className="text-sm text-gray-400">Đang tải...</div>
-              ) : report?.error ? (
-                <div className="text-sm text-red-500">Không thể tải kết quả</div>
-              ) : report ? (
-                <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-2">
-                  {report.technique && <div><span className="font-medium">Kỹ thuật:</span> {report.technique}</div>}
-                  {report.findings && <div><span className="font-medium">Mô tả:</span> {report.findings}</div>}
-                  {report.impression && <div><span className="font-medium">Kết luận:</span> {report.impression}</div>}
-                  {report.recommendation && <div><span className="font-medium">Đề nghị:</span> {report.recommendation}</div>}
-                  <div className="text-xs text-gray-400 mt-1">
-                    Trạng thái: {report.status === 'final' ? 'Đã duyệt' : 'Sơ bộ'} — {fmtDateTime(report.reportedAt)}
+              {detail.conclusion && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600 mb-1.5">Kết luận của bác sĩ</div>
+                  <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3 text-sm whitespace-pre-wrap">{detail.conclusion}</div>
+                </div>
+              )}
+
+              {detail.services?.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600 mb-1.5">Dịch vụ ({detail.services.length})</div>
+                  <div className="border border-gray-100 rounded-lg overflow-hidden">
+                    {detail.services.map((s, i) => (
+                      <div key={i} className="px-3 py-2 border-t border-gray-100 first:border-t-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm text-gray-800 truncate"><strong>{s.name}</strong> <span className="text-xs text-gray-400 font-mono">{s.code}</span></div>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 whitespace-nowrap">{SVC_STATUS_LABEL[s.status] || s.status}</span>
+                        </div>
+                        {s.status === 'done' && (
+                          <div className="mt-1"><ServiceOutput output={s.output} /></div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ) : null}
-            </div>
-          )}
+              )}
+
+              {detail.bill?.items?.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600 mb-1.5">Hóa đơn</div>
+                  <table className="w-full text-sm">
+                    <thead><tr className="text-left text-gray-500 text-xs">
+                      <th className="pb-1">Loại</th><th className="pb-1">Tên</th><th className="pb-1 text-right">SL</th><th className="pb-1 text-right">Đơn giá</th><th className="pb-1 text-right">Thành tiền</th>
+                    </tr></thead>
+                    <tbody>
+                      {detail.bill.items.map((b, i) => (
+                        <tr key={i} className="border-t border-gray-50">
+                          <td className="py-1 text-xs text-gray-500">{KIND_LABEL[b.kind] || b.kind}</td>
+                          <td className="py-1">{b.name}</td>
+                          <td className="py-1 text-right">{b.qty}</td>
+                          <td className="py-1 text-right font-mono text-xs">{fmtMoney(b.unitPrice)}</td>
+                          <td className="py-1 text-right font-mono">{fmtMoney(b.totalPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="mt-2 text-sm space-y-0.5 text-right">
+                    <div className="text-gray-600">Tạm tính: <span className="font-mono">{fmtMoney(detail.bill.subtotal)}đ</span></div>
+                    {detail.bill.discountAmount > 0 && (
+                      <div className="text-rose-600">Giảm giá{detail.bill.discountPercent > 0 ? ` (${detail.bill.discountPercent}%)` : ''}: <span className="font-mono">−{fmtMoney(detail.bill.discountAmount)}đ</span></div>
+                    )}
+                    <div className="text-blue-700 font-semibold">Tổng cộng: <span className="font-mono">{fmtMoney(detail.bill.grandTotal)}đ</span></div>
+                    {detail.bill.paidAmount > 0 && (
+                      <div className="text-green-700">Đã thu: <span className="font-mono">{fmtMoney(detail.bill.paidAmount)}đ</span></div>
+                    )}
+                    {detail.bill.remaining > 0 && (
+                      <div className="text-amber-700">Còn lại: <span className="font-mono">{fmtMoney(detail.bill.remaining)}đ</span></div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {detail.payments?.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-600 mb-1.5">Lịch sử thanh toán</div>
+                  <ul className="text-xs text-gray-700 space-y-0.5">
+                    {detail.payments.map((p, i) => {
+                      const isRefund = p.kind === 'refund'
+                      return (
+                        <li key={i} className={isRefund ? 'text-rose-600' : ''}>
+                          {fmtDateTime(p.at)} · {isRefund ? 'Hoàn tiền' : 'Thu'} · {PAY_METHOD_LABEL[p.method] || p.method || '—'}
+                          {p.byName && ` · ${p.byName}`}
+                          <span className="ml-2 font-mono">{isRefund ? '−' : ''}{fmtMoney(p.amount)}đ</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : null}
 
           {/* Feedback */}
           <div>
-            <div className="text-sm font-medium text-gray-600 mb-2">Đánh giá dịch vụ:</div>
+            <div className="text-sm font-medium text-gray-600 mb-2">Đánh giá dịch vụ</div>
             {fbSaved ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <StarRating value={rating} readonly />
                 {comment && <span className="text-sm text-gray-500">— {comment}</span>}
                 <span className="text-xs text-green-600 ml-2">Đã gửi</span>
@@ -280,7 +355,7 @@ export default function PatientPortal() {
             {visits.length === 0 ? (
               <div className="text-center text-gray-400 py-12">Chưa có lịch sử khám</div>
             ) : visits.map(v => (
-              <VisitCard key={v.appointmentId} visit={v} api={api} onFeedbackSaved={() => {}} />
+              <VisitCard key={v.encounterId} visit={v} api={api} onFeedbackSaved={() => {}} />
             ))}
           </div>
         ) : tab === 'profile' && profile ? (
