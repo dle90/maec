@@ -2045,7 +2045,14 @@ export default function Catalogs() {
 // Subcatalogs that share the "Sản phẩm & Dịch vụ" sidebar entry. Kính and
 // Thuốc moved to the Kho page on 2026-05-02 — they're physical inventory,
 // not clinical billables. Sản phẩm & Dịch vụ is now clinical/service-only.
+// In-page tab cluster shown when the active catalog is one of the patient-
+// facing product/service catalogs. The sidebar shortcut "Danh mục" lands on
+// /catalogs/services; from there the user pivots to Gói khám / Kính / Thuốc
+// without leaving the page. Other catalogs (Bệnh nhân, partners, HR, etc.)
+// stay accessed via the sidebar Danh mục tree under Khác.
 const PRODUCT_SERVICE_CLUSTER = [
-  { key: 'services', label: 'Dịch vụ khám', icon: '📄' },
+  { key: 'services', label: 'Dịch vụ Khám', icon: '📄' },
   { key: 'packages', label: 'Gói khám',     icon: '📦' },
+  { key: 'kinh',     label: 'Kính',         icon: '👓' },
+  { key: 'thuoc',    label: 'Thuốc',        icon: '💊' },
 ]

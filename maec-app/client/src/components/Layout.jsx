@@ -36,7 +36,7 @@ const NAV = [
   },
   {
     group: 'shortcut-products', headerless: true,
-    items: [{ path: '/catalogs/services', label: 'Dịch vụ', icon: '🧾', workflowOnly: true }]
+    items: [{ path: '/catalogs/services', label: 'Danh mục', icon: '🧾', workflowOnly: true }]
   },
   {
     group: 'shortcut-kho', headerless: true,
