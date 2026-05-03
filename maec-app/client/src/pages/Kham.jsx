@@ -44,11 +44,11 @@ const startOfYearISO = () => {
 
 const PERIOD_LABELS = { today: 'Hôm nay', week: 'Tuần này', month: 'Tháng này', ytd: 'YTD', custom: 'Tùy chỉnh' }
 
-// ── Phiếu khám print (A4 visit summary) ─────────────────────────────────────
-// Opens a dedicated window with the clinic letterhead + BN info + packages +
-// services-with-results + bill + signature lines, then auto-prints. Works for
-// any encounter status; fields that are empty (services with no output, no
-// discount, etc.) are gracefully omitted.
+// ── Phiếu Khám print (A4 clinical record) ───────────────────────────────────
+// Clinical-only: clinic letterhead + BN info + packages + services-with-
+// results + signature lines. No bill, no prices, no payment data — those
+// belong on Phiếu Thu (printed from Thu Ngân). Cancellation banner is kept
+// because it's a clinical state, not a payment state.
 
 export function printVisitReport(enc) {
   const w = window.open('', '_blank', 'width=820,height=1100')
@@ -61,7 +61,6 @@ export function printVisitReport(enc) {
     : null
   const gender = enc.gender === 'M' ? 'Nam' : enc.gender === 'F' ? 'Nữ' : '—'
   const esc = (s) => String(s || '').replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]))
-  const money = (n) => Number(n || 0).toLocaleString('vi-VN')
 
   const formatOutput = (output) => {
     if (!output || typeof output !== 'object') return ''
@@ -99,43 +98,9 @@ export function printVisitReport(enc) {
       </table>
     </div>`
 
-  const billItems = enc.billItems || []
-  const subtotal = enc.billTotal || 0
-  const discPct = enc.discountPercent || 0
-  const discAmt = discPct > 0 ? Math.round(subtotal * discPct / 100) : (enc.discountAmount || 0)
-  const grand = Math.max(0, subtotal - discAmt)
-  const kindLabel = (k) => ({ service: 'Dịch vụ', package: 'Gói khám', kinh: 'Kính', thuoc: 'Thuốc' }[k] || k)
-  const billHtml = billItems.length === 0 ? '' : `
-    <div class="section">
-      <h3>Bảng giá / Hóa đơn</h3>
-      <table class="data">
-        <thead><tr>
-          <th class="w8">#</th><th class="w16">Loại</th><th>Tên</th>
-          <th class="w8 r">SL</th><th class="w16 r">Đơn giá</th><th class="w20 r">Thành tiền</th>
-        </tr></thead>
-        <tbody>
-          ${billItems.map((b, i) => `<tr>
-            <td class="c">${i + 1}</td>
-            <td class="small">${kindLabel(b.kind)}</td>
-            <td>${esc(b.name)}</td>
-            <td class="r">${b.qty || 1}</td>
-            <td class="r mono small">${money(b.unitPrice)}</td>
-            <td class="r mono"><strong>${money(b.totalPrice)}</strong></td>
-          </tr>`).join('')}
-        </tbody>
-        <tfoot>
-          <tr><td colspan="5" class="r">Tạm tính</td><td class="r mono">${money(subtotal)}</td></tr>
-          ${discAmt > 0 ? `<tr><td colspan="5" class="r">Giảm giá${discPct > 0 ? ` (${discPct}%)` : ''}${enc.discountReason ? ` — ${esc(enc.discountReason)}` : ''}</td><td class="r mono" style="color:#dc2626">−${money(discAmt)}</td></tr>` : ''}
-          <tr class="grand"><td colspan="5" class="r"><strong>Tổng cộng</strong></td><td class="r mono"><strong>${money(grand)} đ</strong></td></tr>
-        </tfoot>
-      </table>
-    </div>`
-
-  const paidBanner = enc.status === 'paid'
-    ? `<div class="paid">Đã thanh toán · ${esc(enc.paidByName || '')} · ${enc.paidAt ? new Date(enc.paidAt).toLocaleString('vi-VN') : ''}</div>`
-    : enc.status === 'cancelled'
-      ? `<div class="cancelled">Đã hủy${enc.cancelReason ? ` — ${esc(enc.cancelReason)}` : ''}</div>`
-      : ''
+  const cancelledBanner = enc.status === 'cancelled'
+    ? `<div class="cancelled">Đã hủy${enc.cancelReason ? ` — ${esc(enc.cancelReason)}` : ''}</div>`
+    : ''
 
   const html = `
 <!doctype html><html lang="vi"><head><meta charset="utf-8">
@@ -199,7 +164,7 @@ export function printVisitReport(enc) {
 <h1>PHIẾU KHÁM</h1>
 <div class="subtitle">Bệnh nhân giữ phiếu này để theo dõi và đối chiếu lần sau</div>
 
-${paidBanner}
+${cancelledBanner}
 
 <table class="info"><tbody>
   <tr>
@@ -223,7 +188,6 @@ ${enc.conclusion ? `
 </div>` : ''}
 ${packagesHtml}
 ${servicesHtml}
-${billHtml}
 
 <div class="signs">
   <div>
@@ -722,7 +686,7 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
           <button
             onClick={() => printVisitReport(enc)}
             className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
-            title="In phiếu khám"><span>🖨</span> In phiếu</button>
+            title="In phiếu khám (chỉ thông tin lâm sàng)"><span>🖨</span> In Phiếu Khám</button>
           {!isClosed && (
             <button
               onClick={async () => {
