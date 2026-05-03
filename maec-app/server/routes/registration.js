@@ -262,6 +262,7 @@ router.post('/check-in', requireAuth, async (req, res) => {
           qty: s.qty || 1,
           unitPrice: s.price || 0,
           totalPrice: (s.price || 0) * (s.qty || 1),
+          vatRate: 0,
           addedBy: req.user.username,
           addedAt: now(),
         })

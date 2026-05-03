@@ -12,6 +12,11 @@ const billItemSchema = new mongoose.Schema({
   qty: { type: Number, default: 1 },
   unitPrice: { type: Number, default: 0 },
   totalPrice: { type: Number, default: 0 },
+  // VAT-inclusive price model: unitPrice/totalPrice are gross. vatRate is the
+  // % portion of that gross that's tax. Stamped at add-time by the server
+  // based on kind (service/package=0, kinh=5, thuoc=Thuoc.vatRate). Old rows
+  // without it are treated as 0 for display.
+  vatRate: { type: Number, default: 0 },
   addedBy: String,
   addedAt: String,
   note: String,

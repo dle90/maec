@@ -4,6 +4,7 @@ const Encounter = require('../models/Encounter')
 const Patient = require('../models/Patient')
 const Package = require('../models/Package')
 const Service = require('../models/Service')
+const Thuoc = require('../models/Thuoc')
 const Entitlement = require('../models/Entitlement')
 const Warehouse = require('../models/Warehouse')
 const Supply = require('../models/Supply')
@@ -215,6 +216,7 @@ router.post('/:id/assign-package', requireAuth, async (req, res) => {
       qty: 1,
       unitPrice: pkgPrice,
       totalPrice: pkgPrice,
+      vatRate: 0,
       addedBy: req.user.username,
       addedAt: now(),
     })
@@ -438,6 +440,7 @@ router.post('/:id/services', requireAuth, async (req, res) => {
       qty: 1,
       unitPrice: svcDoc.basePrice || 0,
       totalPrice: svcDoc.basePrice || 0,
+      vatRate: 0,
       addedBy: req.user.username,
       addedAt: now(),
     })
@@ -458,11 +461,27 @@ router.post('/:id/bill-items', requireAuth, async (req, res) => {
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
 
+    // VAT rate by kind (server-stamped, not client-provided): kính is a flat
+    // 5%, thuốc varies per SKU (5/8 — looked up from Thuoc.vatRate when a
+    // catalog code is supplied), services/packages are 0%. Falls back to 0
+    // for kind=thuoc freeform entries with no matching catalog row.
+    let vatRate = 0
+    if (kind === 'kinh') vatRate = 5
+    else if (kind === 'thuoc') {
+      if (code) {
+        const t = await Thuoc.findOne({ code }).lean()
+        vatRate = t?.vatRate ?? 5
+      } else {
+        vatRate = 5
+      }
+    }
+
     enc.billItems.push({
       kind, code, name,
       qty: +qty || 1,
       unitPrice: +unitPrice || 0,
       totalPrice: (+qty || 1) * (+unitPrice || 0),
+      vatRate,
       addedBy: req.user.username,
       addedAt: now(),
       note,

@@ -965,62 +965,91 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
           )}
         </section>
 
-        {/* Bill */}
+        {/* Bill — grouped by kind (Gói khám / Dịch vụ / Kính / Thuốc), each
+            group with its own subtotal. VAT is extracted from gross prices
+            (prices in catalog are VAT-inclusive). Footer breakdown shows the
+            embedded VAT per rate so reporting is transparent — but the
+            grand total math is unchanged: gross subtotal − discount. */}
         <section>
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Bill ({(enc.billItems || []).length} mục)</h3>
           {(enc.billItems || []).length === 0 ? (
             <div className="text-xs text-gray-400 italic">Chưa có mục nào trên bill.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="text-xs text-gray-500">
-                <tr><th className="text-left py-1">Loại</th><th className="text-left">Tên</th><th className="text-right">SL</th><th className="text-right">Đơn giá</th><th className="text-right">TT</th><th></th></tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {enc.billItems.map((b, i) => {
-                  const kb = KIND_BADGE[b.kind] || { label: b.kind, cls: 'bg-gray-100 text-gray-600' }
-                  return (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="py-1.5"><span className={`text-[10px] px-1.5 py-0.5 rounded ${kb.cls}`}>{kb.label}</span></td>
-                      <td className="py-1.5">{b.name}</td>
-                      <td className="py-1.5 text-right">{b.qty}</td>
-                      <td className="py-1.5 text-right font-mono text-xs">{fmtMoney(b.unitPrice)}</td>
-                      <td className="py-1.5 text-right font-mono">{fmtMoney(b.totalPrice)}</td>
-                      <td className="py-1.5 text-right">
-                        {!isClosed && (
-                          <button onClick={async () => {
-                            if (!confirm(`Xóa "${b.name}" khỏi bill?`)) return
-                            // Prefer the stable subdoc _id; fall back to array
-                            // index for any legacy item that doesn't have one.
-                            await api.delete(`/encounters/${enc._id}/bill-items/${b._id || i}`)
-                            reload()
-                          }} className="text-red-500 hover:text-red-700 text-xs">×</button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              <tfoot className="text-sm">
-                <tr className="border-t-2 border-gray-300">
-                  <td colSpan={4} className="py-1.5 text-right text-gray-500">Tạm tính</td>
-                  <td className="py-1.5 text-right font-mono text-gray-700">{fmtMoney(enc.billTotal)}</td>
-                  <td></td>
-                </tr>
-                <tr>
-                  <td colSpan={4} className="py-1.5 text-right text-gray-500">Giảm giá</td>
-                  <td className="py-1.5 text-right">
-                    <DiscountInput encounter={enc} disabled={isClosed} onSaved={reload} />
-                  </td>
-                  <td></td>
-                </tr>
-                <tr className="border-t border-gray-200 font-bold">
-                  <td colSpan={4} className="py-2 text-right">Tổng cộng</td>
-                  <td className="py-2 text-right font-mono text-blue-700 text-base">{fmtMoney(grandTotal(enc))}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          )}
+          ) : (() => {
+            const KIND_ORDER = [
+              { kind: 'package', label: 'Gói khám',   hint: 'không VAT',   cls: 'text-purple-700' },
+              { kind: 'service', label: 'Dịch vụ',    hint: 'không VAT',   cls: 'text-blue-700' },
+              { kind: 'kinh',    label: 'Kính',       hint: 'VAT 5%',      cls: 'text-emerald-700' },
+              { kind: 'thuoc',   label: 'Thuốc',      hint: 'VAT 5% / 8%', cls: 'text-amber-700' },
+            ]
+            const grouped = { package: [], service: [], kinh: [], thuoc: [] }
+            for (const b of enc.billItems) (grouped[b.kind] || (grouped[b.kind] = [])).push(b)
+            // VAT breakdown from gross: vat = total * rate / (100 + rate)
+            const vatByRate = {}  // { 5: total_vat, 8: total_vat }
+            let groupSubtotal = (items) => items.reduce((s, b) => s + (b.totalPrice || 0), 0)
+            for (const b of enc.billItems) {
+              const rate = b.vatRate || 0
+              if (rate > 0) {
+                vatByRate[rate] = (vatByRate[rate] || 0) + (b.totalPrice || 0) * rate / (100 + rate)
+              }
+            }
+            return (
+            <div className="space-y-3 text-sm">
+              {KIND_ORDER.map(g => {
+                const items = grouped[g.kind] || []
+                if (items.length === 0) return null
+                return (
+                  <div key={g.kind} className="border border-gray-100 rounded-lg overflow-hidden">
+                    <div className={`flex items-center justify-between px-3 py-1.5 bg-gray-50 text-xs font-semibold ${g.cls}`}>
+                      <span>{g.label} <span className="font-normal text-gray-400">· {g.hint}</span></span>
+                      <span className="font-mono">{fmtMoney(groupSubtotal(items))} đ</span>
+                    </div>
+                    <table className="w-full">
+                      <tbody className="divide-y divide-gray-100">
+                        {items.map((b, i) => (
+                          <tr key={b._id || `${g.kind}-${i}`} className="hover:bg-gray-50">
+                            <td className="py-1.5 px-3">
+                              {b.name}
+                              {/* For Thuốc, show per-item VAT badge since rate varies */}
+                              {g.kind === 'thuoc' && (b.vatRate || 0) > 0 && (
+                                <span className="ml-1.5 text-[10px] text-gray-400">VAT {b.vatRate}%</span>
+                              )}
+                            </td>
+                            <td className="py-1.5 text-right w-12">{b.qty}</td>
+                            <td className="py-1.5 text-right font-mono text-xs w-24 text-gray-600">{fmtMoney(b.unitPrice)}</td>
+                            <td className="py-1.5 text-right font-mono w-28">{fmtMoney(b.totalPrice)}</td>
+                            <td className="py-1.5 text-right w-8 pr-2">
+                              {!isClosed && (
+                                <button onClick={async () => {
+                                  if (!confirm(`Xóa "${b.name}" khỏi bill?`)) return
+                                  await api.delete(`/encounters/${enc._id}/bill-items/${b._id || enc.billItems.indexOf(b)}`)
+                                  reload()
+                                }} className="text-red-500 hover:text-red-700 text-xs">×</button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })}
+              <div className="pt-2 space-y-1 border-t-2 border-gray-200">
+                <div className="flex justify-between"><span className="text-gray-500">Tạm tính (gồm VAT)</span><span className="font-mono text-gray-700">{fmtMoney(enc.billTotal)}</span></div>
+                {Object.keys(vatByRate).sort((a, b) => Number(a) - Number(b)).map(rate => (
+                  <div key={rate} className="flex justify-between text-xs text-gray-500 pl-3">
+                    <span>↳ trong đó VAT {rate}%</span>
+                    <span className="font-mono">{fmtMoney(Math.round(vatByRate[rate]))}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center"><span className="text-gray-500">Giảm giá</span><DiscountInput encounter={enc} disabled={isClosed} onSaved={reload} /></div>
+                <div className="flex justify-between items-baseline pt-1.5 border-t border-gray-200 font-bold">
+                  <span>Tổng cộng</span>
+                  <span className="font-mono text-blue-700 text-base">{fmtMoney(grandTotal(enc))}</span>
+                </div>
+              </div>
+            </div>
+            )
+          })()}
         </section>
       </div>
 
