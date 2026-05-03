@@ -167,6 +167,29 @@ router.post('/:id/assign-package', requireAuth, async (req, res) => {
       addedBy: req.user.username,
     })
 
+    // Absorb any pre-existing individual service bill lines whose code is
+    // included in this package's bundle. The patient is effectively
+    // upgrading — they shouldn't be billed twice. The corresponding entry
+    // in assignedServices is preserved (so any work-in-progress / output
+    // already captured is kept) but retagged with addedByPackage so removing
+    // the package later cleans the service up alongside the bundled ones.
+    // The frontend prompts the user before reaching this endpoint when
+    // overlap exists, so we do the absorption silently here.
+    const bundledSet = new Set(allServiceCodes)
+    const absorbedCodes = new Set()
+    enc.billItems = (enc.billItems || []).filter(b => {
+      if (b.kind === 'service' && bundledSet.has(b.code)) {
+        absorbedCodes.add(b.code)
+        return false
+      }
+      return true
+    })
+    for (const svc of (enc.assignedServices || [])) {
+      if (absorbedCodes.has(svc.serviceCode) && !svc.addedByPackage) {
+        svc.addedByPackage = pkg.code
+      }
+    }
+
     // Append bundled services that aren't already on the encounter
     const existingCodes = new Set((enc.assignedServices || []).map(s => s.serviceCode))
     for (const code of allServiceCodes) {

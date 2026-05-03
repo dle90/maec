@@ -1214,6 +1214,10 @@ function EncounterDrawer({ id, onClose, onOpenOther }) {
 function AssignPackageModal({ encounterId, onClose, onDone }) {
   const [packages, setPackages] = useState([])
   const [alreadyAssigned, setAlreadyAssigned] = useState(new Set())
+  // Existing individual service bill lines on the encounter — used to detect
+  // overlap with the chosen package's bundle and prompt the user before the
+  // server silently absorbs those lines into the package.
+  const [existingServiceBillItems, setExistingServiceBillItems] = useState([])
   const [pkgCode, setPkgCode] = useState('')
   const [tierCode, setTierCode] = useState('')
   const [saving, setSaving] = useState(false)
@@ -1223,6 +1227,7 @@ function AssignPackageModal({ encounterId, onClose, onDone }) {
     api.get('/catalogs/packages').then(r => setPackages(r.data || []))
     api.get(`/encounters/${encounterId}`).then(r => {
       setAlreadyAssigned(new Set((r.data?.packages || []).map(p => p.code)))
+      setExistingServiceBillItems((r.data?.billItems || []).filter(b => b.kind === 'service'))
     })
   }, [encounterId])
 
@@ -1230,10 +1235,26 @@ function AssignPackageModal({ encounterId, onClose, onDone }) {
 
   const pkg = packages.find(p => p.code === pkgCode)
   const tiers = pkg?.pricingTiers || []
+  const selectedTier = tiers.find(t => t.code === tierCode)
+
+  // Compute overlap so we can warn before the server absorbs.
+  const bundleCodes = new Set([
+    ...(pkg?.bundledServices || []),
+    ...(selectedTier?.extraServices || []),
+  ])
+  const overlapping = existingServiceBillItems.filter(b => bundleCodes.has(b.code))
 
   const submit = async () => {
     if (!pkgCode) return setErr('Chọn gói')
     if (tiers.length > 0 && !tierCode) return setErr('Chọn tier')
+    if (overlapping.length > 0) {
+      const lines = overlapping.map(b => `• ${b.name} (${fmtMoney(b.totalPrice)} đ)`).join('\n')
+      const ok = window.confirm(
+        `${overlapping.length} dịch vụ rời lẻ đã có trên bill trùng với gói:\n\n${lines}\n\n` +
+        `Khi thêm gói, các dịch vụ này sẽ được tính chung trong giá gói (xóa khỏi bill rời lẻ).\n\nTiếp tục?`
+      )
+      if (!ok) return
+    }
     setSaving(true); setErr('')
     try {
       await api.post(`/encounters/${encounterId}/assign-package`, { packageCode: pkgCode, tierCode })
@@ -1266,6 +1287,15 @@ function AssignPackageModal({ encounterId, onClose, onDone }) {
         {pkg && (
           <div className="text-xs text-gray-500 bg-gray-50 rounded p-2">
             Bundled services: {(pkg.bundledServices || []).join(', ') || '—'}
+          </div>
+        )}
+        {overlapping.length > 0 && (
+          <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded p-2 space-y-1">
+            <div className="font-semibold">⚠ {overlapping.length} dịch vụ rời lẻ trùng với gói:</div>
+            <ul className="list-disc list-inside pl-2">
+              {overlapping.map(b => <li key={b._id || b.code}>{b.name} ({fmtMoney(b.totalPrice)} đ)</li>)}
+            </ul>
+            <div className="text-[11px] text-amber-700 italic">Sẽ được tính chung trong giá gói khi thêm.</div>
           </div>
         )}
         {err && <div className="text-xs text-red-600">{err}</div>}
