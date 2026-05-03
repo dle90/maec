@@ -389,3 +389,14 @@ Net-new Expo / React Native build. v1 scope:
 - Phone camera capture for ad-hoc images
 - Encounter sign-off
 - Billing
+
+## Phiếu kết quả — bilingual VN / EN print (deferred)
+
+Today the doctor's printable from Khám is `printVisitReport` (Phiếu Khám) in Vietnamese only — see [Kham.jsx](maec-app/client/src/pages/Kham.jsx). Foreign / expat patients need an English version on demand.
+
+Plan:
+- Add a third print: **Phiếu kết quả** (results sheet, distinct from Phiếu Khám) — focused on the clinical findings + conclusion + diagnosis, no station-by-station worklist clutter. Patient-facing, suitable for handing to a foreign patient or sharing with their home doctor.
+- Before opening the print window, prompt the user to pick **Tiếng Việt** or **English**. Single language renders per print (no side-by-side).
+- English variant needs translations for: clinic header (already have "Minh Anh Eye Clinic"), section titles, status labels, examType names, common service names, conclusion / diagnosis labels. Output values that are free text stay as-typed (no auto-translation).
+- Implementation note: avoid an i18n framework — keep a small `EN_LABELS = { ... }` map at the top of the print module mirroring the VN labels; switch by parameter. Same pattern as the existing inline-Vietnamese convention in CLAUDE.md.
+- Where: a new "🖨 In Phiếu kết quả" button in the encounter pane header next to "In Phiếu Khám", popping a tiny VN/EN chooser before invoking the dedicated `printResultSheet(enc, lang)` function.
