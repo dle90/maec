@@ -176,6 +176,7 @@ router.post('/:id/assign-package', requireAuth, async (req, res) => {
         status: 'pending',
         output: {},
         addedByPackage: pkg.code,
+        addedAt: now(),
       })
     }
 
@@ -301,12 +302,23 @@ router.put('/:id/site', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// PUT /encounters/:id/conclusion — set the doctor's conclusion text.
-router.put('/:id/conclusion', requireAuth, async (req, res) => {
+// PUT /encounters/:id/clinical-notes — partial update for the 5 clinical-text
+// fields (clinicalInfo / presentIllness / pastHistory / diagnosis /
+// conclusion). Each Khám textarea PUTs only the field it owns; others are
+// left untouched. Empty string is allowed (clears the field).
+const CLINICAL_NOTE_FIELDS = ['clinicalInfo', 'presentIllness', 'pastHistory', 'diagnosis', 'conclusion']
+router.put('/:id/clinical-notes', requireAuth, async (req, res) => {
   try {
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
-    enc.conclusion = String(req.body.conclusion || '')
+    let touched = false
+    for (const f of CLINICAL_NOTE_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(req.body, f)) {
+        enc[f] = String(req.body[f] || '')
+        touched = true
+      }
+    }
+    if (!touched) return res.status(400).json({ error: 'Không có trường nào để cập nhật' })
     enc.updatedAt = now()
     await enc.save()
     res.json(enc.toObject())
@@ -416,6 +428,7 @@ router.post('/:id/services', requireAuth, async (req, res) => {
       serviceName: svcDoc.name,
       status: 'pending',
       output: {},
+      addedAt: now(),
     })
 
     enc.billItems.push({

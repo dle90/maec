@@ -27,9 +27,17 @@ const encounterSchema = new mongoose.Schema({
   examType: String,
   modality: String,
   bodyPart: String,
+  // Lý do đến khám — captured at registration (chief complaint / triệu chứng).
+  // Editable from Khám; surfaces in the encounter pane, print, and portal.
   clinicalInfo: String,
-  // Doctor's conclusion / diagnosis written after the exam. Free text.
-  // Surfaces in the encounter pane + the printed phiếu khám.
+  // Quá trình bệnh lý — narrative of the present illness. Doctor-written.
+  presentIllness: String,
+  // Tiền sử người bệnh — past medical/family/social history.
+  pastHistory: String,
+  // Chẩn đoán — diagnosis (working or final).
+  diagnosis: String,
+  // Kết luận — overall summary / next steps / follow-up plan written by the
+  // doctor after the exam. Free text. Surfaces in encounter pane + Phiếu Khám.
   conclusion: String,
   site: String,
   scheduledDate: String,
@@ -128,6 +136,10 @@ const encounterSchema = new mongoose.Schema({
       status: { type: String, enum: ['pending', 'in_progress', 'done', 'skipped'], default: 'pending' },
       assignedTo: String,
       assignedToName: String,
+      // Stamped when the service is first appended to the encounter (via
+      // package, registration, or manual add). Used to compute "thời gian
+      // hoàn thành" (addedAt → completedAt) on the Khám service row.
+      addedAt: String,
       startedAt: String,
       completedAt: String,
       output: { type: mongoose.Schema.Types.Mixed, default: {} },

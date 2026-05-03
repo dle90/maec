@@ -140,6 +140,9 @@ router.get('/visits/:encounterId', requirePatient, async (req, res) => {
       status: enc.status,
       examType: enc.examType || '',
       clinicalInfo: enc.clinicalInfo || '',
+      presentIllness: enc.presentIllness || '',
+      pastHistory: enc.pastHistory || '',
+      diagnosis: enc.diagnosis || '',
       conclusion: enc.conclusion || '',
       packages: (enc.packages || []).map(p => ({ code: p.code, name: p.name, tier: p.tier })),
       services: (enc.assignedServices || []).map(s => ({

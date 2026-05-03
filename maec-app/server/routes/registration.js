@@ -271,6 +271,7 @@ router.post('/check-in', requireAuth, async (req, res) => {
             serviceName: svc.name,
             status: 'pending',
             output: {},
+            addedAt: now(),
           })
         }
       }

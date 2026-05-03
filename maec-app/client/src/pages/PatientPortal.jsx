@@ -158,9 +158,17 @@ function VisitCard({ visit, api, onFeedbackSaved }) {
             <div className="text-sm text-red-500">Không thể tải chi tiết</div>
           ) : detail ? (
             <>
-              {detail.clinicalInfo && (
-                <div className="text-sm"><span className="font-medium text-gray-600">Lý do khám:</span> {detail.clinicalInfo}</div>
-              )}
+              {[
+                { k: 'clinicalInfo',   label: 'Lý do đến khám' },
+                { k: 'presentIllness', label: 'Quá trình bệnh lý' },
+                { k: 'pastHistory',    label: 'Tiền sử người bệnh' },
+                { k: 'diagnosis',      label: 'Chẩn đoán' },
+              ].map(({ k, label }) => detail[k] ? (
+                <div key={k} className="text-sm">
+                  <div className="font-medium text-gray-600">{label}:</div>
+                  <div className="whitespace-pre-wrap text-gray-700">{detail[k]}</div>
+                </div>
+              ) : null)}
 
               {detail.packages?.length > 0 && (
                 <div>

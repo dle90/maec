@@ -9,6 +9,20 @@ const fmtTime = (iso) => {
   const d = new Date(iso)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
+// Compact elapsed between two ISO timestamps. End defaults to now (use for
+// in-progress / pending services where completedAt isn't set yet).
+const fmtDuration = (fromISO, toISO) => {
+  if (!fromISO) return ''
+  const start = new Date(fromISO).getTime()
+  if (isNaN(start)) return ''
+  const end = toISO ? new Date(toISO).getTime() : Date.now()
+  let secs = Math.max(0, Math.round((end - start) / 1000))
+  if (secs < 60) return `${secs}s`
+  const mins = Math.floor(secs / 60)
+  if (mins < 60) return `${mins}p`
+  const h = Math.floor(mins / 60)
+  return `${h}h${mins % 60 ? ` ${mins % 60}p` : ''}`
+}
 
 const STATUS_BADGE = {
   pending:     { label: 'Chờ',          cls: 'bg-gray-100 text-gray-600' },
@@ -177,7 +191,16 @@ ${cancelledBanner}
     <td class="k">Giới tính</td><td class="v">${gender}</td>
   </tr>
   ${enc.clinicalInfo ? `<tr>
-    <td class="k">Lâm sàng</td><td class="v" colspan="3">${esc(enc.clinicalInfo)}</td>
+    <td class="k">Lý do đến khám</td><td class="v" colspan="3">${esc(enc.clinicalInfo).replace(/\n/g, '<br>')}</td>
+  </tr>` : ''}
+  ${enc.presentIllness ? `<tr>
+    <td class="k">Quá trình bệnh lý</td><td class="v" colspan="3">${esc(enc.presentIllness).replace(/\n/g, '<br>')}</td>
+  </tr>` : ''}
+  ${enc.pastHistory ? `<tr>
+    <td class="k">Tiền sử người bệnh</td><td class="v" colspan="3">${esc(enc.pastHistory).replace(/\n/g, '<br>')}</td>
+  </tr>` : ''}
+  ${enc.diagnosis ? `<tr>
+    <td class="k">Chẩn đoán</td><td class="v" colspan="3">${esc(enc.diagnosis).replace(/\n/g, '<br>')}</td>
   </tr>` : ''}
 </tbody></table>
 
@@ -764,17 +787,33 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
-        {/* Doctor's conclusion (Kết luận) — editable, persists on blur */}
+        {/* Hồ sơ bệnh án — 5 self-saving textareas. Each persists on blur via
+            PUT /encounters/:id/clinical-notes with only its own field. */}
         <section>
           <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-            <span>📝</span> Kết luận
+            <span>📝</span> Hồ sơ bệnh án
           </h3>
-          <ConclusionInput
-            encounterId={enc._id}
-            value={enc.conclusion || ''}
-            disabled={isClosed}
-            onSaved={reload}
-          />
+          <div className="space-y-3">
+            {[
+              { field: 'clinicalInfo',   label: 'Lý do đến khám',     rows: 2, placeholder: 'Triệu chứng chính khi đến khám…' },
+              { field: 'presentIllness', label: 'Quá trình bệnh lý',  rows: 3, placeholder: 'Diễn biến triệu chứng, thời gian khởi phát, các yếu tố tăng/giảm…' },
+              { field: 'pastHistory',    label: 'Tiền sử người bệnh', rows: 2, placeholder: 'Bệnh đã mắc, phẫu thuật, dị ứng, gia đình, dùng thuốc…' },
+              { field: 'diagnosis',      label: 'Chẩn đoán',          rows: 2, placeholder: 'Chẩn đoán xác định / sơ bộ…' },
+              { field: 'conclusion',     label: 'Kết luận',           rows: 2, placeholder: 'Hướng xử trí, đơn thuốc, hẹn tái khám…' },
+            ].map(cfg => (
+              <ClinicalNoteInput
+                key={cfg.field}
+                encounterId={enc._id}
+                field={cfg.field}
+                label={cfg.label}
+                value={enc[cfg.field] || ''}
+                rows={cfg.rows}
+                placeholder={cfg.placeholder}
+                disabled={isClosed}
+                onSaved={reload}
+              />
+            ))}
+          </div>
         </section>
 
         {/* Patient history */}
@@ -861,6 +900,14 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
                       )}
                     </button>
                     <span className="font-mono text-[10px] text-gray-400 flex-shrink-0">{s.serviceCode}</span>
+                    {s.addedAt && (
+                      <span
+                        className={`text-[10px] flex-shrink-0 tabular-nums ${s.status === 'done' ? 'text-emerald-600' : 'text-gray-400'}`}
+                        title={s.status === 'done'
+                          ? `Thêm ${new Date(s.addedAt).toLocaleString('vi-VN')} → Hoàn thành ${s.completedAt ? new Date(s.completedAt).toLocaleString('vi-VN') : '—'}`
+                          : `Thêm ${new Date(s.addedAt).toLocaleString('vi-VN')} (đang chờ/làm)`}
+                      >⏱ {fmtDuration(s.addedAt, s.completedAt)}</span>
+                    )}
                     {s.addedByPackage && <span className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded flex-shrink-0" title={`Từ gói ${s.addedByPackage}`}>📦</span>}
                     <button onClick={() => setOpenServiceCode(s.serviceCode)} className="text-xs text-blue-600 flex-shrink-0">Mở →</button>
                     {!isClosed && (
@@ -957,12 +1004,10 @@ function grandTotal(enc) {
   return Math.max(0, (enc?.billTotal || 0) - effectiveDiscount(enc))
 }
 
-// Inline discount input — toggles between absolute (đ) and percent (%) modes,
-// commits on blur / Enter via PUT /encounters/:id/discount.
-// Inline textarea for the doctor's conclusion. Persists on blur via PUT
-// /encounters/:id/conclusion. No auto-save while typing — keeps it simple
-// and avoids burst-PUTs.
-function ConclusionInput({ encounterId, value, disabled, onSaved }) {
+// Inline textarea for one clinical-note field on an encounter. Persists on
+// blur via PUT /encounters/:id/clinical-notes with only its own field key —
+// other fields are untouched. No auto-save while typing.
+function ClinicalNoteInput({ encounterId, field, label, value, rows = 2, placeholder, disabled, onSaved }) {
   const [text, setText] = useState(value || '')
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState(null)
@@ -971,20 +1016,21 @@ function ConclusionInput({ encounterId, value, disabled, onSaved }) {
     if (text === (value || '')) return
     setSaving(true)
     try {
-      await api.put(`/encounters/${encounterId}/conclusion`, { conclusion: text })
+      await api.put(`/encounters/${encounterId}/clinical-notes`, { [field]: text })
       setSavedAt(new Date())
       onSaved && onSaved()
     } finally { setSaving(false) }
   }
   return (
     <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
       <textarea
         value={text}
         onChange={e => setText(e.target.value)}
         onBlur={commit}
         disabled={disabled || saving}
-        rows={3}
-        placeholder="Kết luận lâm sàng, chẩn đoán, hướng xử trí, hẹn tái khám…"
+        rows={rows}
+        placeholder={placeholder}
         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-gray-50"
       />
       <div className="text-[10px] text-gray-400 mt-0.5 text-right">
@@ -993,6 +1039,9 @@ function ConclusionInput({ encounterId, value, disabled, onSaved }) {
     </div>
   )
 }
+
+// Inline discount input — toggles between absolute (đ) and percent (%) modes,
+// commits on blur / Enter via PUT /encounters/:id/discount.
 
 function DiscountInput({ encounter, disabled, onSaved }) {
   const initialMode = (encounter.discountPercent || 0) > 0 ? 'percent' : 'amount'
