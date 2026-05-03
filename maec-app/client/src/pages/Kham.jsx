@@ -442,16 +442,26 @@ function EncounterListRail({ list, loading, openId, onPick }) {
           const services = e.assignedServices || []
           const done = services.filter(s => s.status === 'done').length
           const isActive = openId === e._id
+          const isTerminal = e.status === 'paid' || e.status === 'cancelled'
           const statusPill = e.status === 'paid'
             ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Đã trả</span>
             : e.status === 'cancelled'
               ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Hủy</span>
               : null
+          // DV pill — only shown for non-terminal encounters. Suppressed for
+          // paid/cancelled where service state is no longer actionable.
+          const dvPill = isTerminal ? null
+            : services.length === 0
+              ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Chưa có DV</span>
+              : done === services.length
+                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">Hoàn thành DV</span>
+                : null
           return (
             <button key={e._id} onClick={() => onPick(e._id)}
               className={`w-full text-left px-3 py-2.5 transition-colors border-l-4 ${isActive ? 'bg-blue-50 border-blue-500' : 'border-transparent hover:bg-gray-50'}`}>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-medium text-gray-900 truncate flex-1">{e.patientName || '—'}</span>
+                {dvPill}
                 {statusPill}
               </div>
               <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 min-w-0">
@@ -461,7 +471,10 @@ function EncounterListRail({ list, loading, openId, onPick }) {
                     : (e.packages || []).length === 1
                       ? <>{e.packages[0].name}{e.packages[0].tier && ` · ${e.packages[0].tier}`}</>
                       : <>{e.packages.length} gói: {e.packages.map(p => p.name).join(' + ')}</>}
-                  {services.length > 0 && <span className="ml-1 text-gray-400">· {done}/{services.length} DV</span>}
+                  {/* Inline x/y DV only for partial progress — the two edge cases get a pill above. */}
+                  {!isTerminal && services.length > 0 && done < services.length && (
+                    <span className="ml-1 text-gray-400">· {done}/{services.length} DV</span>
+                  )}
                 </span>
                 <span className="font-mono text-blue-700 flex-shrink-0">{fmtMoney(e.billTotal)}đ</span>
               </div>
