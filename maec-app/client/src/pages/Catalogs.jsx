@@ -312,13 +312,13 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
   const handleSave = async () => {
     for (const f of fields) { if (f.required && !form[f.key]?.toString().trim()) return setError(`${f.label} là bắt buộc`) }
     setSaving(true); setError('')
-    // For packages, the PackageBuilder section publishes its current
-    // bundle/tier/entitlement state via builderStateRef. Merge it in so a
-    // single Lưu commits both the info fields AND the builder state in one
-    // PUT — otherwise the form's stale snapshot of bundledServices clobbers
-    // any bundle edits made via PackageBuilder.
+    // For catalogs that have a builder section (packages / services), that
+    // section publishes its current state via builderStateRef. Merge it in
+    // so a single Lưu commits both the info fields AND the builder state in
+    // one PUT — otherwise the form's stale snapshot of the builder field
+    // clobbers any builder edits.
     let body = form
-    if (catalogKey === 'packages' && builderStateRef.current) {
+    if ((catalogKey === 'packages' || catalogKey === 'services') && builderStateRef.current) {
       body = { ...form, ...builderStateRef.current }
     }
     try { await onSave(body) } catch (err) { setError(err.response?.data?.error || 'Lỗi'); setSaving(false) }
@@ -327,9 +327,10 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
   const title = isNew ? 'Thêm mới' : (record.name || record.displayName || record.code || record._id)
   const subtitle = isNew ? catalogLabel : (record.code || record._id)
 
-  // Wider modal for catalogs that have a builder section (currently packages)
-  // since the bundle / tier / entitlement editor needs horizontal room.
-  const isWideModal = catalogKey === 'packages'
+  // Wider modal for catalogs that have a builder section (currently packages
+  // and services with the output-fields editor) since the editor needs
+  // horizontal room.
+  const isWideModal = catalogKey === 'packages' || catalogKey === 'services'
   const modalCls = isWideModal ? 'max-w-5xl' : 'max-w-2xl'
   const formCols = isWideModal ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2'
 
@@ -370,6 +371,7 @@ function RowDrawer({ catalogKey, catalogLabel, fields, record, onClose, onSave, 
                 </div>
               </div>
               {!isNew && catalogKey === 'packages' && <PackageBuilder pkg={record} canEdit={canEdit} stateRef={builderStateRef} />}
+              {!isNew && catalogKey === 'services' && <ServiceOutputFieldsEditor service={record} canEdit={canEdit} stateRef={builderStateRef} />}
             </>
           )}
           {tab === 'history' && !isNew && (
@@ -746,6 +748,150 @@ function PackageBuilder({ pkg, canEdit, stateRef }) {
               Có thay đổi chưa lưu — bấm <b>Lưu</b> ở dưới để lưu cùng các trường thông tin.
             </div>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Per-service clinical output-fields editor ──────────────
+// Lets admins define which fields the doctor fills out when running this
+// service in Khám. State is published to the parent drawer via stateRef so
+// the drawer's single Lưu commits everything in one PUT (mirrors the
+// PackageBuilder pattern).
+const FIELD_TYPES = [
+  { value: 'text',     label: 'Text (1 dòng)' },
+  { value: 'textarea', label: 'Văn bản (nhiều dòng)' },
+  { value: 'number',   label: 'Số' },
+  { value: 'boolean',  label: 'Có / Không' },
+  { value: 'select',   label: 'Chọn 1' },
+  { value: 'datetime', label: 'Ngày giờ' },
+]
+
+function ServiceOutputFieldsEditor({ service, canEdit, stateRef }) {
+  const initial = (service.outputFields || []).map(f => ({
+    key: f.key || '',
+    label: f.label || '',
+    type: f.type || 'text',
+    options: Array.isArray(f.options) ? f.options.join(', ') : '',
+    placeholder: f.placeholder || '',
+    step: typeof f.step === 'number' ? String(f.step) : '',
+    required: !!f.required,
+  }))
+  const [rows, setRows] = useState(initial)
+  // Re-init when switching to a different service.
+  useEffect(() => {
+    setRows((service.outputFields || []).map(f => ({
+      key: f.key || '',
+      label: f.label || '',
+      type: f.type || 'text',
+      options: Array.isArray(f.options) ? f.options.join(', ') : '',
+      placeholder: f.placeholder || '',
+      step: typeof f.step === 'number' ? String(f.step) : '',
+      required: !!f.required,
+    })))
+  }, [service._id])
+
+  // Publish current state up to the drawer's Lưu. Only emit valid rows
+  // (must have key + label) — empty rows are placeholders the user is
+  // filling in and shouldn't be persisted.
+  useEffect(() => {
+    if (!stateRef) return
+    stateRef.current = {
+      outputFields: rows
+        .filter(r => r.key.trim() && r.label.trim())
+        .map(r => {
+          const out = {
+            key: r.key.trim(),
+            label: r.label.trim(),
+            type: r.type,
+            required: !!r.required,
+          }
+          if (r.type === 'select') {
+            out.options = r.options.split(',').map(s => s.trim()).filter(Boolean)
+          }
+          if (r.placeholder) out.placeholder = r.placeholder
+          if (r.type === 'number' && r.step !== '') {
+            const n = Number(r.step)
+            if (!isNaN(n)) out.step = n
+          }
+          return out
+        }),
+    }
+  }, [rows, stateRef])
+
+  const update = (i, patch) => setRows(rs => rs.map((r, idx) => idx === i ? { ...r, ...patch } : r))
+  const remove = (i) => setRows(rs => rs.filter((_, idx) => idx !== i))
+  const move = (i, dir) => setRows(rs => {
+    const j = i + dir
+    if (j < 0 || j >= rs.length) return rs
+    const copy = rs.slice()
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+    return copy
+  })
+  const add = () => setRows(rs => [...rs, { key: '', label: '', type: 'text', options: '', placeholder: '', step: '', required: false }])
+
+  const dirty = JSON.stringify(rows) !== JSON.stringify(initial)
+  const inputCls = 'border border-gray-200 rounded px-2 py-1 text-sm w-full focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 disabled:bg-gray-50'
+
+  return (
+    <div className="px-5 pb-5 pt-4 border-t border-gray-100 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          Trường kết quả khám ({rows.length})
+        </h3>
+        {canEdit && <button onClick={add} className="text-xs text-blue-600 hover:text-blue-800">+ Thêm trường</button>}
+      </div>
+      {rows.length === 0 ? (
+        <div className="text-xs text-gray-400 italic">
+          Chưa có trường kết quả nào. Bấm <b>+ Thêm trường</b> để định nghĩa các trường BS sẽ điền khi làm dịch vụ này.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-[24px_1fr_1.4fr_140px_1fr_60px_60px_28px] gap-2 text-[10px] uppercase tracking-wide text-gray-400 px-1">
+            <div></div>
+            <div>Khóa (key)</div>
+            <div>Nhãn hiển thị</div>
+            <div>Loại</div>
+            <div>Tuỳ chọn / placeholder</div>
+            <div className="text-center">Step</div>
+            <div className="text-center">BB</div>
+            <div></div>
+          </div>
+          {rows.map((r, i) => (
+            <div key={i} className="grid grid-cols-[24px_1fr_1.4fr_140px_1fr_60px_60px_28px] gap-2 items-center bg-white border border-gray-100 rounded-lg p-1.5">
+              <div className="flex flex-col items-center text-gray-400">
+                <button onClick={() => move(i, -1)} disabled={!canEdit || i === 0} className="hover:text-gray-700 disabled:opacity-30" title="Lên">▲</button>
+                <button onClick={() => move(i, 1)} disabled={!canEdit || i === rows.length - 1} className="hover:text-gray-700 disabled:opacity-30" title="Xuống">▼</button>
+              </div>
+              <input className={`${inputCls} font-mono`} value={r.key} onChange={e => update(i, { key: e.target.value.replace(/[^a-zA-Z0-9_]/g, '_') })} disabled={!canEdit} placeholder="vd: od_sphere" />
+              <input className={inputCls} value={r.label} onChange={e => update(i, { label: e.target.value })} disabled={!canEdit} placeholder="Nhãn tiếng Việt" />
+              <select className={inputCls} value={r.type} onChange={e => update(i, { type: e.target.value })} disabled={!canEdit}>
+                {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+              {r.type === 'select' ? (
+                <input className={inputCls} value={r.options} onChange={e => update(i, { options: e.target.value })} disabled={!canEdit} placeholder="A, B, C (phẩy ngăn cách)" />
+              ) : r.type === 'boolean' ? (
+                <div className="text-xs text-gray-400 italic">— không cần —</div>
+              ) : (
+                <input className={inputCls} value={r.placeholder} onChange={e => update(i, { placeholder: e.target.value })} disabled={!canEdit} placeholder="Placeholder (ví dụ)" />
+              )}
+              {r.type === 'number' ? (
+                <input className={`${inputCls} text-right`} value={r.step} onChange={e => update(i, { step: e.target.value })} disabled={!canEdit} placeholder="0.25" />
+              ) : (
+                <div className="text-center text-gray-300">—</div>
+              )}
+              <div className="text-center">
+                <input type="checkbox" checked={r.required} onChange={e => update(i, { required: e.target.checked })} disabled={!canEdit} title="Bắt buộc" />
+              </div>
+              <button onClick={() => remove(i)} disabled={!canEdit} className="text-rose-500 hover:text-rose-700 disabled:opacity-30 text-base leading-none" title="Xóa">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {canEdit && dirty && (
+        <div className="text-xs text-amber-700 italic">
+          Có thay đổi chưa lưu — bấm <b>Lưu</b> ở dưới để lưu cùng các trường thông tin.
         </div>
       )}
     </div>

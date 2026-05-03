@@ -131,10 +131,18 @@ router.get('/:id', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// GET /encounters/:id/service-fields/:serviceCode — output field schema for a service
+// GET /encounters/:id/service-fields/:serviceCode — output field schema for a
+// service. Prefers Service.outputFields from the catalog (editable by admin),
+// falling back to the static serviceOutputFields.js config for any service
+// not yet migrated. Once every service has been edited via the catalog UI
+// the static config can be retired.
 router.get('/:id/service-fields/:serviceCode', requireAuth, async (req, res) => {
-  const fields = SERVICE_OUTPUT_FIELDS[req.params.serviceCode] || []
-  res.json({ serviceCode: req.params.serviceCode, fields })
+  try {
+    const svc = await Service.findOne({ code: req.params.serviceCode }).lean()
+    const fromDb = svc?.outputFields || []
+    const fields = fromDb.length > 0 ? fromDb : (SERVICE_OUTPUT_FIELDS[req.params.serviceCode] || [])
+    res.json({ serviceCode: req.params.serviceCode, fields })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // POST /encounters/:id/assign-package — APPEND a package to the encounter.
