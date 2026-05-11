@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import api from '../api'
+import api, { downloadEncounterPrintout, concludeEncounter, reopenEncounter } from '../api'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
@@ -712,10 +712,16 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
               <span className="font-mono text-xs text-gray-400 whitespace-nowrap">{enc.patientId}</span>
               {enc.status === 'paid' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Đã thanh toán</span>}
               {enc.status === 'cancelled' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Đã hủy</span>}
+              {(enc.status === 'reported' || enc.status === 'verified') && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">BS đã kết luận</span>
+              )}
             </div>
             <div className="text-xs text-gray-500 mt-0.5 truncate">{enc.site || '—'} · {enc._id}</div>
             {enc.status === 'paid' && enc.paidByName && (
               <div className="text-xs text-green-700 mt-0.5">Thu ngân: {enc.paidByName} · {enc.paidAt && new Date(enc.paidAt).toLocaleString('vi-VN')}</div>
+            )}
+            {(enc.status === 'reported' || enc.status === 'verified') && enc.reportedAt && (
+              <div className="text-xs text-blue-700 mt-0.5">Kết luận: {enc.radiologistName || enc.radiologist || '—'} · {new Date(enc.reportedAt).toLocaleString('vi-VN')}</div>
             )}
           </div>
           <button onClick={onClose} className="sm:hidden text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0" aria-label="Đóng">×</button>
@@ -724,10 +730,39 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
           {!isClosed && (enc.billItems || []).length > 0 && (
             <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded hidden md:inline">Tổng bill: <b className="text-blue-700 font-mono">{fmtMoney(grandTotal(enc))} đ</b> · chuyển <b>Thu ngân</b></span>
           )}
+          {/* BS sign-off (soft signal): toggles status reported ↔ in_progress.
+              Doesn't block Thu ngân — Thu ngân can still collect payment at
+              any status. See encounters.js POST /:id/conclude and /:id/reopen. */}
+          {!isClosed && enc.status !== 'reported' && enc.status !== 'verified' && (
+            <button
+              onClick={async () => {
+                try { await concludeEncounter(enc._id); reload() }
+                catch (e) { alert(e.response?.data?.error || 'Lỗi hoàn tất khám') }
+              }}
+              className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1 whitespace-nowrap"
+              title="BS hoàn tất khám — chuyển trạng thái sang Đã kết luận"><span>✓</span> Hoàn tất khám</button>
+          )}
+          {(enc.status === 'reported' || enc.status === 'verified') && enc.status !== 'paid' && enc.status !== 'cancelled' && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Mở lại lượt khám của ${enc.patientName} để chỉnh sửa?`)) return
+                try { await reopenEncounter(enc._id); reload() }
+                catch (e) { alert(e.response?.data?.error || 'Lỗi mở lại khám') }
+              }}
+              className="text-xs px-2 py-1 rounded border border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1 whitespace-nowrap"
+              title="Mở lại lượt khám đã kết luận"><span>↩</span> Mở lại khám</button>
+          )}
           <button
             onClick={() => printVisitReport(enc)}
             className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
             title="In phiếu khám (chỉ thông tin lâm sàng)"><span>🖨</span> In Phiếu Khám</button>
+          <button
+            onClick={async () => {
+              try { await downloadEncounterPrintout(enc._id, enc.patientName) }
+              catch (e) { alert('Không xuất được phiếu kết quả: ' + (e.response?.data?.error || e.message)) }
+            }}
+            className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
+            title="Xuất Phiếu kết quả (.docx) — bản dành cho người bệnh"><span>📄</span> Phiếu kết quả (.docx)</button>
           {!isClosed && (
             <button
               onClick={async () => {

@@ -100,4 +100,20 @@ export const confirmInventoryTransaction = (id) => api.put(`/inventory/transacti
 export const getStockReport = (params) => api.get('/inventory/reports/stock', { params }).then(r => r.data)
 export const getStockCard = (supplyId) => api.get(`/inventory/reports/card/${supplyId}`).then(r => r.data)
 
+// Encounters — BS sign-off (soft signal; does not block checkout)
+export const concludeEncounter = (id) => api.post(`/encounters/${id}/conclude`).then(r => r.data)
+export const reopenEncounter   = (id) => api.post(`/encounters/${id}/reopen`).then(r => r.data)
+
+// Encounters — patient-facing result printout (docx, auth headers required)
+export const downloadEncounterPrintout = async (encounterId, patientName = 'phieu-ket-qua') => {
+  const r = await api.get(`/encounters/${encounterId}/printout.docx`, { responseType: 'blob' })
+  const url = URL.createObjectURL(r.data)
+  const a = document.createElement('a')
+  a.href = url
+  const safe = patientName.replace(/[^\w-]+/g, '_')
+  a.download = `${safe}-${encounterId}.docx`
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
 export default api

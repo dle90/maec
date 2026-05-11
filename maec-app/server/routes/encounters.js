@@ -14,6 +14,7 @@ const { requireAuth } = require('../middleware/auth')
 const { fifoDeduct, stockCheck } = require('../lib/fifoDeduct')
 const SERVICE_OUTPUT_FIELDS = require('../config/serviceOutputFields')
 const { localDate, localDayStartUtcZ, localDayEndUtcZ } = require('../lib/dates')
+const { renderPrintout } = require('../lib/patientPrintout')
 
 const now = () => new Date().toISOString()
 const todayISO = () => localDate()  // HCM-local YYYY-MM-DD; was UTC slice
@@ -129,6 +130,30 @@ router.get('/:id', requireAuth, async (req, res) => {
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
     res.json(enc)
   } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// GET /encounters/:id/printout.docx — render the patient-facing result sheet
+// (templates/patient-printout.docx) with this encounter's findings filled in.
+// Pulls visible fields from Encounter + Patient and flattens every
+// assignedServices[].output bag into one namespace. See lib/patientPrintout.js
+// for the variable map; canonical field codes come from
+// config/examSummarySchema.js (the digitised clinic spec).
+router.get('/:id/printout.docx', requireAuth, async (req, res) => {
+  try {
+    const enc = await Encounter.findById(req.params.id).lean()
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    const patient = await Patient.findById(enc.patientId).lean()
+    const buf = renderPrintout(enc, patient)
+    const safeName = (enc.patientName || 'phieu-ket-qua').replace(/[^\w-]+/g, '_')
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    res.setHeader('Content-Disposition',
+      `attachment; filename="${safeName}-${enc._id}.docx"`)
+    res.send(buf)
+  } catch (err) {
+    console.error('printout.docx error:', err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // GET /encounters/:id/service-fields/:serviceCode — output field schema for a
@@ -309,6 +334,52 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
     enc.cancelledAt = now()
     enc.cancelledBy = req.user.username
     enc.cancelReason = req.body.reason || ''
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// POST /encounters/:id/conclude — BS hoàn tất khám. Soft signal only: stamps
+// status='reported' + reportedAt + radiologist (so the encounter pane shows
+// "BS đã kết luận" and downstream reports can filter). Does NOT block Thu
+// ngân from collecting payment — checkout still allowed at any status.
+// Allowed at any status except completed/cancelled/already reported.
+router.post('/:id/conclude', requireAuth, async (req, res) => {
+  try {
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (enc.status === 'cancelled') return res.status(400).json({ error: 'Lượt khám đã hủy' })
+    if (enc.status === 'reported' || enc.status === 'verified') {
+      return res.status(400).json({ error: 'Lượt khám đã hoàn tất khám' })
+    }
+    enc.status = 'reported'
+    enc.reportedAt = now()
+    enc.radiologist = req.user.username
+    enc.radiologistName = req.user.displayName || req.user.username
+    enc.updatedAt = now()
+    await enc.save()
+    res.json(enc.toObject())
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// POST /encounters/:id/reopen — undo conclude. Reverts status to in_progress
+// and clears the reportedAt stamp so the pane goes back to edit-mode. Allowed
+// for bacsi (any) or the original concluding doctor; admin always allowed.
+// Refuses once payment has landed (status=paid/completed) so the audit trail
+// of the paid encounter stays intact.
+router.post('/:id/reopen', requireAuth, async (req, res) => {
+  try {
+    const enc = await Encounter.findById(req.params.id)
+    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (enc.status !== 'reported' && enc.status !== 'verified') {
+      return res.status(400).json({ error: 'Lượt khám chưa được kết luận, không cần mở lại' })
+    }
+    const u = req.user
+    const isAllowed = u.role === 'admin' || u.role === 'bacsi' || u.username === enc.radiologist
+    if (!isAllowed) return res.status(403).json({ error: 'Chỉ bác sĩ mới có quyền mở lại lượt khám' })
+    enc.status = 'in_progress'
+    enc.reportedAt = ''
     enc.updatedAt = now()
     await enc.save()
     res.json(enc.toObject())

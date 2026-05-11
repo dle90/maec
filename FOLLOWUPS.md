@@ -390,6 +390,26 @@ Net-new Expo / React Native build. v1 scope:
 - Encounter sign-off
 - Billing
 
+## Phiếu kết quả — patient docx printout (landed 2026-05-10)
+
+Clinic delivered two Word docs that drive the patient-facing result sheet + the canonical Encounter field list:
+
+- **Patient printout template**: [maec-app/server/templates/patient-printout.docx](maec-app/server/templates/patient-printout.docx) — 7 sections, `{{var}}` placeholders, rendered via [docxtemplater](https://docxtemplater.com/).
+- **Field spec (digitised)**: [maec-app/server/config/examSummarySchema.js](maec-app/server/config/examSummarySchema.js) — 14 sections, ~200 fields with codes, value sets, eyeSplit flags. Source doc preserved at [maec-app/server/templates/exam-summary-spec.docx](maec-app/server/templates/exam-summary-spec.docx).
+
+Wired live:
+- Route: `GET /api/encounters/:id/printout.docx` ([encounters.js](maec-app/server/routes/encounters.js)).
+- Binder: [lib/patientPrintout.js](maec-app/server/lib/patientPrintout.js) — flattens `assignedServices[].output` into a single namespace; rollup vars (slit-lamp groupings, dry-eye score selection, myopia narrative) composed inline.
+- Button: "📄 Phiếu kết quả (.docx)" next to "In Phiếu Khám" in the Khám encounter pane.
+- Smoke: `cd maec-app/server && node scripts/smoke-printout.js` renders against a synthetic encounter — no DB needed.
+- Cross-validation: `node scripts/validate-printout-template.js` confirms every `{{var}}` in the template maps to either a schema key or a known printout-only rollup.
+
+Remaining gaps before the form replaces ReportEditor:
+
+- **Encounter form UI** still pending — drive it from `examSummarySchema.js` and persist into the existing `assignedServices[].output` bag using the canonical codes (so the printout binder requires no changes).
+- **Narrative rollup vars** in the printout (`myopia_risk_interpretation`, `myopia_plan_short`, `progression_interpretation`, `treatment_adjustment`, `risk_factor_summary`, `lifestyle_advice_short`) currently emit empty strings — these are doctor-authored summary text fields and need either dedicated form inputs or a one-shot AI summarisation step.
+- **Bilingual EN variant** of the printout template still needed (see next section).
+
 ## Phiếu kết quả — bilingual VN / EN print (deferred)
 
 Today the doctor's printable from Khám is `printVisitReport` (Phiếu Khám) in Vietnamese only — see [Kham.jsx](maec-app/client/src/pages/Kham.jsx). Foreign / expat patients need an English version on demand.
