@@ -420,3 +420,24 @@ Plan:
 - English variant needs translations for: clinic header (already have "Minh Anh Eye Clinic"), section titles, status labels, examType names, common service names, conclusion / diagnosis labels. Output values that are free text stay as-typed (no auto-translation).
 - Implementation note: avoid an i18n framework — keep a small `EN_LABELS = { ... }` map at the top of the print module mirroring the VN labels; switch by parameter. Same pattern as the existing inline-Vietnamese convention in CLAUDE.md.
 - Where: a new "🖨 In Phiếu kết quả" button in the encounter pane header next to "In Phiếu Khám", popping a tiny VN/EN chooser before invoking the dedicated `printResultSheet(enc, lang)` function.
+
+## Encounter attachments + sample import + dd/mm/yyyy — shipped 2026-05-22
+
+### Encounter file attachments — Cloudflare R2 (`f944814`)
+Per-encounter PDF/image upload. Bytes in Cloudflare R2 (S3-compatible), metadata in a new collection.
+- Backend: [lib/r2.js](maec-app/server/lib/r2.js), [EncounterAttachment](maec-app/server/models/EncounterAttachment.js) model, [routes/attachments.js](maec-app/server/routes/attachments.js) — upload / list / presigned-URL view / delete, mounted at `/api`. New deps: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `multer`.
+- Frontend: [EncounterAttachments.jsx](maec-app/client/src/components/EncounterAttachments.jsx) — "Tài liệu / Hồ sơ" panel in the Khám encounter pane.
+- **Pending (user action): R2 provisioning.** Create the bucket + R2 API token in Cloudflare, set `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` in Railway. Until set, uploads return a clean 503; nothing else is affected.
+- Still deferred: the **watched-folder ingestor** (auto-attach from Medmont / AB800 / IDRA export folders) — this shipped the manual-upload + storage half only.
+
+### Sample patient import — review-gated (`61bfb5e`, re-parsed in `f944814`)
+The 10 "Hồ sơ PK Minh Anh" sample PDFs → 7 patients / 19 encounters via [scripts/import-sample-hoso.js](maec-app/server/scripts/import-sample-hoso.js) (idempotent, fixed IDs `BN-20260522-9xxx`).
+- 3 from digital device PDFs (Medmont / Optopol REVO / AB800) — exact values. 4 from handwritten scans — best-effort; each handwritten service note carries a ⚠ verify-against-scan caveat.
+- Clinical data parsed into structured `assignedServices[].output` fields, not free text in `conclusion`.
+- All rows land `reviewStatus: 'pending_review'`. New review fields on Patient + Encounter: `reviewStatus` / `importBatch` / `importSource` / `importedAt` / `reviewedBy` / `reviewedAt`. Admin approves from the Bệnh nhân catalog — "⏳ Chờ duyệt" filter → "✓ Duyệt hồ sơ" (`POST /registration/patients/:id/approve`, cascades to the patient's pending encounters).
+
+### Exam output fields
+[serviceOutputFields.js](maec-app/server/config/serviceOutputFields.js) gained fields the paper exam forms use but the Khám form lacked — SVC-TG2M (MEM / NPC / AC-A / NRA-PRA), SVC-REFRACT (VA-with-old-glasses, SE), SVC-OCT-POST (C/D ratio), SVC-CL-FIT (centration, treatment delta). Codes already existed in `examSummarySchema.js`. Not added (smaller follow-up): SAI / SRI on SVC-TOPO, pupil size.
+
+### dd/mm/yyyy date display
+Shared [client/src/lib/date.js](maec-app/client/src/lib/date.js) (`formatDate` / `formatDateTime`). 11 screens that rendered raw `YYYY-MM-DD` now show `dd/mm/yyyy`; the rest already did via `vi-VN` locale. Stored values + `<input type="date">` unchanged.

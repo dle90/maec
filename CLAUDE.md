@@ -12,7 +12,7 @@ Clinic management + EMR + imaging system for **Minh Anh Eye Clinic** (Phòng kh�
 - **Web frontend**: React 18 + Vite + Tailwind, deployed as static build served by the backend
 - **PACS**: Orthanc + OHIF v3.8 (Docker), **deferred until imaging integration starts** — not currently provisioned
 - **Mobile**: Expo / React Native, **not yet scaffolded**
-- **Hosting**: Railway (Node app), MongoDB Atlas (database). No Cloudflare R2 yet — add when PACS comes online.
+- **Hosting**: Railway (Node app), MongoDB Atlas (database). **Cloudflare R2** wired for encounter file attachments ([lib/r2.js](maec-app/server/lib/r2.js)) — needs `R2_*` env vars provisioned in Railway.
 
 ## Repo layout
 - [maec-app/server/](maec-app/server/) — Express backend (models, routes, lib, middleware, scripts)
@@ -88,8 +88,8 @@ P0 + most of P1 was completed 2026-05-01. See [FOLLOWUPS.md](FOLLOWUPS.md) for t
 - [ ] **Financials module rebuild** (deleted 2026-05-01) — design fresh on the 2-site model when economics conversation happens
 
 ### P2 — Imaging
-- [ ] Provision Orthanc + OHIF Railway services + Cloudflare R2 bucket (defer until first device is wired)
-- [ ] Document-path watched-folder ingestor (Medmont, AB800, IDRA) → encounter attachment
+- [ ] Provision Orthanc + OHIF Railway services (defer until first device is wired)
+- [ ] Document-path **watched-folder ingestor** (Medmont, AB800, IDRA) → auto-attach to encounter — manual PDF upload to encounters already shipped (Cloudflare R2; see FOLLOWUPS)
 - [ ] DICOM-path verification: sample DICOM from DRS Plus and Revo into Orthanc + OHIF render
 - [ ] **IOL calculation workflow**: AB800 biometry → formula → surgical plan attached to encounter
 - [ ] **Compare-over-time** UI component (meibography, fundus, OCT) — design once, reuse
