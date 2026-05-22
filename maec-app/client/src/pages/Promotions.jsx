@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api'
+import { formatDate } from '../lib/date'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 
@@ -282,7 +283,7 @@ export default function Promotions() {
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-gray-500">
-                    {p.startDate && p.endDate ? `${p.startDate} - ${p.endDate}` : p.startDate || p.endDate || 'Không giới hạn'}
+                    {p.startDate && p.endDate ? `${formatDate(p.startDate)} - ${formatDate(p.endDate)}` : formatDate(p.startDate) || formatDate(p.endDate) || 'Không giới hạn'}
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     {p.currentUsage}{p.maxUsageTotal ? `/${p.maxUsageTotal}` : ''}

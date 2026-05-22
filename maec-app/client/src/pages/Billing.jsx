@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../api'
+import { formatDate } from '../lib/date'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
-const fmtDate = (s) => s ? s.slice(0, 10) : ''
+const fmtDate = (s) => formatDate(s)
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const STATUS_TABS = [

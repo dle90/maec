@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import api from '../api'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { formatDate } from '../lib/date'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 const fmtTime = (iso) => {
@@ -499,7 +500,7 @@ function PaymentDrawer({ id, onClose }) {
                         {it.plan.map((p, j) => (
                           <div key={j}>
                             → Lot <span className="font-mono">{p.lotNumber || p.lotId.slice(-6)}</span> ×{p.quantity}
-                            {p.expiryDate && <span className="text-gray-400 ml-1">(HSD {p.expiryDate})</span>}
+                            {p.expiryDate && <span className="text-gray-400 ml-1">(HSD {formatDate(p.expiryDate)})</span>}
                           </div>
                         ))}
                       </div>

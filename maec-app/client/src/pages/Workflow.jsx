@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getTasks, createTask, updateTask, addComment, deleteTask, getSites, getWorkCategories, saveWorkCategories } from '../api'
+import { formatDate } from '../lib/date'
 
 const FIXED_DEPTS = ['Ops', 'HR', 'Kế toán']
 
@@ -15,11 +16,7 @@ const PRIORITY_CONFIG = {
   low:    { label: 'Thấp',    color: 'bg-gray-100 text-gray-500',    border: 'border-l-gray-300' },
 }
 
-const fmtDate = (iso) => {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
-}
+const fmtDate = (iso) => formatDate(iso) || '—'
 const fmtTime = (iso) => {
   if (!iso) return ''
   const d = new Date(iso)

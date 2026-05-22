@@ -7,6 +7,7 @@ import ReportTemplates from './ReportTemplates'
 import { FormView } from './Registration'
 import { CATALOG_TO_GROUP, DEFAULT_CATALOG_KEY } from '../config/catalogGroups'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { formatDate } from '../lib/date'
 
 const LAST_CATALOG_KEY = 'maec_last_catalog'
 
@@ -1416,7 +1417,7 @@ function UsageTab({ catalogKey, record }) {
 function relTime(iso) {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()
-  if (!Number.isFinite(diff) || diff < 0) return iso.slice(0, 10)
+  if (!Number.isFinite(diff) || diff < 0) return formatDate(iso)
   const m = Math.floor(diff / 60000)
   if (m < 1) return 'vừa xong'
   if (m < 60) return `${m} phút trước`
@@ -1424,7 +1425,7 @@ function relTime(iso) {
   if (h < 24) return `${h} giờ trước`
   const d = Math.floor(h / 24)
   if (d < 7) return `${d} ngày trước`
-  return iso.slice(0, 10)
+  return formatDate(iso)
 }
 
 // ── Generic Catalog Table ────────────────────────────────
@@ -1856,7 +1857,7 @@ function PatientsTable() {
                     ? <span className="text-gray-700">{p.guardianPhone}<span className="ml-1 text-[10px] text-gray-400">({p.guardianRelation || 'người giám hộ'})</span></span>
                     : '-')}
                 </td>
-                <td className="px-4 py-2.5 text-gray-600">{p.dob || '-'}</td>
+                <td className="px-4 py-2.5 text-gray-600">{formatDate(p.dob) || '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -1947,7 +1948,7 @@ function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
   }
 
   const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
-  const fmtDate = (iso) => iso ? iso.slice(0, 10) : '—'
+  const fmtDate = (iso) => formatDate(iso) || '—'
   const fmtTime = (iso) => {
     if (!iso) return ''
     const d = new Date(iso)
@@ -2069,7 +2070,7 @@ function PromotionsTable({ canEdit }) {
               <td className="px-4 py-2.5 font-medium text-gray-900">{p.name}</td>
               <td className="px-4 py-2.5 text-gray-600">{p.type === 'percentage' ? '%' : 'VND'}</td>
               <td className="px-4 py-2.5 text-right font-medium text-blue-600">{p.type === 'percentage' ? `${p.discountValue}%` : fmtMoney(p.discountValue)}</td>
-              <td className="px-4 py-2.5 text-xs text-gray-500">{p.startDate || ''} - {p.endDate || ''}</td>
+              <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(p.startDate)} - {formatDate(p.endDate)}</td>
               <td className="px-4 py-2.5 text-center text-gray-600">{p.currentUsage}{p.maxUsageTotal ? `/${p.maxUsageTotal}` : ''}</td>
               <td className="px-4 py-2.5"><span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{p.status === 'active' ? 'HĐ' : p.status}</span></td>
             </tr>

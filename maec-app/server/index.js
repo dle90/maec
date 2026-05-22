@@ -28,6 +28,7 @@ const partnerAdminRouter = require('./routes/partner-admin')
 const hrRouter = require('./routes/hr')
 const reportsRouter = require('./routes/reports')
 const enhancementsRouter = require('./routes/enhancements')
+const attachmentsRouter = require('./routes/attachments')
 const { requireAdmin } = require('./middleware/auth')
 const { auditMiddleware } = require('./middleware/audit')
 
@@ -88,6 +89,9 @@ app.use('/api/reports', reportsRouter)
 
 // Templates, audit log, notifications, today dashboard, search, MWL
 app.use('/api', enhancementsRouter)
+
+// Encounter file attachments (PDF/images → Cloudflare R2)
+app.use('/api', attachmentsRouter)
 
 // Serve React build in production
 const clientDist = path.join(__dirname, '../client/dist')

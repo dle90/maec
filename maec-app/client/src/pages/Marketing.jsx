@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getMarketing, saveMarketing } from '../api'
+import { formatDate } from '../lib/date'
 
 // ─── constants ───────────────────────────────────────────────────────────────
 const STAGES = [
@@ -38,7 +39,7 @@ const fmtBudget = n => {
   if (!n) return '—'
   return n >= 1e9 ? (n/1e9).toFixed(1) + ' tỷ' : n >= 1e6 ? (n/1e6).toFixed(0) + 'M' : n.toLocaleString('vi-VN')
 }
-const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit' }) : '—'
+const fmtDate = iso => formatDate(iso) || '—'
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
 
 const stageOf  = key => STAGES.find(s => s.key === key) || STAGES[0]

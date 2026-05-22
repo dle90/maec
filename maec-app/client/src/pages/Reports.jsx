@@ -1660,7 +1660,7 @@ function SoKhoReport() {
               const signCls = incoming ? 'text-emerald-700' : 'text-rose-600'
               return (
                 <tr key={t._id} className="border-t border-gray-100 hover:bg-blue-50/50">
-                  <td className="px-4 py-2.5 text-xs text-gray-500">{t.createdAt?.slice(0, 10)}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500">{fmtDate(t.createdAt)}</td>
                   <td className="px-4 py-2.5">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${TX_TYPE_CLS[t.type] || 'bg-gray-50 border-gray-200'}`}>
                       {TX_TYPE_LABELS[t.type] || t.type}

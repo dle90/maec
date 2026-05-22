@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import api, { downloadEncounterPrintout, concludeEncounter, reopenEncounter } from '../api'
 import { useEscapeKey } from '../hooks/useEscapeKey'
+import { formatDate } from '../lib/date'
+import EncounterAttachments from '../components/EncounterAttachments'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 const fmtTime = (iso) => {
@@ -627,7 +629,7 @@ function CreateEncounterModal({ onClose, onCreated }) {
                   {results.map(p => (
                     <button key={p._id} onClick={() => setPicked(p)} className="w-full text-left px-3 py-2 hover:bg-gray-50">
                       <div className="font-semibold text-sm">{p.name}</div>
-                      <div className="text-xs text-gray-500">{p.patientId || p._id} · {p.phone || '—'} · {p.dob || '—'}</div>
+                      <div className="text-xs text-gray-500">{p.patientId || p._id} · {p.phone || '—'} · {formatDate(p.dob) || '—'}</div>
                     </button>
                   ))}
                 </div>
@@ -904,7 +906,7 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
                 {history.map(h => (
                   <button key={h._id} onClick={() => onOpenOther && onOpenOther(h._id)}
                     className="w-full text-left px-3 py-2 hover:bg-blue-50 flex items-center gap-2 text-sm">
-                    <span className="text-xs text-gray-500 font-mono w-24 flex-shrink-0">{(h.createdAt || '').slice(0, 10) || '—'}</span>
+                    <span className="text-xs text-gray-500 font-mono w-24 flex-shrink-0">{formatDate(h.createdAt) || '—'}</span>
                     <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{h.site || '—'}</span>
                     <span className="flex-1 truncate">
                       {(h.packages || []).length === 0
@@ -999,6 +1001,8 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
             </div>
           )}
         </section>
+
+        <EncounterAttachments encounterId={enc._id} canEdit={!isClosed} />
 
         {/* Bill — grouped by kind (Gói khám / Dịch vụ / Kính / Thuốc), each
             group with its own subtotal. VAT is extracted from gross prices

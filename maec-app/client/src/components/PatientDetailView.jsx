@@ -445,7 +445,7 @@ function PatientSummaryCard({ study }) {
           {study.patientId || '—'}
           {' · '}{study.gender === 'M' ? 'Nam' : study.gender === 'F' ? 'Nữ' : '—'}
           {age !== '' && ` · ${age}t`}
-          {study.dob && ` · ${(study.dob || '').slice(0, 10)}`}
+          {study.dob && ` · ${fmtDate(study.dob)}`}
         </div>
       </div>
       <div className="w-px h-8 bg-gray-200" />

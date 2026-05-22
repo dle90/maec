@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { getDashboardToday, getDashboardExtras } from '../api'
+import { formatDate } from '../lib/date'
 
 const fmt = (n) => (n == null ? '0' : Number(n).toLocaleString('vi-VN'))
 
@@ -138,7 +139,7 @@ export default function DashboardOps() {
                     <td className="py-1.5 text-gray-700 truncate max-w-[160px]">{l.supplyId || '—'}</td>
                     <td className="py-1.5 text-gray-600">{l.site || '—'}</td>
                     <td className="py-1.5 text-right font-mono">{l.currentQuantity}</td>
-                    <td className="py-1.5 text-right font-mono text-orange-700">{l.expiryDate?.slice(0, 10)}</td>
+                    <td className="py-1.5 text-right font-mono text-orange-700">{formatDate(l.expiryDate)}</td>
                   </tr>
                 ))}
               </tbody>

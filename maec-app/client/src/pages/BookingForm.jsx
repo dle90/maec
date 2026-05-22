@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { formatDate } from '../lib/date'
 
 const api = axios.create({ baseURL: '/api' })
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
@@ -204,10 +205,10 @@ export default function BookingForm() {
               <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-gray-500">Ho ten:</span><span className="font-medium">{form.name}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Dien thoai:</span><span className="font-medium">{form.phone}</span></div>
-                {form.dob && <div className="flex justify-between"><span className="text-gray-500">Ngay sinh:</span><span>{form.dob}</span></div>}
+                {form.dob && <div className="flex justify-between"><span className="text-gray-500">Ngay sinh:</span><span>{formatDate(form.dob)}</span></div>}
                 <div className="flex justify-between"><span className="text-gray-500">Co so:</span><span className="font-medium">{form.site}</span></div>
                 {form.serviceName && <div className="flex justify-between"><span className="text-gray-500">Dich vu:</span><span>{form.serviceName}</span></div>}
-                <div className="flex justify-between"><span className="text-gray-500">Ngay hen:</span><span className="font-medium">{form.scheduledDate}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Ngay hen:</span><span className="font-medium">{formatDate(form.scheduledDate)}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Gio hen:</span><span className="font-medium text-blue-600">{form.scheduledTime}</span></div>
                 {form.clinicalInfo && <div><span className="text-gray-500">Trieu chung:</span> <span>{form.clinicalInfo}</span></div>}
               </div>

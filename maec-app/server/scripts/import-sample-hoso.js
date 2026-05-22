@@ -2,19 +2,18 @@
  * Import patient + clinical data extracted from the "Hồ sơ PK Minh Anh"
  * sample PDFs into the Patient + Encounter collections.
  *
+ * Clinical values are parsed into structured encounter.assignedServices[].output
+ * fields, keyed to the Khám form schema (config/serviceOutputFields.js) — so the
+ * data renders in the Khám form, not as a wall of text in `conclusion`.
+ * `conclusion` holds only a short clinical summary / plan.
+ *
  * Every imported row lands as reviewStatus='pending_review' — an admin
- * reviews/edits and approves it from the Bệnh nhân catalog before the data
- * is treated as trusted.
+ * reviews/edits and approves it from the Bệnh nhân catalog.
  *
- * Source so far: the 6 *digital device* PDFs — machine-printed, exact values:
- *   - MediWorks AB800 biometry      → Lê Minh Khôi
- *   - Optopol REVO NX OCT (×3)      → Bành Huyền Trang
- *   - Medmont topography (×2)       → Nguyễn Anh Thư
- * Handwritten-form patients (doc3/4/5/10) are appended to SOURCE as they
- * are transcribed.
- *
- * Clinical values land in encounter.assignedServices[].output, keyed to the
- * Khám form schema (config/serviceOutputFields.js) so they render in Khám.
+ * Sources:
+ *   - 6 digital device PDFs (Medmont / Optopol REVO / AB800) — exact values.
+ *   - 4 handwritten scanned forms (doc3/4/5/10) — BEST-EFFORT reads; each
+ *     handwritten service carries a ⚠ note to verify against the scan.
  *
  * Idempotent — deterministic _ids, re-run safe (upsert).
  *
@@ -27,8 +26,20 @@ const DRY = process.argv.includes('--dry-run')
 const BATCH = 'hoso-pkminhanh-2026-05-22'
 const IMPORTED_AT = '2026-05-22T00:00:00.000Z'
 const STAMP = 'Nhập từ hồ sơ PK Minh Anh, chờ duyệt — 2026-05-22.'
+// Caveat stamped into each handwritten-sourced service note.
+const HW = '⚠ Số liệu đọc từ chữ viết tay — đối chiếu bản scan gốc khi duyệt.'
 
 const iso = (ymd) => `${ymd}T00:00:00.000Z`
+
+const SVC = {
+  AUTOREF:  'Chụp khúc xạ tự động (+ đo số kính cũ nếu có)',
+  REFRACT:  'Đo khúc xạ (VA + chủ quan + khách quan + PD)',
+  TG2M:     'Đo thị giác hai mắt',
+  TOPO:     'Bản đồ giác mạc',
+  BIOMETRY: 'Sinh trắc nhãn cầu (IOL biometry)',
+  OCTPOST:  'OCT bán phần sau (RNFL + macula + ONH)',
+  CLRGP:    'Thử kính tiếp xúc cứng (RGP / ortho-K)',
+}
 
 // ─── Patient A — Lê Minh Khôi (MediWorks AB800 biometry) ──────────────────
 const khoi = {
@@ -39,18 +50,12 @@ const khoi = {
     notes: STAMP + ' Nguồn: AB800. Mã thiết bị 202605210001.',
   },
   encounters: [{
-    _id: 'enc-hoso-khoi-1',
-    date: '2026-05-21',
-    examType: 'Khám kiểm soát cận thị',
+    _id: 'enc-hoso-khoi-1', date: '2026-05-21', examType: 'Khám kiểm soát cận thị',
     importSource: 'Sinh trắc học nhãn cầu.pdf (AB800)',
-    conclusion:
-      'Sinh trắc nhãn cầu (MediWorks AB800) — 21/05/2026. ' +
-      'Trục nhãn cầu (AL): OD 23.38 mm / OS 24.85 mm. AL/CR: OD 3.08 / OS 3.29. ' +
-      'K trung bình: OD 44.55 D / OS 44.74 D. CCT: OD 556 / OS 545 µm. ' +
-      'Không còn dự trữ viễn thị cả 2 mắt. Theo biểu đồ chuẩn tuổi (7 tuổi): ' +
-      'OD-AL trên bách phân vị 50, OS-AL trên bách phân vị 95. ' + STAMP,
+    conclusion: 'Sinh trắc nhãn cầu AB800 — OS-AL 24.85 mm trên bách phân vị 95 theo tuổi (7t), '
+      + 'nguy cơ tiến triển cận thị; không còn dự trữ viễn thị 2 mắt.',
     services: [{
-      serviceCode: 'SVC-BIOMETRY', serviceName: 'Sinh trắc nhãn cầu (IOL biometry)',
+      serviceCode: 'SVC-BIOMETRY', serviceName: SVC.BIOMETRY,
       output: {
         device: 'MediWorks AB800',
         od_axial_length: 23.384, os_axial_length: 24.851,
@@ -58,11 +63,9 @@ const khoi = {
         od_k: 44.55, os_k: 44.74,
         od_white_to_white: 11.84, os_white_to_white: 11.69,
         iol_calc_note:
-          'AB800, 21/05/2026. K: OD 43.33/45.77 D (ΔK 2.43), OS 43.67/45.80 D (ΔK 2.13). ' +
-          'CCT OD 556 / OS 545 µm. LT OD 3.739 / OS 3.352 mm. ' +
-          'Buồng dịch (AD) OD 2.396 / OS 2.710 mm. Dịch kính OD 16.693 / OS 18.244 mm. ' +
-          'Angle kappa OD 4.20° / OS 3.32°. Đồng tử OD 3.67 / OS 4.20 mm. ' +
-          'AL/CR OD 3.08 / OS 3.29. Không còn dự trữ viễn thị 2 mắt.',
+          'CCT OD 556 / OS 545 µm. LT OD 3.739 / OS 3.352 mm. '
+          + 'K1/K2 OD 43.33/45.77, OS 43.67/45.80 D. AL/CR OD 3.08 / OS 3.29. '
+          + 'Dịch kính OD 16.69 / OS 18.24 mm. Đồng tử OD 3.67 / OS 4.20 mm.',
       },
     }],
   }],
@@ -77,41 +80,30 @@ const trang = {
     notes: STAMP + ' Nguồn: Optopol REVO NX. Mã thiết bị AUTO20240727092246.',
   },
   encounters: [{
-    _id: 'enc-hoso-trang-1',
-    date: '2023-10-28',
-    examType: 'Khám mắt — OCT đáy mắt',
+    _id: 'enc-hoso-trang-1', date: '2023-10-28', examType: 'Khám mắt — OCT đáy mắt',
     importSource: 'OCT GAI THI / HOANG DIEM / TRUC NHAN CAU - BANH HUYEN TRANG.pdf (REVO NX)',
-    conclusion:
-      'OCT Optopol REVO NX — 28/10/2023. RNFL trung bình: OD 126 / OS 136 µm. ' +
-      'Hoàng điểm: vùng trung tâm OD 240 / OS 238 µm, foveola tối thiểu OD 199 / OS 197 µm. ' +
-      'Gai thị: C/D dọc OD 0.51 / OS 0.65, C/D ngang OD 0.60 / OS 0.86 — ' +
-      'bất đối xứng đầu thị thần kinh 2 mắt. Sinh trắc trục nhãn cầu: ' +
-      'OD 24.58 / OS 24.16 mm (máy cảnh báo chênh lệch 2 mắt). ' + STAMP,
+    conclusion: 'OCT REVO NX — bất đối xứng đầu thị thần kinh 2 mắt (C/D dọc OD 0.51 / OS 0.65), '
+      + 'cân nhắc theo dõi glôcôm.',
     services: [
       {
-        serviceCode: 'SVC-OCT-POST', serviceName: 'OCT bán phần sau (RNFL + macula + ONH)',
+        serviceCode: 'SVC-OCT-POST', serviceName: SVC.OCTPOST,
         output: {
           od_rnfl_avg: 126, os_rnfl_avg: 136,
           od_macula_thickness: 240, os_macula_thickness: 238,
+          od_cd_ratio: 0.51, os_cd_ratio: 0.65,
           note:
-            'OPTOPOL REVO NX, 28/10/2023. Hoàng điểm (3D 7×7 mm): foveola tối thiểu ' +
-            'OD 199 / OS 197 µm; vùng trung tâm OD 240 / OS 238 µm; thể tích OD 7.91 / OS 8.04 mm³. ' +
-            'Gai thị (3D 6×6 mm): C/D dọc OD 0.51 / OS 0.65; C/D ngang OD 0.60 / OS 0.86; ' +
-            'disc area OD 2.82 / OS 2.96 mm²; rim area OD 2.08 / OS 1.39 mm²; ' +
-            'cup area OD 0.74 / OS 1.58 mm²; DDLS OD 4 / OS 5. ' +
-            'Lưu ý bất đối xứng đầu thị thần kinh giữa 2 mắt.',
+            'C/D ngang OD 0.60 / OS 0.86. Foveola tối thiểu OD 199 / OS 197 µm. '
+            + 'Disc area OD 2.82 / OS 2.96 mm². Rim area OD 2.08 / OS 1.39 mm². DDLS OD 4 / OS 5.',
         },
       },
       {
-        serviceCode: 'SVC-BIOMETRY', serviceName: 'Sinh trắc nhãn cầu (IOL biometry)',
+        serviceCode: 'SVC-BIOMETRY', serviceName: SVC.BIOMETRY,
         output: {
           device: 'Optopol Revo (OCT trục)',
           od_axial_length: 24.58, os_axial_length: 24.16,
           od_acd: 3.54, os_acd: 3.49,
-          iol_calc_note:
-            'REVO NX sinh trắc trục nhãn cầu, 28/10/2023. AL OD 24.58 / OS 24.16 mm. ' +
-            'ACD OD 3.54 / OS 3.49 mm. LT OD 3.33 / OS 3.36 mm. CCT OD 537 / OS 534 µm. ' +
-            'Máy cảnh báo (!!) chênh lệch AL giữa 2 mắt đáng kể.',
+          iol_calc_note: 'LT OD 3.33 / OS 3.36 mm. CCT OD 537 / OS 534 µm. '
+            + 'Máy cảnh báo chênh lệch AL giữa 2 mắt.',
         },
       },
     ],
@@ -119,73 +111,51 @@ const trang = {
 }
 
 // ─── Patient C — Nguyễn Anh Thư (Medmont topography ×2 visits) ────────────
+const thuTopo = (k, ecc, extra) => ({
+  serviceCode: 'SVC-TOPO', serviceName: SVC.TOPO,
+  output: { ...k, ...ecc, note: extra },
+})
 const thu = {
   _id: 'BN-20260522-9003',
   patient: {
     name: 'Nguyễn Anh Thư', gender: '', dob: '',
     importSource: 'Medmont Studio — file thiết bị',
-    notes: STAMP + ' Nguồn: Medmont Studio. ' +
-      'Ngày sinh & giới tính KHÔNG có trong file thiết bị — cần bổ sung khi duyệt.',
+    notes: STAMP + ' Nguồn: Medmont Studio. '
+      + 'Ngày sinh & giới tính KHÔNG có trong file thiết bị — cần bổ sung khi duyệt.',
   },
   encounters: [
     {
-      _id: 'enc-hoso-thu-1',
-      date: '2025-10-18',
-      examType: 'Bản đồ giác mạc',
+      _id: 'enc-hoso-thu-1', date: '2025-10-18', examType: 'Bản đồ giác mạc',
       importSource: 'BandogiacmacNguyenAnhThu2.pdf (Medmont)',
-      conclusion:
-        'Bản đồ giác mạc (Medmont Studio 7.2.8) — 18/10/2025. ' +
-        'OD: K 41.87 / 42.24 D (ΔK 0.36), K trung bình 42.47 D, IS 0.61, SAI 1.46, SRI 0.77. ' +
-        'OS: K 41.54 / 42.19 D (ΔK 0.65), K trung bình 42.39 D, IS 0.98, SAI 1.76, SRI 0.80. ' + STAMP,
-      services: [{
-        serviceCode: 'SVC-TOPO', serviceName: 'Bản đồ giác mạc',
-        output: {
-          od_k1: 41.87, od_k2: 42.24, os_k1: 41.54, os_k2: 42.19,
-          od_eccentricity: 0.38, os_eccentricity: 0.36,
-          note:
-            'Medmont Studio 7.2.8 — Tangential Power, 18/10/2025. ' +
-            'OD: Flat K 41.87 D@30°, Steep K 42.24 D@120°, ΔK 0.36 D, Avg K 42.47 D, ' +
-            'IS 0.61, SAI 1.46, SRI 0.77, đồng tử 3.1 mm. ' +
-            'OS: Flat K 41.54 D@161°, Steep K 42.19 D@71°, ΔK 0.65 D, Avg K 42.39 D, ' +
-            'IS 0.98, SAI 1.76, SRI 0.80, đồng tử 3.4 mm.',
-        },
-      }],
+      conclusion: 'Bản đồ giác mạc Medmont — 18/10/2025.',
+      services: [thuTopo(
+        { od_k1: 41.87, od_k2: 42.24, os_k1: 41.54, os_k2: 42.19 },
+        { od_eccentricity: 0.38, os_eccentricity: 0.36 },
+        'Avg K OD 42.47 / OS 42.39 D. ΔK OD 0.36 / OS 0.65. '
+        + 'IS index OD 0.61 / OS 0.98. SAI OD 1.46 / OS 1.76. SRI OD 0.77 / OS 0.80. '
+        + 'Đồng tử OD 3.1 / OS 3.4 mm. (Medmont Studio 7.2.8)',
+      )],
     },
     {
-      _id: 'enc-hoso-thu-2',
-      date: '2026-05-21',
-      examType: 'Bản đồ giác mạc',
+      _id: 'enc-hoso-thu-2', date: '2026-05-21', examType: 'Bản đồ giác mạc',
       importSource: 'BandogiacmacNguyenAnhThu3.pdf (Medmont)',
-      conclusion:
-        'Bản đồ giác mạc (Medmont Studio 7.2.8) — 21/05/2026 (tái khám). ' +
-        'OD: K 42.61 / 43.52 D (ΔK 0.91), K trung bình 42.97 D, IS 0.80, SAI 0.66, SRI 0.28. ' +
-        'OS: K 42.64 / 43.45 D (ΔK 0.81), K trung bình 42.92 D, IS 0.82, SAI 0.72, SRI 0.37. ' + STAMP,
-      services: [{
-        serviceCode: 'SVC-TOPO', serviceName: 'Bản đồ giác mạc',
-        output: {
-          od_k1: 42.61, od_k2: 43.52, os_k1: 42.64, os_k2: 43.45,
-          od_eccentricity: 0.59, os_eccentricity: 0.58,
-          note:
-            'Medmont Studio 7.2.8 — Tangential Power, 21/05/2026. ' +
-            'OD: Flat K 42.61 D@180°, Steep K 43.52 D@90°, ΔK 0.91 D, Avg K 42.97 D, ' +
-            'IS 0.80, SAI 0.66, SRI 0.28, đồng tử 3.1 mm. ' +
-            'OS: Flat K 42.64 D@173°, Steep K 43.45 D@83°, ΔK 0.81 D, Avg K 42.92 D, ' +
-            'IS 0.82, SAI 0.72, SRI 0.37, đồng tử 3.0 mm.',
-        },
-      }],
+      conclusion: 'Bản đồ giác mạc Medmont — 21/05/2026 (tái khám).',
+      services: [thuTopo(
+        { od_k1: 42.61, od_k2: 43.52, os_k1: 42.64, os_k2: 43.45 },
+        { od_eccentricity: 0.59, os_eccentricity: 0.58 },
+        'Avg K OD 42.97 / OS 42.92 D. ΔK OD 0.91 / OS 0.81. '
+        + 'IS index OD 0.80 / OS 0.82. SAI OD 0.66 / OS 0.72. SRI OD 0.28 / OS 0.37. '
+        + 'Đồng tử OD 3.1 / OS 3.0 mm. (Medmont Studio 7.2.8)',
+      )],
     },
   ],
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// HANDWRITTEN BATCH — doc3/4/5/10. Scanned paper forms. Clinical numbers are
-// BEST-EFFORT reads from handwriting and must be verified against the scans
-// during review — they live in `conclusion` text, not structured fields, so
-// they don't masquerade as device-grade values. Demographics are partial;
-// the admin completes DOB/gender on approval.
+// HANDWRITTEN BATCH — doc3/4/5/10. Refraction / K / axial values parsed into
+// structured fields BEST-EFFORT from handwriting; each service note carries
+// the ⚠ verify-against-scan caveat. Demographics partial — admin completes.
 // ══════════════════════════════════════════════════════════════════════════
-const HW = 'Hồ sơ giấy viết tay (scan) — số liệu lâm sàng đọc theo chữ viết tay, ' +
-  'BẮT BUỘC đối chiếu bản scan gốc khi duyệt.'
 
 // doc3 — Ngô Đức Trọng — theo dõi tiến triển cận thị, kính gọng Stellest
 const trong = {
@@ -193,23 +163,63 @@ const trong = {
   patient: {
     name: 'Ngô Đức Trọng', gender: 'M', dob: '',
     importSource: 'Kiểm soát tiến triển cận thị kính gọng.pdf (phiếu viết tay)',
-    notes: STAMP + ' ' + HW + ' Nguồn: phiếu theo dõi cận thị viết tay (mã hồ sơ "58"). ' +
-      'Sinh năm 2019 (chỉ đọc được năm — cần bổ sung ngày/tháng). Phiếu ban đầu ghi: ' +
-      'cao 1m38, nặng 35.5kg, sinh non 37 tuần / 2.8kg, dị ứng thời tiết, gia đình có cận thị.',
+    notes: STAMP + ' ' + HW + ' Nguồn: phiếu theo dõi cận thị viết tay (mã hồ sơ "58"). '
+      + 'Sinh năm 2019 (chỉ đọc được năm — cần bổ sung ngày/tháng). Phiếu ban đầu ghi: '
+      + 'cao 1m38, nặng 35.5kg, sinh non 37 tuần / 2.8kg, dị ứng thời tiết, gia đình có cận thị.',
   },
   encounters: [
-    { _id: 'enc-hoso-trong-1', date: '2024-09-28', examType: 'Tái khám kiểm soát cận thị',
-      conclusion: 'Theo dõi tiến triển cận thị — 28/09/2024. KXTĐ (đọc tay): ' +
-        'MP ~-3.00/-0.75 ×165, MT ~-3.00/-1.25 ×165. Kính cũ: MP -1.75/-0.50, MT -2.00/-0.75. ' + HW },
-    { _id: 'enc-hoso-trong-2', date: '2025-04-09', examType: 'Tái khám kiểm soát cận thị',
-      conclusion: 'Theo dõi tiến triển cận thị — 09/04/2025. KXTĐ (đọc tay): MP -3.00/-0.75 ×169, ' +
-        'K 44.00/45.75. Trục nhãn cầu (OCT, ~T6/2024): OD ~24.5 / OS ~24.0 mm. ' + HW },
-    { _id: 'enc-hoso-trong-3', date: '2025-11-08', examType: 'Tái khám kiểm soát cận thị',
-      conclusion: 'Theo dõi tiến triển cận thị — 08/11/2025. Cao 1m44, nặng 42kg. ' +
-        'Trục nhãn cầu (OCT, ~T6/2025). Xử trí: dừng Vigamox; Comfort Shield ×1; khám lại sau 3 tháng. ' + HW },
-    { _id: 'enc-hoso-trong-4', date: '2025-11-22', examType: 'Tái khám kiểm soát cận thị',
-      conclusion: 'Theo dõi tiến triển cận thị — ~22/11/2025. KXTĐ (đọc tay): ' +
-        'MP ~-2.50/-0.75 ×167, MT ~-3.00/-1.50 ×158. Trục nhãn cầu (OCT, ~T7/2025). ' + HW },
+    {
+      _id: 'enc-hoso-trong-1', date: '2024-09-28', examType: 'Tái khám kiểm soát cận thị',
+      conclusion: 'Theo dõi tiến triển cận thị — 28/09/2024.',
+      services: [{
+        serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+        output: {
+          od_sphere: -3.00, od_cyl: -0.75, od_axis: 165,
+          os_sphere: -3.00, os_cyl: -1.25, os_axis: 165,
+          old_glasses: 'MP -1.75/-0.50, MT -2.00/-0.75', note: HW,
+        },
+      }],
+    },
+    {
+      _id: 'enc-hoso-trong-2', date: '2025-04-09', examType: 'Tái khám kiểm soát cận thị',
+      conclusion: 'Theo dõi tiến triển cận thị — 09/04/2025.',
+      services: [
+        {
+          serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+          output: { od_sphere: -3.00, od_cyl: -0.75, od_axis: 169, od_k1: 44.00, od_k2: 45.75, note: HW },
+        },
+        {
+          serviceCode: 'SVC-BIOMETRY', serviceName: SVC.BIOMETRY,
+          output: {
+            device: 'Optopol Revo (OCT trục)', od_axial_length: 24.5, os_axial_length: 24.0,
+            iol_calc_note: HW + ' Trục nhãn cầu OCT ~T6/2024, giá trị gần đúng.',
+          },
+        },
+      ],
+    },
+    {
+      _id: 'enc-hoso-trong-3', date: '2025-11-08', examType: 'Tái khám kiểm soát cận thị',
+      conclusion: 'Theo dõi cận thị — 08/11/2025 (cao 1m44, nặng 42kg). '
+        + 'Xử trí: dừng Vigamox; Comfort Shield ×1 lọ; tái khám sau 3 tháng.',
+      services: [{
+        serviceCode: 'SVC-BIOMETRY', serviceName: SVC.BIOMETRY,
+        output: {
+          device: 'Optopol Revo (OCT trục)',
+          iol_calc_note: HW + ' OCT trục nhãn cầu ~T6/2025 — giá trị chưa đọc rõ từ bản scan.',
+        },
+      }],
+    },
+    {
+      _id: 'enc-hoso-trong-4', date: '2025-11-22', examType: 'Tái khám kiểm soát cận thị',
+      conclusion: 'Theo dõi tiến triển cận thị — 22/11/2025.',
+      services: [{
+        serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+        output: {
+          od_sphere: -2.50, od_cyl: -0.75, od_axis: 167,
+          os_sphere: -3.00, os_cyl: -1.50, os_axis: 158, note: HW,
+        },
+      }],
+    },
   ],
 }
 
@@ -219,24 +229,57 @@ const tung = {
   patient: {
     name: 'Nguyễn Đình Tùng', gender: 'M', dob: '',
     importSource: 'Kinh tiếp xúc cứng - Giác mạc chóp.pdf (phiếu viết tay)',
-    notes: STAMP + ' ' + HW + ' Nguồn: phiếu khám kính tiếp xúc viết tay (mã 133KTX). ' +
-      'Chẩn đoán: giác mạc hình chóp (keratoconus), đeo kính tiếp xúc cứng RGP. ' +
-      'Ngày sinh đọc tay 11/7/1991 hoặc 11/7/1994 — cần xác minh. ' +
-      'Tên đệm có thể là "Danh" thay vì "Đình" — cần xác minh.',
+    notes: STAMP + ' ' + HW + ' Nguồn: phiếu khám kính tiếp xúc viết tay (mã 133KTX). '
+      + 'Chẩn đoán: giác mạc hình chóp (keratoconus), đeo kính tiếp xúc cứng RGP. '
+      + 'Ngày sinh đọc tay 11/7/1991 hoặc 11/7/1994 — cần xác minh. '
+      + 'Tên đệm có thể là "Danh" thay vì "Đình" — cần xác minh.',
   },
   encounters: [
-    { _id: 'enc-hoso-tung-1', date: '2022-02-15', examType: 'Khám kính tiếp xúc (mới)',
-      conclusion: 'Khám kính tiếp xúc cứng — giác mạc hình chóp — 15/02/2022. KXTĐ (đọc tay): ' +
-        'MP phẳng/-2.50 ×69, MT -5.25/-6.25 ×84. K dốc bất thường. Thử lens RGP. ' + HW },
-    { _id: 'enc-hoso-tung-2', date: '2022-12-15', examType: 'Tái khám kính tiếp xúc',
-      conclusion: 'Tái khám kính tiếp xúc cứng — 15/12/2022. KXTĐ (đọc tay): MP -7.75 vùng, ' +
-        'MT -0.25/-4.00. Thử lens KTX. ' + HW },
-    { _id: 'enc-hoso-tung-3', date: '2024-01-11', examType: 'Tái khám kính tiếp xúc',
-      conclusion: 'Tái khám kính tiếp xúc cứng — 11/01/2024. Thị lực với kính 20/25. ' +
-        'Xử trí: Comfort Shield. ' + HW },
-    { _id: 'enc-hoso-tung-4', date: '2025-03-14', examType: 'Tái khám kính tiếp xúc',
-      conclusion: 'Tái khám kính tiếp xúc cứng — 14/03/2025. Đơn lens RGP cuối (đọc tay): ' +
-        'MP 6.70 / 9.00 / -7.00, MT 6.70 / 9.00 / -8.00. ' + HW },
+    {
+      _id: 'enc-hoso-tung-1', date: '2022-02-15', examType: 'Khám kính tiếp xúc (mới)',
+      conclusion: 'Khám kính tiếp xúc cứng — giác mạc hình chóp — 15/02/2022.',
+      services: [{
+        serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+        output: {
+          od_sphere: 0, od_cyl: -2.50, od_axis: 69,
+          os_sphere: -5.25, os_cyl: -6.25, os_axis: 84,
+          note: HW + ' MP cầu phẳng (plano). K dốc bất thường (keratoconus).',
+        },
+      }],
+    },
+    {
+      _id: 'enc-hoso-tung-2', date: '2022-12-15', examType: 'Tái khám kính tiếp xúc',
+      conclusion: 'Tái khám kính tiếp xúc cứng — 15/12/2022.',
+      services: [{
+        serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+        output: {
+          od_sphere: -7.75, os_sphere: -0.25, os_cyl: -4.00,
+          note: HW + ' MP trụ/trục chưa đọc rõ.',
+        },
+      }],
+    },
+    {
+      _id: 'enc-hoso-tung-3', date: '2024-01-11', examType: 'Tái khám kính tiếp xúc',
+      conclusion: 'Tái khám kính tiếp xúc cứng — 11/01/2024. Xử trí: Comfort Shield.',
+      services: [{
+        serviceCode: 'SVC-REFRACT', serviceName: SVC.REFRACT,
+        output: { od_va_corrected: '20/25', os_va_corrected: '20/25', note: HW + ' Thị lực với kính.' },
+      }],
+    },
+    {
+      _id: 'enc-hoso-tung-4', date: '2025-03-14', examType: 'Tái khám kính tiếp xúc',
+      conclusion: 'Tái khám kính tiếp xúc cứng — 14/03/2025. Đơn kính RGP cuối.',
+      services: [{
+        serviceCode: 'SVC-CL-FIT-RGP', serviceName: SVC.CLRGP,
+        output: {
+          lens_type: 'RGP',
+          od_bc: 6.70, od_dia: 9.00, od_power: -7.00,
+          os_bc: 6.70, os_dia: 9.00, os_power: -8.00,
+          final_rx: 'OD 6.70 / 9.00 / -7.00 · OS 6.70 / 9.00 / -8.00 (RGP, giác mạc chóp)',
+          fit_assessment: HW,
+        },
+      }],
+    },
   ],
 }
 
@@ -246,18 +289,70 @@ const thao = {
   patient: {
     name: 'Lê Thu Thảo', gender: '', dob: '',
     importSource: 'Kính tiếp xúc OrthoK.pdf (phiếu viết tay)',
-    notes: STAMP + ' ' + HW + ' Nguồn: phiếu khám Ortho-K viết tay (mã 2O46). ' +
-      'Ngày sinh đọc tay ~28/07/1988 — cần xác minh. Giới tính chưa rõ trên phiếu.',
+    notes: STAMP + ' ' + HW + ' Nguồn: phiếu khám Ortho-K viết tay (mã 2O46). '
+      + 'Ngày sinh đọc tay ~28/07/1988 — cần xác minh. Giới tính chưa rõ trên phiếu.',
   },
   encounters: [
-    { _id: 'enc-hoso-thao-1', date: '2026-02-26', examType: 'Khám kính tiếp xúc (mới)',
-      conclusion: 'Khám Ortho-K lần đầu — 26/02/2026. KXTĐ (đọc tay): MP -3.00/-0.75 ×85, ' +
-        'MT -3.00/-1.00 ×5. Bản đồ giác mạc: MP K 42.14/42.62, MT K 41.53/42.34. Thử kính Ortho-K. ' + HW },
-    { _id: 'enc-hoso-thao-2', date: '2026-03-12', examType: 'Tái khám kính tiếp xúc (Ortho-K)',
-      conclusion: 'Tái khám Ortho-K — 12/03/2026. KXTĐ tồn dư (đọc tay): MP -0.75/-0.50 ×97, ' +
-        'MT -1.25/-1.25 ×15. Thị lực 20/20. Thuốc: Solidra Plus. ' + HW },
-    { _id: 'enc-hoso-thao-3', date: '2026-03-31', examType: 'Tái khám kính tiếp xúc (Ortho-K)',
-      conclusion: 'Tái khám Ortho-K — 31/03/2026. Thị lực 20/20, định tâm tốt. ' + HW },
+    {
+      _id: 'enc-hoso-thao-1', date: '2026-02-26', examType: 'Khám kính tiếp xúc (mới)',
+      conclusion: 'Khám Ortho-K lần đầu — 26/02/2026.',
+      services: [
+        {
+          serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+          output: {
+            od_sphere: -3.00, od_cyl: -0.75, od_axis: 85,
+            os_sphere: -3.00, os_cyl: -1.00, os_axis: 5, note: HW,
+          },
+        },
+        {
+          serviceCode: 'SVC-TOPO', serviceName: SVC.TOPO,
+          output: {
+            od_k1: 42.14, od_k2: 42.62, os_k1: 41.53, os_k2: 42.34,
+            note: HW + ' Bản đồ giác mạc (Sim K).',
+          },
+        },
+        {
+          serviceCode: 'SVC-CL-FIT-RGP', serviceName: SVC.CLRGP,
+          output: { lens_type: 'Ortho-K', fit_assessment: HW + ' Thử kính Ortho-K lần đầu.' },
+        },
+      ],
+    },
+    {
+      _id: 'enc-hoso-thao-2', date: '2026-03-12', examType: 'Tái khám kính tiếp xúc (Ortho-K)',
+      conclusion: 'Tái khám Ortho-K — 12/03/2026. Thị lực 20/20. Thuốc: Solidra Plus.',
+      services: [
+        {
+          serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+          output: {
+            od_sphere: -0.75, od_cyl: -0.50, od_axis: 97,
+            os_sphere: -1.25, os_cyl: -1.25, os_axis: 15,
+            note: HW + ' Khúc xạ tồn dư sau Ortho-K.',
+          },
+        },
+        {
+          serviceCode: 'SVC-REFRACT', serviceName: SVC.REFRACT,
+          output: { od_va_corrected: '20/20', os_va_corrected: '20/20', note: HW },
+        },
+        {
+          serviceCode: 'SVC-CL-FIT-RGP', serviceName: SVC.CLRGP,
+          output: { lens_type: 'Ortho-K', fit_assessment: HW + ' Theo dõi kính Ortho-K.' },
+        },
+      ],
+    },
+    {
+      _id: 'enc-hoso-thao-3', date: '2026-03-31', examType: 'Tái khám kính tiếp xúc (Ortho-K)',
+      conclusion: 'Tái khám Ortho-K — 31/03/2026. Thị lực 20/20, định tâm kính tốt.',
+      services: [
+        {
+          serviceCode: 'SVC-REFRACT', serviceName: SVC.REFRACT,
+          output: { od_va_corrected: '20/20', os_va_corrected: '20/20', note: HW },
+        },
+        {
+          serviceCode: 'SVC-CL-FIT-RGP', serviceName: SVC.CLRGP,
+          output: { lens_type: 'Ortho-K', centration: 'Tốt', fit_assessment: HW + ' Định tâm kính tốt.' },
+        },
+      ],
+    },
   ],
 }
 
@@ -267,21 +362,68 @@ const dipanh = {
   patient: {
     name: 'Trần Diệp Anh', gender: '', dob: '',
     importSource: 'kiểm soát tiến triển cận thị bằng thuốc_1.pdf (phiếu viết tay)',
-    notes: STAMP + ' ' + HW + ' Nguồn: phiếu theo dõi cận thị viết tay (mã A201–A204). ' +
-      'Sinh tháng 3/2014 (đọc tay ~11–16/03/2014) — cần xác minh. Giới tính chưa rõ.',
+    notes: STAMP + ' ' + HW + ' Nguồn: phiếu theo dõi cận thị viết tay (mã A201–A204). '
+      + 'Sinh tháng 3/2014 (đọc tay ~11–16/03/2014) — cần xác minh. Giới tính chưa rõ.',
   },
   encounters: [
-    { _id: 'enc-hoso-dipanh-1', date: '2024-03-16', examType: 'Khám kiểm soát cận thị',
-      conclusion: 'Phiếu thông tin theo dõi cận thị — 16/03/2024. Cao ~130cm, nặng ~33kg. ' +
-        'Tiền sử: bố cận thị. ' + HW },
-    { _id: 'enc-hoso-dipanh-2', date: '2024-11-24', examType: 'Tái khám kiểm soát cận thị',
-      conclusion: 'Theo dõi cận thị — ~24/11/2024. KXTĐ (đọc tay) cận thị cao: MP ~-8.00/-4.25 ×119, ' +
-        'MT ~-10.25/-2.50 ×122. Trục nhãn cầu (OCT, đọc tay) ~OD 28 / OS 27 mm — SỐ LIỆU NGHI NGỜ, cần đối chiếu. ' + HW },
-    { _id: 'enc-hoso-dipanh-3', date: '2025-10-23', examType: 'Tái khám kiểm soát cận thị',
-      conclusion: 'Theo dõi cận thị — ~23/10/2025. KXTĐ (đọc tay): MP -3.00/-1.75 ×138, MT -0.50/-2.50 ×152. ' +
-        'Trục nhãn cầu (OCT, đọc tay) OD ~25.9 / OS ~23.5 mm. ' + HW },
-    { _id: 'enc-hoso-dipanh-4', date: '2026-03-19', examType: 'Tái khám kiểm soát cận thị',
-      conclusion: 'Theo dõi cận thị — ~19/03/2026. Trục nhãn cầu (OCT, đọc tay) OD ~23.7 / OS ~23.5 mm. ' + HW },
+    {
+      _id: 'enc-hoso-dipanh-1', date: '2024-03-16', examType: 'Khám kiểm soát cận thị',
+      conclusion: 'Khám ban đầu kiểm soát cận thị — 16/03/2024 '
+        + '(cao ~130 cm, nặng ~33 kg; tiền sử bố cận thị).',
+    },
+    {
+      _id: 'enc-hoso-dipanh-2', date: '2024-11-24', examType: 'Tái khám kiểm soát cận thị',
+      conclusion: 'Theo dõi cận thị — ~24/11/2024. Cận thị cao 2 mắt.',
+      services: [
+        {
+          serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+          output: {
+            od_sphere: -8.00, od_cyl: -4.25, od_axis: 119,
+            os_sphere: -10.25, os_cyl: -2.50, os_axis: 122,
+            note: HW + ' Cận thị cao — kiểm tra kỹ giá trị.',
+          },
+        },
+        {
+          serviceCode: 'SVC-BIOMETRY', serviceName: SVC.BIOMETRY,
+          output: {
+            device: 'Optopol Revo (OCT trục)', od_axial_length: 28, os_axial_length: 27,
+            iol_calc_note: HW + ' NGHI NGỜ SAI SỐ — trục nhãn cầu đọc tay ~OD 28 / OS 27 mm '
+              + 'bất thường lớn, BẮT BUỘC đối chiếu bản scan.',
+          },
+        },
+      ],
+    },
+    {
+      _id: 'enc-hoso-dipanh-3', date: '2025-10-23', examType: 'Tái khám kiểm soát cận thị',
+      conclusion: 'Theo dõi cận thị — ~23/10/2025.',
+      services: [
+        {
+          serviceCode: 'SVC-AUTOREF', serviceName: SVC.AUTOREF,
+          output: {
+            od_sphere: -3.00, od_cyl: -1.75, od_axis: 138,
+            os_sphere: -0.50, os_cyl: -2.50, os_axis: 152, note: HW,
+          },
+        },
+        {
+          serviceCode: 'SVC-BIOMETRY', serviceName: SVC.BIOMETRY,
+          output: {
+            device: 'Optopol Revo (OCT trục)', od_axial_length: 25.9, os_axial_length: 23.5,
+            iol_calc_note: HW + ' Trục nhãn cầu OCT, giá trị gần đúng.',
+          },
+        },
+      ],
+    },
+    {
+      _id: 'enc-hoso-dipanh-4', date: '2026-03-19', examType: 'Tái khám kiểm soát cận thị',
+      conclusion: 'Theo dõi cận thị — ~19/03/2026.',
+      services: [{
+        serviceCode: 'SVC-BIOMETRY', serviceName: SVC.BIOMETRY,
+        output: {
+          device: 'Optopol Revo (OCT trục)', od_axial_length: 23.7, os_axial_length: 23.5,
+          iol_calc_note: HW + ' Trục nhãn cầu OCT, giá trị gần đúng.',
+        },
+      }],
+    },
   ],
 }
 
@@ -293,7 +435,6 @@ function buildAll() {
   const encounters = []
   for (const p of SOURCE) {
     const encDates = p.encounters.map(e => e.date).sort()
-    const lastDate = encDates[encDates.length - 1]
     patients.push({
       _id: p._id,
       doc: {
@@ -307,7 +448,7 @@ function buildAll() {
         importBatch: BATCH,
         importSource: p.patient.importSource,
         importedAt: IMPORTED_AT,
-        lastEncounterAt: iso(lastDate),
+        lastEncounterAt: iso(encDates[encDates.length - 1]),
         createdAt: iso(encDates[0]),
         updatedAt: IMPORTED_AT,
       },
@@ -340,7 +481,7 @@ function buildAll() {
           billTotal: 0,
           reviewStatus: 'pending_review',
           importBatch: BATCH,
-          importSource: e.importSource,
+          importSource: e.importSource || p.patient.importSource,
           importedAt: IMPORTED_AT,
           createdAt: iso(e.date),
           updatedAt: IMPORTED_AT,
@@ -356,24 +497,21 @@ function printPreview({ patients, encounters }) {
   for (const p of patients) {
     const d = p.doc
     console.log(`PATIENT  ${p._id}  ${d.name}   [${d.reviewStatus}]`)
-    console.log(`         giới tính: ${d.gender || '(trống — cần bổ sung)'}   ` +
-      `ngày sinh: ${d.dob || '(trống — cần bổ sung)'}`)
-    const encs = encounters.filter(e => e.doc.patientId === p._id)
-    for (const e of encs) {
-      console.log(`  ENCOUNTER  ${e._id}  ${e.doc.studyDate}  "${e.doc.examType}"  [${e.doc.reviewStatus}]`)
-      if (e.doc.conclusion) console.log(`         ↳ ${e.doc.conclusion.slice(0, 96)}…`)
+    console.log(`         giới tính: ${d.gender || '(trống)'}   ngày sinh: ${d.dob || '(trống)'}`)
+    for (const e of encounters.filter(x => x.doc.patientId === p._id)) {
+      console.log(`  ENCOUNTER  ${e._id}  ${e.doc.studyDate}  "${e.doc.examType}"`)
+      console.log(`     KL: ${e.doc.conclusion}`)
       for (const s of e.doc.assignedServices) {
-        console.log(`     • ${s.serviceCode}  ${s.serviceName}`)
-        for (const [k, v] of Object.entries(s.output)) {
-          const val = String(v).length > 90 ? String(v).slice(0, 90) + '…' : v
-          console.log(`         ${k}: ${val}`)
-        }
+        const fields = Object.entries(s.output)
+          .filter(([k]) => !['note', 'iol_calc_note', 'fit_assessment'].includes(k))
+        console.log(`     • ${s.serviceCode} — ${fields.length} trường: `
+          + fields.map(([k, v]) => `${k}=${v}`).join(', '))
       }
     }
     console.log('')
   }
   console.log(`TOTAL: ${patients.length} bệnh nhân, ${encounters.length} lượt khám — tất cả chờ duyệt.`)
-  console.log('Để ghi vào MongoDB Atlas:  railway run node scripts/import-sample-hoso.js\n')
+  console.log('Ghi vào MongoDB Atlas:  railway run node scripts/import-sample-hoso.js\n')
 }
 
 async function main() {
