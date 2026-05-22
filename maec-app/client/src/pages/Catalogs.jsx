@@ -1661,6 +1661,7 @@ function PatientsTable() {
   const [page, setPage] = useState(1)
   const [searchQ, setSearchQ] = useState('')
   const [todayOnly, setTodayOnly] = useState(false)
+  const [reviewFilter, setReviewFilter] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [genderFilter, setGenderFilter] = useState('')
   const [ageMin, setAgeMin] = useState('')
@@ -1679,6 +1680,7 @@ function PatientsTable() {
   const todayStr = new Date().toISOString().slice(0, 10)
   const buildParams = useCallback((pageNum) => {
     const params = { page: pageNum, pageSize: PATIENTS_PAGE_SIZE }
+    if (reviewFilter) params.reviewStatus = 'pending_review'
     if (isSearching) {
       params.q = searchQ.trim()
       return params
@@ -1700,7 +1702,7 @@ function PatientsTable() {
       params.lastTo = todayStr
     }
     return params
-  }, [isSearching, searchQ, genderFilter, ageMin, ageMax, createdFrom, createdTo, lastFrom, lastTo, todayOnly, todayStr])
+  }, [isSearching, searchQ, genderFilter, ageMin, ageMax, createdFrom, createdTo, lastFrom, lastTo, todayOnly, todayStr, reviewFilter])
 
   // Load page 1 whenever the filter set changes — debounced so typing in the
   // search box doesn't fire a request per keystroke.
@@ -1760,6 +1762,11 @@ function PatientsTable() {
           onChange={e => setSearchQ(e.target.value)}
           autoFocus
         />
+        <button onClick={() => setReviewFilter(v => !v)}
+          className={`px-3 py-1.5 text-sm rounded-lg font-medium border transition-colors ${reviewFilter ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+          title="Chỉ hiện hồ sơ nhập khẩu đang chờ duyệt">
+          ⏳ Chờ duyệt
+        </button>
         <div className={`flex items-center gap-2 ${isSearching ? 'opacity-40' : ''}`} title={isSearching ? 'Bộ lọc tạm tắt khi đang tìm kiếm' : undefined}>
           <button onClick={() => setTodayOnly(t => !t)} disabled={isSearching}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium border transition-colors ${todayOnly ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'}`}
@@ -1840,6 +1847,9 @@ function PatientsTable() {
                 <td className="px-4 py-2.5 font-medium text-gray-900">
                   {p.name || '-'}
                   <GenderIcon gender={p.gender} />
+                  {p.reviewStatus === 'pending_review' && (
+                    <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 align-middle">⏳ Chờ duyệt</span>
+                  )}
                 </td>
                 <td className="px-4 py-2.5 text-gray-600">
                   {p.phone || (p.guardianPhone
@@ -1885,6 +1895,7 @@ function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
   const [site, setSite] = useState(initialSite)
   const [encounters, setEncounters] = useState(null)
   const [checkingIn, setCheckingIn] = useState(false)
+  const [approving, setApproving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -1921,6 +1932,20 @@ function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
     if (onSaved) onSaved()
   }
 
+  // Approve an imported (pending_review) patient — also flips its still-pending
+  // imported encounters to 'approved' server-side.
+  const approve = async () => {
+    setApproving(true)
+    try {
+      const r = await api.post(`/registration/patients/${encodeURIComponent(patient._id)}/approve`)
+      if (r.data?.patient) setPatient(r.data.patient)
+      if (onSaved) onSaved()
+    } catch (e) {
+      alert(e.response?.data?.error || 'Không duyệt được hồ sơ')
+    }
+    setApproving(false)
+  }
+
   const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
   const fmtDate = (iso) => iso ? iso.slice(0, 10) : '—'
   const fmtTime = (iso) => {
@@ -1945,6 +1970,12 @@ function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-gray-900 truncate">{patient.name || '—'}</div>
               <div className="text-xs text-gray-500 font-mono mt-0.5 whitespace-nowrap">{patient.patientId || patient._id}</div>
+              {patient.reviewStatus === 'pending_review' && (
+                <div className="text-[11px] text-amber-700 mt-1">⏳ Hồ sơ nhập khẩu — kiểm tra và sửa thông tin, rồi bấm Duyệt hồ sơ.</div>
+              )}
+              {patient.reviewStatus === 'approved' && patient.importBatch && (
+                <div className="text-[11px] text-emerald-700 mt-1">✓ Đã duyệt{patient.reviewedBy ? ` bởi ${patient.reviewedBy}` : ''}.</div>
+              )}
             </div>
             <button onClick={onClose} className="sm:hidden text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0" aria-label="Đóng">×</button>
           </div>
@@ -1954,6 +1985,12 @@ function PatientDetailDrawer({ patient: initialPatient, onClose, onSaved }) {
               title="Cơ sở thực hiện lượt khám">
               {SITES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+            {patient.reviewStatus === 'pending_review' && (
+              <button onClick={approve} disabled={approving}
+                className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 whitespace-nowrap">
+                {approving ? 'Đang duyệt…' : '✓ Duyệt hồ sơ'}
+              </button>
+            )}
             <button onClick={checkIn} disabled={checkingIn}
               className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap">
               {checkingIn ? 'Đang tiếp đón…' : '+ Tiếp đón'}

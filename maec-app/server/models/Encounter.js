@@ -168,6 +168,17 @@ const encounterSchema = new mongoose.Schema({
   discountPercent: { type: Number, default: 0 },
   discountReason: String,
 
+  // ─── Imported-record review workflow ──────────────────────────────────
+  // Encounters created by a bulk import land as 'pending_review' and are
+  // approved together with their patient. Separate from `status` (the
+  // clinical workflow state) — this only tracks import vetting.
+  reviewStatus: { type: String, enum: ['', 'pending_review', 'approved'], default: '' },
+  importBatch: String,
+  importSource: String,
+  importedAt: String,
+  reviewedBy: String,
+  reviewedAt: String,
+
   createdAt: String,
   updatedAt: String,
 }, { _id: false })

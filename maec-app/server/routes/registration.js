@@ -112,6 +112,27 @@ router.put('/patients/:id', requireAuth, async (req, res) => {
   }
 })
 
+// POST /his/patients/:id/approve — approve a pending_review (imported) patient.
+// Flips the patient and all of its still-pending imported encounters to
+// 'approved'. Used by the Bệnh nhân catalog's review workflow.
+router.post('/patients/:id/approve', requireAuth, async (req, res) => {
+  try {
+    const patient = await Patient.findById(req.params.id).lean()
+    if (!patient) return res.status(404).json({ error: 'Not found' })
+    const ts = now()
+    const stamp = { reviewStatus: 'approved', reviewedBy: req.user.username, reviewedAt: ts, updatedAt: ts }
+    await Patient.updateOne({ _id: patient._id }, { $set: stamp })
+    const enc = await Encounter.updateMany(
+      { patientId: patient.patientId || patient._id, reviewStatus: 'pending_review' },
+      { $set: stamp }
+    )
+    const updated = await Patient.findById(patient._id).lean()
+    res.json({ patient: updated, encountersApproved: enc.modifiedCount })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ─── APPOINTMENTS — removed 2026-05-02 ────────────────────────────────────────
 // The /his/appointments GET/POST/PUT/DELETE block lived here (mounted at
 // /api/registration/appointments). It carried radiology-era validation

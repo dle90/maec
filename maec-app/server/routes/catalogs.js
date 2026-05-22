@@ -381,6 +381,8 @@ router.get('/patients', requireAuth, async (req, res) => {
     const pageSize = Math.min(500, Math.max(1, parseInt(req.query.pageSize) || 200))
 
     const filter = {}
+    // Import-review filter — orthogonal to q/demographic filters, applies always.
+    if (req.query.reviewStatus) filter.reviewStatus = req.query.reviewStatus
     if (q && q.trim()) {
       // Escape regex specials — patient queries often include "(", "+", etc.
       const safe = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

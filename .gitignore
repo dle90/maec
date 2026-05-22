@@ -7,3 +7,8 @@ dist/
 .playwright-mcp/
 .claude/
 tmp-playwright/
+pw-scratch/
+
+# Sample patient data — real medical records, must never be committed (privacy)
+*.zip
+_sample_import/

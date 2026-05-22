@@ -26,6 +26,16 @@ const patientSchema = new mongoose.Schema({
   referralId: String,
   referralName: String,
   notes: String,
+  // ─── Imported-record review workflow ──────────────────────────────────
+  // Rows created by a bulk import (e.g. scripts/import-sample-hoso.js) land
+  // as 'pending_review'. An admin reviews + edits, then approves — flipping
+  // this to 'approved'. Empty string = a normal record needing no review.
+  reviewStatus: { type: String, enum: ['', 'pending_review', 'approved'], default: '' },
+  importBatch: String,    // e.g. 'hoso-pkminhanh-2026-05-22'
+  importSource: String,   // provenance — which file/device the row came from
+  importedAt: String,
+  reviewedBy: String,
+  reviewedAt: String,
   // Denormalized timestamp of the patient's most recent Encounter — updated by
   // the check-in flow. Powers the "last encounter" filter on the Bệnh Nhân
   // catalog without needing an aggregation per row.
@@ -49,5 +59,6 @@ patientSchema.index({ dob: 1 })
 patientSchema.index({ gender: 1 })
 patientSchema.index({ lastEncounterAt: -1 })
 patientSchema.index({ registeredSite: 1 })
+patientSchema.index({ reviewStatus: 1 })
 
 module.exports = mongoose.model('Patient', patientSchema)
