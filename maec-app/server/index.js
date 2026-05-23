@@ -29,6 +29,7 @@ const hrRouter = require('./routes/hr')
 const reportsRouter = require('./routes/reports')
 const enhancementsRouter = require('./routes/enhancements')
 const attachmentsRouter = require('./routes/attachments')
+const { router: equipmentRouter, attRouter: equipmentAttRouter } = require('./routes/equipment')
 const { requireAdmin } = require('./middleware/auth')
 const { auditMiddleware } = require('./middleware/audit')
 
@@ -92,6 +93,10 @@ app.use('/api', enhancementsRouter)
 
 // Encounter file attachments (PDF/images → Cloudflare R2)
 app.use('/api', attachmentsRouter)
+
+// Equipment: CRUD + per-equipment contract/manual attachments
+app.use('/api/equipment', equipmentRouter)
+app.use('/api/equipment-attachments', equipmentAttRouter)
 
 // Serve React build in production
 const clientDist = path.join(__dirname, '../client/dist')

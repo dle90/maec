@@ -11,6 +11,7 @@ const PAGE_LINKS = [
   { label: 'Đăng ký bệnh nhân',         link: '/registration' },
   { label: 'Phiếu thu (Billing)',      link: '/billing' },
   { label: 'Quản lý kho',              link: '/inventory' },
+  { label: 'Thiết bị',                 link: '/equipment' },
   { label: 'Khuyến mãi',               link: '/catalogs/promotions' },
   { label: 'Bệnh nhân (catalog)',      link: '/catalogs/patients' },
   { label: 'Bác sĩ giới thiệu',        link: '/catalogs/referral-doctors' },

@@ -59,6 +59,7 @@ const NAV = [
             group: 'Vận hành',
             items: [
               { path: '/inventory', label: 'Quản lý kho', icon: '📦', workflowOnly: true },
+              { path: '/equipment', label: 'Thiết bị',    icon: '🔬', workflowOnly: true },
             ]
           },
           { catalogTree: true, group: 'Danh mục' },

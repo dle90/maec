@@ -16,6 +16,7 @@ import KPISales from './pages/KPISales'
 import Marketing from './pages/Marketing'
 import Billing from './pages/Billing'
 import Inventory from './pages/Inventory'
+import Equipment from './pages/Equipment'
 import Catalogs from './pages/Catalogs'
 import BookingForm from './pages/BookingForm'
 import PatientLogin from './pages/PatientLogin'
@@ -59,6 +60,7 @@ function AuthenticatedRoutes() {
             {isWorkflowUser && <Route path="/billing" element={<Billing />} />}
 
             {isWorkflowUser && <Route path="/inventory" element={<Inventory />} />}
+            {isWorkflowUser && <Route path="/equipment" element={<Equipment />} />}
             {isWorkflowUser && <Route path="/catalogs" element={<Catalogs />} />}
             {isWorkflowUser && <Route path="/catalogs/:catalogKey" element={<Catalogs />} />}
             {isWorkflowUser && <Route path="/reports" element={<Reports />} />}

@@ -13,3 +13,6 @@ pw-scratch/
 *.zip
 _sample_import/
 patient pdf/
+
+# Equipment purchase docs — vendor contracts + pricing (commercial-sensitive)
+equipments/
