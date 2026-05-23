@@ -311,15 +311,22 @@ The Đăng ký sidebar entry was removed 2026-05-02. Bệnh nhân now hosts the 
 
 The legacy radiology dashboards ([TodayDashboard.jsx](maec-app/client/src/pages/TodayDashboard.jsx), [DashboardClinical.jsx](maec-app/client/src/pages/DashboardClinical.jsx), [DashboardOps.jsx](maec-app/client/src/pages/DashboardOps.jsx)) still exist under Khác → Inactive — salvage patterns from them when adding the inventory / clinical-queue widgets.
 
-## Devices module — deferred (split out of Service 2026-05-02)
+## Equipment module — shipped 2026-05-23
 
-`Service.station`, `Service.role`, `Service.devices` were dropped from the [Service](maec-app/server/models/Service.js) schema and the [Catalogs.jsx](maec-app/client/src/pages/Catalogs.jsx) services config on 2026-05-02 (user: "we don't need station, role, devices here"). They were design notes baked into the catalog, never queried, never edited in production.
+The "Devices module" deferred 2026-05-02 (when `Service.station/role/devices` were ripped out as never-queried catalog clutter) landed as **Equipment** — sidebar under Khác → Vận hành → 🔬 Thiết bị (`/equipment`). Code: backend models + route, frontend page + attachments component, all wired in `1f8ac30`.
 
-When the Devices module is built, model it as its own collection (not nested on Service). Likely shape:
+- **Model**: [Equipment](maec-app/server/models/Equipment.js) — flat schema, fields grouped as identity / deployment / purchase. Schema is loose by design (vendor docs vary in what they record). `siteId` is `'TK'` (Trung Kính) / `'KG'` (Kim Giang) / `''` (unassigned). `status`: `active / commissioning / repair / retired`. `serviceCodes: [String]` links a device to the Service codes it performs (denormalised — no join collection yet; reads from CLAUDE.md device-map table when there's ambiguity).
+- **Attachments**: [EquipmentAttachment](maec-app/server/models/EquipmentAttachment.js) mirrors EncounterAttachment + adds `kind` chip (`contract / quote / manual / service / calibration / other`). Same R2 storage path (`equipment/<id>/<attId>/<filename>`).
+- **Routes**: [routes/equipment.js](maec-app/server/routes/equipment.js) → `/api/equipment` (CRUD) + `/api/equipment/:id/attachments` (upload/list) + `/api/equipment-attachments/:id/url` (presigned-GET) + `/api/equipment-attachments/:id` (DELETE).
+- **UI**: [pages/Equipment.jsx](maec-app/client/src/pages/Equipment.jsx) — filter bar + table + inline-edit drawer with KPI tiles. Admin/giamdoc edit; other roles see read-only. "+ Thiết bị mới" auto-suggests next `TB-NNN` code.
+- **Seed**: [scripts/seed-equipment.js](maec-app/server/scripts/seed-equipment.js) — 16 devices in 2026-05-23 batch: 11 new (Kim Giang, `commissioning`) from 3 vendor docs + 5 existing (Trung Kính, `active`) from CLAUDE.md device map. Total tracked: ~1.185B VND.
+- **Contracts**: [scripts/attach-equipment-contracts.js](maec-app/server/scripts/attach-equipment-contracts.js) uploaded 11 R2 attachments (HD2636/NH-MA docx → TB-001..007, Medmont Pro .doc → TB-008, IKACHI quote pdf → TB-009..011). Deterministic `ATT-eq-<sha8>` ids → idempotent.
 
-- **`Device`** — physical hardware unit. Fields: `code`, `name`, `model`, `vendor`, `siteId` (Trung Kính / Kim Giang), `category` (auto-ref / slit-lamp / OCT / topo / fundus / biometer / etc.), `serialNumber`, `licenseStatus` (e.g. Optopol Revo DICOM-module licensed?), `status` (active / repair / retired), `lastServiceDate`.
-- **`Service ↔ Device` link** — many-to-many. A service can be performed on multiple device types (e.g. SVC-IOP runs on iCare or Goldmann); a device can serve multiple services (e.g. Optopol Revo covers OCT-ANT + OCT-POST + OCT-FULL + biometry on some configs). Probably a `ServiceDeviceCompatibility` join collection or an array of device-category codes on Service.
-- **Station / role** — these were *workflow* metadata, not device metadata. They probably belong on the Encounter form module config (which station each service is performed at) and on the user/role permission map (who can perform it), not on Device.
+### Still deferred (intentionally simple shipment)
+- **`Service ↔ Device` join collection**: today `Equipment.serviceCodes[]` is a free-form array; no compatibility matrix. Build when reports need it (e.g. "which device should perform SVC-FUNDUS at this site?" answered today by reading CLAUDE.md, not the DB).
+- **Service station / role on Equipment**: kept out — they're *workflow* metadata that should live on the Encounter form module config + user permissions map, not the device.
+- **Existing equipment paperwork**: TB-012..016 (DRS Plus, Optopol Revo, existing Medmont, AB800, IDRA) have `notes` flagging that purchase fields are blank; upload their contracts via the UI when found.
+- **Service-log sub-doc on Equipment**: schema has `lastServiceDate` / `nextServiceDate` flat fields. When recurring maintenance is real, replace with a `serviceLog: [{date, vendor, cost, note, attachmentId}]` sub-array.
 
 ### Source-of-truth snapshot (was in seed-maec-catalog.js until 2026-05-02)
 
@@ -423,11 +430,11 @@ Plan:
 
 ## Encounter attachments + sample import + dd/mm/yyyy — shipped 2026-05-22
 
-### Encounter file attachments — Cloudflare R2 (`f944814`)
+### Encounter file attachments — Cloudflare R2 (`f944814`, provisioned 2026-05-23)
 Per-encounter PDF/image upload. Bytes in Cloudflare R2 (S3-compatible), metadata in a new collection.
-- Backend: [lib/r2.js](maec-app/server/lib/r2.js), [EncounterAttachment](maec-app/server/models/EncounterAttachment.js) model, [routes/attachments.js](maec-app/server/routes/attachments.js) — upload / list / presigned-URL view / delete, mounted at `/api`. New deps: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `multer`.
+- Backend: [lib/r2.js](maec-app/server/lib/r2.js), [EncounterAttachment](maec-app/server/models/EncounterAttachment.js) model, [routes/attachments.js](maec-app/server/routes/attachments.js) — upload / list / presigned-URL view / delete, mounted at `/api`. Deps: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, `multer`.
 - Frontend: [EncounterAttachments.jsx](maec-app/client/src/components/EncounterAttachments.jsx) — "Tài liệu / Hồ sơ" panel in the Khám encounter pane.
-- **Pending (user action): R2 provisioning.** Create the bucket + R2 API token in Cloudflare, set `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET` in Railway. Until set, uploads return a clean 503; nothing else is affected.
+- **R2 provisioned 2026-05-23**: bucket `maec-attachments` (APAC), API token scoped Object Read & Write to that bucket. `R2_*` env vars in Railway + local [.env](maec-app/server/.env). Verify with [scripts/smoke-r2.js](maec-app/server/scripts/smoke-r2.js) (`PUT` → presigned `GET` → `DELETE` roundtrip).
 - Still deferred: the **watched-folder ingestor** (auto-attach from Medmont / AB800 / IDRA export folders) — this shipped the manual-upload + storage half only.
 
 ### Sample patient import — review-gated (`61bfb5e`, re-parsed in `f944814`)
@@ -441,3 +448,29 @@ The 10 "Hồ sơ PK Minh Anh" sample PDFs → 7 patients / 19 encounters via [sc
 
 ### dd/mm/yyyy date display
 Shared [client/src/lib/date.js](maec-app/client/src/lib/date.js) (`formatDate` / `formatDateTime`). 11 screens that rendered raw `YYYY-MM-DD` now show `dd/mm/yyyy`; the rest already did via `vi-VN` locale. Stored values + `<input type="date">` unchanged.
+
+## Hồ sơ PK Minh Anh — PDFs attached to encounters (2026-05-23, `d24bd4f`)
+
+Source: the same `_sample_import` / "Hồ sơ PK Minh Anh" 10-file batch parsed for the 2026-05-22 patient import. With R2 provisioned, [scripts/attach-sample-pdfs.js](maec-app/server/scripts/attach-sample-pdfs.js) wired each PDF to its corresponding encounter — 21 attachments across 19 encounters. Handwritten multi-visit PDFs (`trong.pdf`, `tung.pdf`, `thao.pdf`, `dipanh.pdf`) split per-visit with `pdf-lib` before upload; digital device PDFs (AB800, OCT REVO, Medmont) uploaded whole.
+
+Deterministic `ATT-hoso-<sha8>` ids — re-running the script upserts cleanly, never duplicates.
+
+### Orphan paper visits — 4 found, bundled with nearest existing encounter
+The handwritten paper records contain visit pages the 2026-05-22 import script didn't pick up. They're attached to the chronologically-nearest existing encounter (filename label lists all dates so the gap is visible), but **no Encounter row was created** for them — pending review/approval pass:
+
+| Patient | Orphan visit date | Bundled with encounter |
+|---|---|---|
+| Nguyễn Đình Tùng | 28/11/2023 | enc-hoso-tung-3 (11/1/2024) |
+| Trần Diệp Anh | 28/9/2024 | enc-hoso-dipanh-2 (24/11/2024) |
+| Trần Diệp Anh | 21/2/2025 | enc-hoso-dipanh-2 (24/11/2024) |
+| Lê Thu Thảo | 12/5/2026 | enc-hoso-thao-3 (31/3/2026) |
+
+If the review pass decides any orphan needs to be a real visit, create the encounter then move the relevant pages by re-splitting via the script.
+
+## `patient pdf/` and `equipments/` are gitignored (2026-05-23)
+
+Real clinical scans + vendor commercial contracts must never be committed. Drops into either folder:
+- `patient pdf/` — encounter scans / device printouts. Used by [attach-sample-pdfs.js](maec-app/server/scripts/attach-sample-pdfs.js).
+- `equipments/` — vendor contracts + price quotes. Used by [attach-equipment-contracts.js](maec-app/server/scripts/attach-equipment-contracts.js).
+
+When `git status` shows new files inside either, that's a bug in `.gitignore`, not a thing to commit.
