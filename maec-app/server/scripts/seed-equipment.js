@@ -1,14 +1,16 @@
 /**
  * Seed the Equipment collection with:
- *  - 10 new units from 3 vendor docs (Nam Hưng HD2636, Y Tế Mỹ Medmont Pro,
+ *  - 11 new units from 3 vendor docs (Nam Hưng HD2636, Y Tế Mỹ Medmont Pro,
  *    IKACHI IKAChart quote) → Kim Giang.
- *  - 5 already-owned units from CLAUDE.md's imaging device map → Trung Kính
- *    (purchase fields blank, status='active', notes flag for review).
+ *  - 5 already-owned units from CLAUDE.md's imaging device map → Trung Kính.
+ *  - 4 already-owned units at Kim Giang (Nidek OCT, Eaglet ESP, Syseye
+ *    biometer, handheld tonometer) — confirmed 2026-05-27, paperwork TBD.
+ *  Existing units: purchase fields blank, status='active', notes flag for review.
  *
  *   node scripts/seed-equipment.js --dry-run
  *   railway run node scripts/seed-equipment.js
  *
- * Idempotent — fixed _ids (TB-001..TB-015), re-run upserts.
+ * Idempotent — fixed _ids (TB-001..TB-020), re-run upserts.
  */
 const DRY = process.argv.includes('--dry-run')
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') })
@@ -164,6 +166,7 @@ const newUnits = [
 // ── Existing already-owned units — site assignments inferred from CLAUDE.md ──
 // All purchase fields blank — fill in when paperwork surfaces.
 const existingUnits = [
+  // TK existing (from CLAUDE.md imaging device map)
   {
     code: 'TB-012', name: 'Máy chụp đáy mắt DRS Plus',
     nameEn: 'Fundus camera (DRS Plus)',
@@ -213,6 +216,48 @@ const existingUnits = [
     status: 'active',
     serviceCodes: ['SVC-DRYEYE'],
     notes: NOTE_EXISTING + ' Xuất PDF + structured measurements.',
+  },
+
+  // KG existing (added 2026-05-27 — confirmed by clinic, paperwork TBD)
+  {
+    code: 'TB-017', name: 'OCT Nidek',
+    nameEn: 'OCT (Nidek)',
+    category: 'oct', model: '',
+    manufacturer: 'Nidek Co., Ltd.', originCountry: 'Nhật Bản',
+    siteId: 'KG', location: '',
+    status: 'active',
+    serviceCodes: ['SVC-OCT-ANT', 'SVC-OCT-POST', 'SVC-OCT-FULL'],
+    notes: NOTE_EXISTING + ' Cần xác nhận model + tình trạng module DICOM.',
+  },
+  {
+    code: 'TB-018', name: 'Máy đo bản đồ giác mạc ESP Eaglet',
+    nameEn: 'Eye Surface Profiler (Eaglet ESP)',
+    category: 'topographer', model: 'ESP (Eye Surface Profiler)',
+    manufacturer: 'Eaglet Eye B.V.', originCountry: 'Hà Lan',
+    siteId: 'KG', location: '',
+    status: 'active',
+    serviceCodes: ['SVC-TOPO'],
+    notes: NOTE_EXISTING + ' Dùng cho fitting kính tiếp xúc (đặc biệt scleral).',
+  },
+  {
+    code: 'TB-019', name: 'Máy đo sinh trắc học nhãn cầu Syseye',
+    nameEn: 'Ocular biometer (Syseye)',
+    category: 'biometer', model: '',
+    manufacturer: 'Syseye', originCountry: '',
+    siteId: 'KG', location: '',
+    status: 'active',
+    serviceCodes: ['SVC-BIOMETRY'],
+    notes: NOTE_EXISTING + ' Cần xác nhận model + tuỳ chọn export cho IOL workflow.',
+  },
+  {
+    code: 'TB-020', name: 'Nhãn áp kế cầm tay',
+    nameEn: 'Handheld tonometer',
+    category: 'tonometer', model: '',
+    manufacturer: '', originCountry: '',
+    siteId: 'KG', location: '',
+    status: 'active',
+    serviceCodes: ['SVC-IOP'],
+    notes: NOTE_EXISTING + ' Cần xác nhận hãng/model (iCare ic100/ic200? Tonopen?).',
   },
 ]
 
