@@ -303,8 +303,9 @@
     <g class="struct" data-svc="optical"
        data-title="Cornea" data-vn="Giác mạc"
        data-body="Clear dome. The angle it forms with the iris root is the drainage angle — gonioscopy grades it open vs closed.">
-      <path d="M170,120 Q470,40 770,120 Q740,150 470,120 Q200,150 170,120 Z"
-            fill="var(--optical)" opacity="0.18" stroke="var(--optical)" stroke-width="2"/>
+      <path d="M170,150 Q470,55 770,150"
+            fill="none" stroke="var(--optical)" stroke-width="14" opacity="0.45" stroke-linecap="round"/>
+      <text x="470" y="48" class="lbl key" fill="var(--optical)" text-anchor="middle">Cornea · Giác mạc</text>
     </g>
 
     <!-- Anterior chamber fluid -->
@@ -364,7 +365,7 @@
        data-title="Schlemm's canal" data-vn="Ống Schlemm"
        data-body="Circular drain just outside the trabecular meshwork; empties into episcleral veins. The final common exit of the conventional outflow pathway.">
       <circle cx="765" cy="135" r="7" fill="none" stroke="var(--pressure)" stroke-width="3"/>
-      <text x="782" y="139" class="lbl">Schlemm's canal → episcleral veins</text>
+      <text x="782" y="139" class="lbl">Schlemm's canal</text>
       <text x="782" y="153" class="lbl vn">Ống Schlemm</text>
     </g>
 
@@ -372,8 +373,8 @@
     <path d="M225,330 Q330,300 410,285" fill="none" stroke="var(--pressure)" stroke-width="2.5" marker-end="url(#flow)"/>
     <path d="M470,300 Q470,275 470,255" fill="none" stroke="var(--pressure)" stroke-width="2.5" marker-end="url(#flow)"/>
     <path d="M490,250 Q600,215 700,175" fill="none" stroke="var(--pressure)" stroke-width="2.5" marker-end="url(#flow)"/>
-    <text x="430" y="430" class="lbl" >Flow: ciliary body → posterior chamber → pupil → anterior chamber → angle → trabecular meshwork → Schlemm → veins</text>
-    <text x="430" y="448" class="lbl vn">Thủy dịch: thể mi → hậu phòng → đồng tử → tiền phòng → góc → vùng bè → ống Schlemm</text>
+    <text x="460" y="432" class="lbl key" fill="var(--pressure)" text-anchor="middle">Aqueous flow: ciliary body → posterior chamber → pupil → anterior chamber → angle → trabecular meshwork → Schlemm</text>
+    <text x="460" y="450" class="lbl vn" text-anchor="middle">Thủy dịch: thể mi → hậu phòng → đồng tử → tiền phòng → góc → vùng bè → ống Schlemm</text>
   </svg>
   <p class="caption">One circuit, two failure modes:
     <strong>open-angle</strong> (the meshwork sieve clogs — slow, silent) and
@@ -519,7 +520,7 @@
       <!-- blind spot marker -->
       <line x1="250" y1="280" x2="250" y2="60" stroke="#9ca3af" stroke-dasharray="4 3"/>
       <circle cx="250" cy="277" r="5" fill="#fff" stroke="var(--transport)" stroke-width="2"/>
-      <text x="256" y="74" class="lbl">optic disc — blind spot (no receptors)</text>
+      <text x="244" y="74" class="lbl" text-anchor="end">optic disc — blind spot</text>
     </g>
   </svg>
   <p class="caption">Two clinical anchors: the <strong>foveal avascular zone</strong>
@@ -745,7 +746,7 @@
       <g class="struct" data-svc="coordination" data-title="Lateral rectus (CN VI)" data-vn="Cơ thẳng ngoài"
          data-body="Abducts (eye out). CN VI — abducens. Sixth-nerve palsy = eye can't turn out, esotropia, horizontal diplopia worse at distance.">
         <rect x="-30" y="188" width="120" height="24" fill="#fca5a5"/>
-        <text x="-34" y="204" class="lbl" text-anchor="end">Lateral rectus · VI</text>
+        <text x="-30" y="238" class="lbl">Lateral rectus · VI</text>
       </g>
       <g class="struct" data-svc="coordination" data-title="Superior rectus (CN III)" data-vn="Cơ thẳng trên"
          data-body="Primary elevator in abduction. CN III. Tested with eye turned OUT and up.">
