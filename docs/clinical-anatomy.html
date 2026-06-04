@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAEC — Clinical Anatomy Reference</title>
+<!--
+  Self-contained visual anatomy reference for Minh Anh Eye Clinic (MAEC).
+  No external CSS / fonts / images / network. Inline SVG + inline CSS +
+  vanilla JS only. Opens by double-click.
+
+  Companion docs:
+    docs/clinical-primer.md   — the hub (medicine the equipment serves)
+    docs/eye-exam-primer.md   — equipment + jargon side
+
+  Schematic, not medical-illustration realism. Relationships are correct;
+  proportions are approximate. Anything uncertain is flagged [CHECK] inline
+  for a clinical reviewer (AAO BCSC / AAO PPP).
+-->
+<style>
+  :root{
+    --navy:#1e3a5f;
+    --ink:#1f2937;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --bg:#f9fafb;
+    /* 9-service color system — must match clinical-primer.md + plan */
+    --optical:#2563eb;
+    --sensor:#7c3aed;
+    --transport:#4338ca;
+    --coordination:#0d9488;
+    --surface:#0891b2;
+    --pressure:#ea580c;
+    --vascular:#dc2626;
+    --immune:#16a34a;
+    --autonomic:#ca8a04;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+      Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.55;
+  }
+  header.brand{
+    background:var(--navy);color:#fff;padding:22px 28px;
+  }
+  header.brand h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}
+  header.brand .vn{margin:2px 0 0;font-size:14px;color:#cdd9e8}
+  header.brand .sub{margin:10px 0 0;font-size:13px;color:#9fb3cc;max-width:60ch}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+
+  nav.toc{
+    position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--line);
+    padding:10px 20px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04)
+  }
+  nav.toc a{color:var(--navy);text-decoration:none;white-space:nowrap}
+  nav.toc a:hover{text-decoration:underline}
+
+  section{
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:22px 24px;margin:22px 0;box-shadow:0 1px 3px rgba(0,0,0,.05)
+  }
+  section h2{margin:0 0 4px;font-size:19px;color:var(--navy)}
+  section h2 .num{color:var(--muted);font-weight:600;font-size:15px;margin-right:8px}
+  section .lead{margin:0 0 16px;color:var(--muted);font-size:14px;max-width:78ch}
+  .diagram{width:100%;height:auto;display:block;border:1px solid var(--line);
+    border-radius:8px;background:#fff}
+  .caption{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .check{color:#b45309;font-weight:600}
+
+  /* service legend */
+  .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .svc{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;
+    transition:transform .08s ease, box-shadow .08s ease;background:#fff}
+  .svc:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+  .svc .dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;
+    vertical-align:middle}
+  .svc .name{font-weight:700;font-size:14px}
+  .svc .plane{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .svc .desc{font-size:12.5px;color:var(--ink);margin-top:6px;display:none}
+  .svc.open .desc{display:block}
+
+  /* SVG interactivity */
+  .struct{cursor:pointer;transition:opacity .12s ease, filter .12s ease}
+  .struct.dim{opacity:.28}
+  .struct.hot{filter:drop-shadow(0 0 4px rgba(0,0,0,.45))}
+  .lbl{font-size:12px;fill:var(--ink)}
+  .lbl.vn{fill:var(--muted);font-size:10.5px}
+  .lbl.key{font-weight:700}
+  .leader{stroke:#9ca3af;stroke-width:1;fill:none}
+  .hint{cursor:pointer}
+  .hint:hover .lbl{fill:var(--navy);font-weight:700}
+
+  /* detail card */
+  #detail{
+    position:fixed;right:18px;bottom:18px;width:340px;max-width:calc(100vw - 36px);
+    background:#fff;border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.18);padding:16px 18px;display:none;z-index:80
+  }
+  #detail.show{display:block}
+  #detail .dtitle{font-weight:700;font-size:15px;color:var(--navy)}
+  #detail .dvn{font-size:12.5px;color:var(--muted);margin-top:1px}
+  #detail .dsvc{display:inline-block;font-size:11px;font-weight:700;color:#fff;
+    border-radius:999px;padding:2px 9px;margin-top:8px}
+  #detail .dbody{font-size:13px;margin-top:10px}
+  #detail .dclose{position:absolute;top:8px;right:10px;border:none;background:none;
+    font-size:18px;color:var(--muted);cursor:pointer;line-height:1}
+
+  table.vn{width:100%;border-collapse:collapse;font-size:13px}
+  table.vn th,table.vn td{border:1px solid var(--line);padding:7px 9px;text-align:left;
+    vertical-align:top}
+  table.vn th{background:var(--bg);color:var(--navy);font-size:12px;
+    text-transform:uppercase;letter-spacing:.4px}
+  table.vn td .sd{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+
+  footer.docfoot{padding:24px 4px;color:var(--muted);font-size:13px}
+  footer.docfoot a{color:var(--navy)}
+  .pill{display:inline-block;font-size:11px;font-weight:700;color:#fff;border-radius:999px;
+    padding:2px 8px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<header class="brand">
+  <h1>Minh Anh Eye Clinic — Clinical Anatomy Reference</h1>
+  <p class="vn">Phòng khám Mắt Minh Anh · Giải phẫu nhãn khoa minh họa</p>
+  <p class="sub">Visual companion to <code>clinical-primer.md</code>. Eight schematic
+    diagrams, color-coded by the 9-service architecture. Hover a label to highlight
+    its structure; click a structure for a detail card with the Vietnamese gloss
+    and which service it belongs to.</p>
+</header>
+
+<nav class="toc">
+  <a href="#services">0 · Services</a>
+  <a href="#sagittal">1 · Eye cross-section</a>
+  <a href="#anterior">2 · Aqueous flow</a>
+  <a href="#retlayers">3 · Retinal layers</a>
+  <a href="#macula">4 · Macula</a>
+  <a href="#vascular">5 · Vascular trees</a>
+  <a href="#pathway">6 · Visual pathway</a>
+  <a href="#eom">7 · Eye muscles</a>
+  <a href="#nerves">8 · Cranial nerves</a>
+  <a href="#vntable">9 · VN-EN table</a>
+</nav>
+
+<div class="wrap">
+
+<!-- ═══ SECTION 0 — SERVICES LEGEND ═══ -->
+<section id="services">
+  <h2><span class="num">0</span>The 9 services — color legend</h2>
+  <p class="lead">The eye decomposed by <em>which job</em> each part does, not by
+    anatomical chapter. Every disease drops into one (rarely two) of these. The same
+    color is reused in every diagram below and in the markdown docs, so you build
+    visual recognition. Click a card to expand.</p>
+  <div class="legend" id="legend">
+    <!-- cards injected by JS from SERVICES -->
+  </div>
+  <p class="caption">Two planes carry the signal (data plane: optical → sensor →
+    transport, plus coordination across both eyes); five support services keep that
+    signal alive. Shared hardware — the uvea (iris + ciliary body + choroid) — means
+    services aren't fully independent, which is why compound diseases like
+    neovascular glaucoma exist.</p>
+</section>
+
+<!-- ═══ SECTION 1 — SAGITTAL CROSS-SECTION ═══ -->
+<section id="sagittal">
+  <h2><span class="num">1</span>Eye — horizontal cross-section</h2>
+  <p class="lead">The canonical cutaway. Light enters from the left (cornea) and
+    lands on the retina at the back. Three concentric walls: fibrous (cornea + sclera),
+    vascular (the uvea = iris + ciliary body + choroid), neural (retina). Tinted by
+    service.</p>
+  <svg class="diagram" viewBox="0 0 920 540" role="img" aria-label="Eye sagittal cross-section">
+    <defs>
+      <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 Z" fill="#374151"/>
+      </marker>
+    </defs>
+
+    <!-- Sclera shell (fibrous outer) -->
+    <g class="struct" data-svc="surface"
+       data-title="Sclera" data-vn="Củng mạc"
+       data-body="The tough white fibrous shell — structural integrity of the globe. Continuous with the cornea at the limbus.">
+      <path d="M250,60 A 230 230 0 1 0 250 480 L250 470 A 220 220 0 1 1 250 70 Z"
+            fill="#f3f4f6" stroke="#9ca3af" stroke-width="2"/>
+    </g>
+
+    <!-- Choroid (vascular layer, part of uvea) -->
+    <g class="struct" data-svc="vascular"
+       data-title="Choroid" data-vn="Hắc mạc / Màng mạch"
+       data-body="The vascular middle layer (part of the uvea). Supplies the OUTER retina — photoreceptors + RPE. A separate blood tree from the central retinal artery.">
+      <path d="M255,72 A 218 218 0 0 1 255 468"
+            fill="none" stroke="var(--vascular)" stroke-width="9" opacity="0.55"/>
+    </g>
+
+    <!-- Retina (neural inner) -->
+    <g class="struct" data-svc="sensor"
+       data-title="Retina" data-vn="Võng mạc"
+       data-body="The neural film at the back — converts light to signal. Photoreceptors (rods + cones) → bipolar → ganglion cells whose axons leave as the optic nerve.">
+      <path d="M262,80 A 210 210 0 0 1 262 460"
+            fill="none" stroke="var(--sensor)" stroke-width="11" opacity="0.5"/>
+    </g>
+
+    <!-- Vitreous -->
+    <g class="struct" data-svc="optical"
+       data-title="Vitreous cavity" data-vn="Buồng dịch kính"
+       data-body="Clear gel filling the back two-thirds. Part of the optical path. Liquefies with age — posterior vitreous detachment causes floaters and can tear the retina.">
+      <ellipse cx="470" cy="270" rx="190" ry="195" fill="var(--optical)" opacity="0.06"/>
+      <text x="500" y="276" class="lbl" text-anchor="middle">Vitreous gel</text>
+      <text x="500" y="290" class="lbl vn" text-anchor="middle">Dịch kính</text>
+    </g>
+
+    <!-- Cornea bulge (front, left) -->
+    <g class="struct" data-svc="optical"
+       data-title="Cornea" data-vn="Giác mạc"
+       data-body="Clear front window. +43 D FIXED lens — does two-thirds of the eye's focusing. Avascular, richly innervated by CN V (so corneal abrasions hurt).">
+      <path d="M250,150 Q120,270 250,390"
+            fill="none" stroke="var(--optical)" stroke-width="10"/>
+    </g>
+
+    <!-- Anterior chamber -->
+    <g class="struct" data-svc="pressure"
+       data-title="Anterior chamber" data-vn="Tiền phòng"
+       data-body="Aqueous-filled space between cornea and iris. Its drainage angle (where iris meets cornea) is the glaucoma circuit. Shallow angle → angle-closure risk.">
+      <path d="M250,160 Q160,270 250,380 L262,360 Q200,270 262,180 Z"
+            fill="var(--pressure)" opacity="0.10"/>
+    </g>
+
+    <!-- Iris + pupil -->
+    <g class="struct" data-svc="autonomic"
+       data-title="Iris &amp; pupil" data-vn="Mống mắt &amp; đồng tử"
+       data-body="The aperture. Sphincter (parasympathetic, CN III) constricts; dilator (sympathetic) widens. Pupil exam localizes autonomic and CN III lesions.">
+      <rect x="262" y="190" width="14" height="60" rx="4" fill="var(--autonomic)" opacity="0.8"/>
+      <rect x="262" y="290" width="14" height="60" rx="4" fill="var(--autonomic)" opacity="0.8"/>
+    </g>
+
+    <!-- Lens -->
+    <g class="struct" data-svc="optical"
+       data-title="Crystalline lens" data-vn="Thủy tinh thể"
+       data-body="+20 D VARIABLE lens behind the iris. Changes shape (accommodation) via the ciliary muscle. Stiffens with age → presbyopia; clouds → cataract.">
+      <ellipse cx="300" cy="270" rx="26" ry="62" fill="var(--optical)" opacity="0.35"
+               stroke="var(--optical)" stroke-width="2"/>
+    </g>
+
+    <!-- Ciliary body -->
+    <g class="struct" data-svc="pressure"
+       data-title="Ciliary body" data-vn="Thể mi"
+       data-body="Ring of tissue behind the iris. PRODUCES aqueous humor (pressure service) AND holds the lens via zonules, driving accommodation (optical). Shared hardware.">
+      <path d="M270,182 q22,8 24,28 M270,358 q22,-8 24,-28"
+            fill="none" stroke="var(--pressure)" stroke-width="9" stroke-linecap="round"/>
+    </g>
+
+    <!-- Macula -->
+    <g class="struct" data-svc="sensor"
+       data-title="Macula / fovea" data-vn="Hoàng điểm / hố trung tâm"
+       data-body="Central 5 mm of retina; the fovea (1.5 mm) is all cones — your only high-resolution vision. AMD and DME attack here, which is why central acuity collapses early.">
+      <circle cx="668" cy="278" r="9" fill="var(--sensor)"/>
+      <text x="684" y="282" class="lbl key">Macula</text>
+    </g>
+
+    <!-- Optic disc + nerve -->
+    <g class="struct" data-svc="transport"
+       data-title="Optic disc &amp; nerve" data-vn="Đĩa thị &amp; thần kinh thị giác"
+       data-body="Where ganglion-cell axons exit. A physiological blind spot (no photoreceptors). Cupping of the disc = glaucoma; swelling = papilledema. CN II.">
+      <rect x="676" y="300" width="14" height="40" fill="var(--transport)" opacity="0.8"/>
+      <path d="M690,320 L780,330" stroke="var(--transport)" stroke-width="16" opacity="0.55"/>
+      <text x="700" y="370" class="lbl key">Optic nerve →</text>
+      <text x="700" y="384" class="lbl vn">Thần kinh thị giác (CN II)</text>
+    </g>
+
+    <!-- Light arrow -->
+    <line x1="60" y1="270" x2="150" y2="270" stroke="#374151" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="60" y="258" class="lbl">light in</text>
+    <text x="60" y="290" class="lbl vn">ánh sáng</text>
+
+    <!-- key labels -->
+    <g class="hint" data-target=""><text x="250" y="120" class="lbl">Sclera · Củng mạc</text></g>
+    <text x="120" y="430" class="lbl key" fill="var(--optical)">Cornea · Giác mạc</text>
+    <text x="300" y="360" class="lbl key" fill="var(--optical)" text-anchor="middle">Lens</text>
+  </svg>
+  <p class="caption">Optical path = cornea → aqueous → pupil → lens → vitreous → retina.
+    The uvea (<span class="pill" style="background:var(--vascular)">vascular</span> choroid +
+    ciliary body + iris) is one continuous tissue threading pressure, optical and vascular
+    services — the reason inflammation in one zone spills into others.</p>
+</section>
+
+<!-- ═══ SECTION 2 — ANTERIOR SEGMENT + AQUEOUS FLOW ═══ -->
+<section id="anterior">
+  <h2><span class="num">2</span>Anterior segment &amp; aqueous flow — the glaucoma circuit</h2>
+  <p class="lead">Same anatomy serves two readings: the optical front-end, and the
+    pressure-service drainage loop. Aqueous is made by the ciliary body, flows forward
+    through the pupil, and drains at the angle. Block the drain → intraocular pressure
+    (IOP) climbs → optic nerve damage.</p>
+  <svg class="diagram" viewBox="0 0 920 520" role="img" aria-label="Anterior segment and aqueous flow">
+    <defs>
+      <marker id="flow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 Z" fill="var(--pressure)"/>
+      </marker>
+    </defs>
+
+    <!-- Cornea -->
+    <g class="struct" data-svc="optical"
+       data-title="Cornea" data-vn="Giác mạc"
+       data-body="Clear dome. The angle it forms with the iris root is the drainage angle — gonioscopy grades it open vs closed.">
+      <path d="M170,120 Q470,40 770,120 Q740,150 470,120 Q200,150 170,120 Z"
+            fill="var(--optical)" opacity="0.18" stroke="var(--optical)" stroke-width="2"/>
+    </g>
+
+    <!-- Anterior chamber fluid -->
+    <g class="struct" data-svc="pressure"
+       data-title="Anterior chamber" data-vn="Tiền phòng"
+       data-body="Aqueous-filled space the light passes through. Cells/flare here = anterior uveitis.">
+      <path d="M200,135 Q470,165 740,135 L700,250 Q470,235 240,250 Z"
+            fill="var(--pressure)" opacity="0.07"/>
+    </g>
+
+    <!-- Iris -->
+    <g class="struct" data-svc="autonomic"
+       data-title="Iris" data-vn="Mống mắt"
+       data-body="Diaphragm with the pupil at center. Its root inserts near the drainage angle; if it bows forward it can close the angle (angle-closure glaucoma).">
+      <path d="M240,250 Q360,235 410,250 L410,275 Q360,262 240,275 Z" fill="var(--autonomic)" opacity="0.7"/>
+      <path d="M700,250 Q580,235 530,250 L530,275 Q580,262 700,275 Z" fill="var(--autonomic)" opacity="0.7"/>
+    </g>
+
+    <!-- Pupil gap label -->
+    <text x="470" y="245" class="lbl vn" text-anchor="middle">đồng tử (pupil)</text>
+
+    <!-- Lens -->
+    <g class="struct" data-svc="optical"
+       data-title="Lens" data-vn="Thủy tinh thể"
+       data-body="Sits just behind the iris. Posterior chamber aqueous is made behind it and flows forward through the pupil.">
+      <ellipse cx="470" cy="320" rx="120" ry="55" fill="var(--optical)" opacity="0.30"
+               stroke="var(--optical)" stroke-width="2"/>
+      <text x="470" y="325" class="lbl" text-anchor="middle">Lens · Thủy tinh thể</text>
+    </g>
+
+    <!-- Ciliary body (production) -->
+    <g class="struct" data-svc="pressure"
+       data-title="Ciliary body (production)" data-vn="Thể mi"
+       data-body="Secretes aqueous humor into the posterior chamber. Aqueous-suppressant drops (beta-blockers, alpha-agonists, CAIs) act here to lower IOP.">
+      <path d="M210,290 q-10,30 14,50 M730,290 q10,30 -14,50"
+            fill="none" stroke="var(--pressure)" stroke-width="12" stroke-linecap="round"/>
+      <text x="150" y="330" class="lbl key" fill="var(--pressure)" text-anchor="end">Ciliary body</text>
+      <text x="150" y="344" class="lbl vn" text-anchor="end">Thể mi — sản xuất thủy dịch</text>
+    </g>
+
+    <!-- Posterior chamber -->
+    <g class="struct" data-svc="pressure"
+       data-title="Posterior chamber" data-vn="Hậu phòng"
+       data-body="Behind the iris, in front of the lens. Where aqueous is born before flowing through the pupil to the anterior chamber.">
+      <path d="M410,255 Q470,272 530,255 L530,300 Q470,288 410,300 Z" fill="var(--pressure)" opacity="0.12"/>
+    </g>
+
+    <!-- Trabecular meshwork + Schlemm at angle (right side zoom callout) -->
+    <g class="struct" data-svc="pressure"
+       data-title="Trabecular meshwork" data-vn="Vùng bè / Lưới bè"
+       data-body="The sieve at the drainage angle — ~90% of aqueous exits here into Schlemm's canal. Its resistance sets IOP. SLT laser and MIGS stents target it.">
+      <rect x="715" y="150" width="30" height="22" rx="3" fill="var(--pressure)"/>
+      <text x="755" y="160" class="lbl key" fill="var(--pressure)">Trabecular meshwork</text>
+      <text x="755" y="174" class="lbl vn">Vùng bè</text>
+    </g>
+    <g class="struct" data-svc="pressure"
+       data-title="Schlemm's canal" data-vn="Ống Schlemm"
+       data-body="Circular drain just outside the trabecular meshwork; empties into episcleral veins. The final common exit of the conventional outflow pathway.">
+      <circle cx="765" cy="135" r="7" fill="none" stroke="var(--pressure)" stroke-width="3"/>
+      <text x="782" y="139" class="lbl">Schlemm's canal → episcleral veins</text>
+      <text x="782" y="153" class="lbl vn">Ống Schlemm</text>
+    </g>
+
+    <!-- Flow arrows: ciliary -> posterior chamber -> pupil -> anterior chamber -> angle -->
+    <path d="M225,330 Q330,300 410,285" fill="none" stroke="var(--pressure)" stroke-width="2.5" marker-end="url(#flow)"/>
+    <path d="M470,300 Q470,275 470,255" fill="none" stroke="var(--pressure)" stroke-width="2.5" marker-end="url(#flow)"/>
+    <path d="M490,250 Q600,215 700,175" fill="none" stroke="var(--pressure)" stroke-width="2.5" marker-end="url(#flow)"/>
+    <text x="430" y="430" class="lbl" >Flow: ciliary body → posterior chamber → pupil → anterior chamber → angle → trabecular meshwork → Schlemm → veins</text>
+    <text x="430" y="448" class="lbl vn">Thủy dịch: thể mi → hậu phòng → đồng tử → tiền phòng → góc → vùng bè → ống Schlemm</text>
+  </svg>
+  <p class="caption">One circuit, two failure modes:
+    <strong>open-angle</strong> (the meshwork sieve clogs — slow, silent) and
+    <strong>angle-closure</strong> (the iris physically blocks the angle — can be
+    acute and painful). Both raise IOP and damage the optic nerve (transport service).</p>
+</section>
+
+<!-- ═══ SECTION 3 — RETINAL LAYERS ═══ -->
+<section id="retlayers">
+  <h2><span class="num">3</span>Retinal layers — light comes from the top, detection at the bottom</h2>
+  <p class="lead">Counter-intuitive: light passes <em>through</em> the transparent neural
+    layers first and is captured at the back by photoreceptors sitting on the RPE. OCT
+    images these layers in cross-section. Three are load-bearing: RNFL, photoreceptors, RPE.</p>
+  <svg class="diagram" viewBox="0 0 920 470" role="img" aria-label="Retinal layers cross-section">
+    <defs>
+      <marker id="lightdn" markerWidth="9" markerHeight="9" refX="4" refY="8" orient="auto">
+        <path d="M0,0 L8,0 L4,7 Z" fill="#374151"/>
+      </marker>
+    </defs>
+    <!-- light direction -->
+    <line x1="80" y1="40" x2="80" y2="120" stroke="#374151" stroke-width="2" marker-end="url(#lightdn)"/>
+    <text x="92" y="58" class="lbl">light enters</text>
+    <text x="92" y="72" class="lbl vn">ánh sáng vào</text>
+    <text x="660" y="58" class="lbl">vitreous side (inner)</text>
+    <text x="660" y="430" class="lbl">blood / choroid side (outer)</text>
+
+    <!-- 10 bands, top=ILM (inner) bottom=RPE/choroid (outer) -->
+    <!-- helper: each band a rect from x=200..640 -->
+    <!-- ILM -->
+    <g class="struct" data-svc="sensor" data-title="ILM — inner limiting membrane" data-vn="Màng giới hạn trong"
+       data-body="Boundary with the vitreous. The plane epiretinal membranes peel from in macular surgery.">
+      <rect x="200" y="110" width="440" height="18" fill="#ede9fe" stroke="#ddd6fe"/>
+      <text x="650" y="123" class="lbl">1 · ILM</text>
+    </g>
+    <!-- RNFL (load bearing) -->
+    <g class="struct hot-default" data-svc="transport" data-title="RNFL — retinal nerve fiber layer" data-vn="Lớp sợi thần kinh võng mạc"
+       data-body="Ganglion-cell AXONS streaming to the optic disc. OCT RNFL thickness is the key glaucoma metric — it thins before visual field loss shows. Belongs to TRANSPORT.">
+      <rect x="200" y="128" width="440" height="26" fill="var(--transport)" opacity="0.30" stroke="var(--transport)"/>
+      <text x="650" y="146" class="lbl key" fill="var(--transport)">2 · RNFL ★</text>
+    </g>
+    <!-- Ganglion cell layer -->
+    <g class="struct" data-svc="transport" data-title="Ganglion cell layer" data-vn="Lớp tế bào hạch"
+       data-body="Cell bodies of the output neurons. GCL thinning on macular OCT is an early, sensitive glaucoma sign.">
+      <rect x="200" y="154" width="440" height="22" fill="#e0e7ff" stroke="#c7d2fe"/>
+      <text x="650" y="170" class="lbl">3 · Ganglion cells</text>
+    </g>
+    <!-- IPL -->
+    <g class="struct" data-svc="sensor" data-title="Inner plexiform layer" data-vn="Lớp rối trong"
+       data-body="Synapses between bipolar and ganglion cells.">
+      <rect x="200" y="176" width="440" height="16" fill="#f5f3ff" stroke="#ede9fe"/>
+      <text x="650" y="189" class="lbl">4 · IPL</text>
+    </g>
+    <!-- INL -->
+    <g class="struct" data-svc="sensor" data-title="Inner nuclear layer (bipolar)" data-vn="Lớp nhân trong"
+       data-body="Bipolar, horizontal, amacrine cells — the relay/processing tier.">
+      <rect x="200" y="192" width="440" height="20" fill="#ede9fe" stroke="#ddd6fe"/>
+      <text x="650" y="207" class="lbl">5 · INL (bipolar)</text>
+    </g>
+    <!-- OPL -->
+    <g class="struct" data-svc="sensor" data-title="Outer plexiform layer" data-vn="Lớp rối ngoài"
+       data-body="Photoreceptor-to-bipolar synapses. Hard exudates in diabetic maculopathy deposit here.">
+      <rect x="200" y="212" width="440" height="16" fill="#f5f3ff" stroke="#ede9fe"/>
+      <text x="650" y="225" class="lbl">6 · OPL</text>
+    </g>
+    <!-- ONL -->
+    <g class="struct" data-svc="sensor" data-title="Outer nuclear layer" data-vn="Lớp nhân ngoài"
+       data-body="Photoreceptor cell bodies (rod + cone nuclei).">
+      <rect x="200" y="228" width="440" height="22" fill="#ede9fe" stroke="#ddd6fe"/>
+      <text x="650" y="244" class="lbl">7 · ONL</text>
+    </g>
+    <!-- Photoreceptor segments (load bearing) -->
+    <g class="struct" data-svc="sensor" data-title="Photoreceptors — rods &amp; cones" data-vn="Tế bào cảm thụ ánh sáng (que &amp; nón)"
+       data-body="Where light becomes signal (phototransduction). Cones (macula, color, detail) + rods (periphery, dim light). The ellipsoid zone band on OCT reflects their health. SENSOR core.">
+      <rect x="200" y="250" width="440" height="30" fill="var(--sensor)" opacity="0.30" stroke="var(--sensor)"/>
+      <text x="650" y="269" class="lbl key" fill="var(--sensor)">8 · Photoreceptors ★</text>
+    </g>
+    <!-- RPE (load bearing) -->
+    <g class="struct" data-svc="sensor" data-title="RPE — retinal pigment epithelium" data-vn="Biểu mô sắc tố võng mạc"
+       data-body="Single cell layer under photoreceptors. Recycles visual pigment, absorbs stray light, maintains the outer blood-retina barrier. AMD is fundamentally an RPE disease; drusen sit on its basement membrane. ★">
+      <rect x="200" y="280" width="440" height="20" fill="var(--sensor)" opacity="0.55" stroke="var(--sensor)"/>
+      <text x="650" y="295" class="lbl key" fill="var(--sensor)">9 · RPE ★</text>
+    </g>
+    <!-- Bruch + choroid -->
+    <g class="struct" data-svc="vascular" data-title="Bruch's membrane &amp; choroid" data-vn="Màng Bruch &amp; hắc mạc"
+       data-body="The choroidal blood supply for the outer retina, separated by Bruch's membrane. Breaks in Bruch's let new vessels grow up into the retina — wet AMD (choroidal neovascularization).">
+      <rect x="200" y="300" width="440" height="14" fill="var(--vascular)" opacity="0.25" stroke="var(--vascular)"/>
+      <rect x="200" y="314" width="440" height="40" fill="var(--vascular)" opacity="0.45"/>
+      <text x="650" y="338" class="lbl key" fill="var(--vascular)">10 · Choroid</text>
+    </g>
+  </svg>
+  <p class="caption">★ = the three load-bearing layers. Mnemonic for disease mapping:
+    <strong>RNFL</strong> thins in glaucoma (transport), <strong>photoreceptors</strong>
+    fail in retinitis pigmentosa, <strong>RPE</strong> degenerates in AMD. The inner
+    retina is fed by the central retinal artery; the outer retina (photoreceptors + RPE)
+    by the choroid — two supplies, two failure modes (see §5).</p>
+</section>
+
+<!-- ═══ SECTION 4 — MACULA TOPOLOGY ═══ -->
+<section id="macula">
+  <h2><span class="num">4</span>Macula topology — concentric zones &amp; cone falloff</h2>
+  <p class="lead">The macula is the high-resolution sensor at the optical axis. Cone
+    density peaks at the foveola and drops steeply outward — which is why only the
+    central few degrees give sharp reading vision, and why macular disease is so
+    disabling even when the rest of the retina is fine.</p>
+  <svg class="diagram" viewBox="0 0 920 420" role="img" aria-label="Macula concentric zones and cone density">
+    <!-- concentric rings on the left -->
+    <g transform="translate(40,10)">
+      <g class="struct" data-svc="sensor" data-title="Perifovea" data-vn="Vùng quanh hố ngoài"
+         data-body="Outer macular ring (~5.5 mm). Mixed rods and cones; rod density actually peaks here.">
+        <circle cx="210" cy="200" r="180" fill="var(--sensor)" opacity="0.07" stroke="var(--sensor)" stroke-width="1"/>
+        <text x="210" y="40" class="lbl" text-anchor="middle">Perifovea</text>
+      </g>
+      <g class="struct" data-svc="sensor" data-title="Parafovea" data-vn="Vùng cạnh hố"
+         data-body="Ring ~0.5–1.25 mm out. Thickest part of the retina; ganglion cells are stacked many deep here.">
+        <circle cx="210" cy="200" r="125" fill="var(--sensor)" opacity="0.12" stroke="var(--sensor)" stroke-width="1"/>
+        <text x="210" y="92" class="lbl" text-anchor="middle">Parafovea</text>
+      </g>
+      <g class="struct" data-svc="sensor" data-title="Fovea" data-vn="Hố trung tâm"
+         data-body="~1.5 mm pit. Inner retinal layers are swept aside so light hits cones directly. The foveal avascular zone (no vessels) is graded on OCT-A in diabetic macular ischemia.">
+        <circle cx="210" cy="200" r="72" fill="var(--sensor)" opacity="0.22" stroke="var(--sensor)" stroke-width="1.5"/>
+        <text x="210" y="150" class="lbl key" text-anchor="middle">Fovea</text>
+      </g>
+      <g class="struct" data-svc="sensor" data-title="Foveola" data-vn="Hố trung tâm nhỏ / Tâm hố"
+         data-body="~0.35 mm bullseye center — pure cones, peak density, your sharpest pixel. Damage here (e.g. macular hole, subfoveal CNV) drops acuity to counting-fingers.">
+        <circle cx="210" cy="200" r="30" fill="var(--sensor)" opacity="0.5"/>
+        <text x="210" y="205" class="lbl key" text-anchor="middle" fill="#fff">Foveola</text>
+      </g>
+    </g>
+
+    <!-- cone density mini-graph on the right -->
+    <g transform="translate(520,40)">
+      <text x="170" y="0" class="lbl key" text-anchor="middle">Cone density vs eccentricity</text>
+      <!-- axes -->
+      <line x1="40" y1="280" x2="340" y2="280" stroke="#374151" stroke-width="1.5"/>
+      <line x1="40" y1="30" x2="40" y2="280" stroke="#374151" stroke-width="1.5"/>
+      <text x="190" y="312" class="lbl" text-anchor="middle">distance from fovea →</text>
+      <text x="14" y="160" class="lbl" text-anchor="middle" transform="rotate(-90 14 160)">cone density</text>
+      <!-- steep falloff curve -->
+      <path d="M44,40 C70,150 100,235 160,255 C230,272 300,275 338,277"
+            fill="none" stroke="var(--sensor)" stroke-width="3"/>
+      <circle cx="44" cy="40" r="4" fill="var(--sensor)"/>
+      <text x="52" y="44" class="lbl">foveola peak</text>
+      <!-- blind spot marker -->
+      <line x1="250" y1="280" x2="250" y2="60" stroke="#9ca3af" stroke-dasharray="4 3"/>
+      <circle cx="250" cy="277" r="5" fill="#fff" stroke="var(--transport)" stroke-width="2"/>
+      <text x="256" y="74" class="lbl">optic disc — blind spot (no receptors)</text>
+    </g>
+  </svg>
+  <p class="caption">Two clinical anchors: the <strong>foveal avascular zone</strong>
+    (graded on OCT-A) and the steep cone falloff that makes <strong>central</strong>
+    acuity a macula test, not a whole-retina test. <span class="check">[CHECK]</span>
+    exact ring diameters vary slightly by source — values are textbook-typical.</p>
+</section>
+
+<!-- ═══ SECTION 5 — VASCULAR TREES ═══ -->
+<section id="vascular">
+  <h2><span class="num">5</span>Two blood supplies — central retinal vs choroidal</h2>
+  <p class="lead">The retina is fed by two independent trees. The central retinal
+    artery feeds the <em>inner</em> retina (ganglion + bipolar); the choroid feeds the
+    <em>outer</em> retina (photoreceptors + RPE). Two supplies → two distinct ischemic
+    syndromes.</p>
+  <svg class="diagram" viewBox="0 0 920 440" role="img" aria-label="Retinal versus choroidal circulation">
+    <!-- LEFT: central retinal artery tree -->
+    <g class="struct" data-svc="vascular"
+       data-title="Central retinal artery / vein" data-vn="Động mạch / tĩnh mạch trung tâm võng mạc"
+       data-body="Enters through the optic disc and branches across the inner retinal surface. Occlusion (CRAO) = sudden painless total loss; branch occlusion (BRVO/BRAO) = sectoral. A retinal end-artery, so little collateral rescue.">
+      <text x="230" y="40" class="lbl key" fill="var(--vascular)" text-anchor="middle">Central retinal artery → INNER retina</text>
+      <text x="230" y="56" class="lbl vn" text-anchor="middle">Cấp máu lớp trong (hạch, lưỡng cực)</text>
+      <!-- disc -->
+      <circle cx="230" cy="240" r="20" fill="#fde68a" stroke="var(--transport)" stroke-width="2"/>
+      <text x="230" y="280" class="lbl" text-anchor="middle">optic disc</text>
+      <!-- branching vessels -->
+      <g stroke="var(--vascular)" fill="none" stroke-width="3">
+        <path d="M230,222 C220,150 180,110 120,90"/>
+        <path d="M230,222 C250,150 290,110 350,92"/>
+        <path d="M214,232 C150,210 110,200 70,210"/>
+        <path d="M246,232 C310,210 360,205 400,212"/>
+      </g>
+      <g stroke="var(--vascular)" fill="none" stroke-width="1.6" opacity="0.8">
+        <path d="M150,128 l-26,-14 M150,128 l-10,-26"/>
+        <path d="M310,128 l26,-14 M310,128 l10,-26"/>
+      </g>
+    </g>
+
+    <!-- divider -->
+    <line x1="460" y1="40" x2="460" y2="400" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="5 4"/>
+
+    <!-- RIGHT: choroidal supply -->
+    <g class="struct" data-svc="vascular"
+       data-title="Choroidal circulation" data-vn="Tuần hoàn hắc mạc"
+       data-body="A dense vascular sponge under the RPE, fed by short posterior ciliary arteries. Highest blood flow per gram in the body; nourishes photoreceptors by diffusion. Breaks in Bruch's membrane let it neovascularize upward → wet AMD.">
+      <text x="690" y="40" class="lbl key" fill="var(--vascular)" text-anchor="middle">Choroid → OUTER retina</text>
+      <text x="690" y="56" class="lbl vn" text-anchor="middle">Cấp máu lớp ngoài (cảm thụ, RPE)</text>
+      <!-- RPE band -->
+      <rect x="520" y="120" width="340" height="14" fill="var(--sensor)" opacity="0.5"/>
+      <text x="520" y="112" class="lbl">RPE + photoreceptors above</text>
+      <!-- Bruch -->
+      <rect x="520" y="134" width="340" height="5" fill="#9ca3af"/>
+      <text x="864" y="139" class="lbl" text-anchor="start" transform="translate(-330,18)">Bruch's membrane</text>
+      <!-- choroidal sponge -->
+      <g fill="var(--vascular)" opacity="0.5">
+        <circle cx="545" cy="170" r="10"/><circle cx="580" cy="190" r="13"/>
+        <circle cx="620" cy="168" r="11"/><circle cx="660" cy="195" r="14"/>
+        <circle cx="705" cy="172" r="12"/><circle cx="748" cy="192" r="13"/>
+        <circle cx="790" cy="170" r="11"/><circle cx="828" cy="190" r="12"/>
+        <circle cx="600" cy="220" r="12"/><circle cx="680" cy="225" r="13"/>
+        <circle cx="765" cy="222" r="12"/>
+      </g>
+      <!-- feeder arteries -->
+      <g stroke="var(--vascular)" stroke-width="3" fill="none">
+        <path d="M620,300 L640,235"/><path d="M740,300 L725,235"/>
+      </g>
+      <text x="690" y="320" class="lbl" text-anchor="middle">short posterior ciliary arteries</text>
+    </g>
+  </svg>
+  <p class="caption">Why it matters clinically:
+    <strong>CRAO</strong> (inner-retina infarct) whitens the retina with a cherry-red
+    spot; <strong>choroidal</strong> failure or neovascularization hits photoreceptors/RPE
+    (AMD). The optic nerve head has its own supply (posterior ciliary) — its infarct is
+    <strong>NAION</strong> (see neuro-ophth deep-dive).</p>
+</section>
+
+<!-- ═══ SECTION 6 — VISUAL PATHWAY + FIELD DEFECTS ═══ -->
+<section id="pathway">
+  <h2><span class="num">6</span>Visual pathway &amp; field defects — lesion localization</h2>
+  <p class="lead">The single most useful neuro-ophthalmology diagram. Each point along
+    the pathway, when damaged, produces a characteristic visual-field defect. The chiasm
+    is the hinge: nasal fibers cross there, so anything behind it affects <em>both</em>
+    eyes' fields on the same side.</p>
+  <svg class="diagram" viewBox="0 0 920 520" role="img" aria-label="Visual pathway with field defect map">
+    <!-- two eyes -->
+    <g class="struct" data-svc="transport" data-title="Optic nerve (pre-chiasmal)" data-vn="Thần kinh thị giác trước giao thoa"
+       data-body="One eye's entire output. A lesion here = monocular field loss / total blindness of that eye. Optic neuritis, NAION, compression.">
+      <circle cx="90" cy="160" r="30" fill="#fff" stroke="var(--transport)" stroke-width="2"/>
+      <circle cx="90" cy="360" r="30" fill="#fff" stroke="var(--transport)" stroke-width="2"/>
+      <text x="90" y="125" class="lbl" text-anchor="middle">OD</text>
+      <text x="90" y="408" class="lbl" text-anchor="middle">OS</text>
+    </g>
+
+    <!-- nerves to chiasm -->
+    <g stroke="var(--transport)" stroke-width="6" fill="none" opacity="0.7">
+      <path d="M120,160 L320,250"/>
+      <path d="M120,360 L320,290"/>
+    </g>
+    <!-- chiasm -->
+    <g class="struct" data-svc="transport" data-title="Optic chiasm" data-vn="Giao thoa thị giác"
+       data-body="Nasal (inner) fibers cross here. A midline lesion (classically a pituitary tumor pressing up) knocks out both temporal fields = BITEMPORAL HEMIANOPIA.">
+      <path d="M320,250 L360,270 L320,290 L300,270 Z" fill="var(--transport)" opacity="0.7"/>
+      <text x="335" y="318" class="lbl key" text-anchor="middle">chiasm</text>
+    </g>
+    <!-- tract -->
+    <g stroke="var(--transport)" stroke-width="6" fill="none" opacity="0.7">
+      <path d="M360,270 L520,270"/>
+    </g>
+    <!-- LGN -->
+    <g class="struct" data-svc="transport" data-title="Optic tract → LGN" data-vn="Dải thị → thể gối ngoài"
+       data-body="After the chiasm, each tract carries the opposite half-field of BOTH eyes. A lesion = contralateral HOMONYMOUS HEMIANOPIA.">
+      <ellipse cx="545" cy="270" rx="26" ry="18" fill="var(--transport)" opacity="0.5"/>
+      <text x="545" y="312" class="lbl" text-anchor="middle">LGN</text>
+    </g>
+    <!-- radiations -->
+    <g stroke="var(--transport)" stroke-width="6" fill="none" opacity="0.55">
+      <path d="M570,270 C650,250 700,250 760,260"/>
+      <path d="M570,272 C650,300 700,300 760,290"/>
+    </g>
+    <text x="660" y="240" class="lbl">optic radiations</text>
+    <text x="660" y="320" class="lbl vn">tia thị (thái dương / đỉnh)</text>
+    <!-- V1 -->
+    <g class="struct" data-svc="transport" data-title="V1 — primary visual cortex" data-vn="Vỏ não thị giác sơ cấp (V1)"
+       data-body="Occipital pole. A lesion = contralateral homonymous hemianopia, classically with MACULAR SPARING (the macula has dual representation). Stroke is the usual cause.">
+      <path d="M770,230 q40,40 0,80 q-20,-40 0,-80 Z" fill="var(--transport)" opacity="0.6"/>
+      <text x="815" y="275" class="lbl key">V1</text>
+    </g>
+
+    <!-- LESION SITES + field pictograms (2-circle bilateral) -->
+    <!-- helper field pictograms drawn bottom row -->
+    <g transform="translate(40,420)">
+      <text x="0" y="-8" class="lbl key">Field defect by lesion site (black = lost; left circle = OD, right = OS):</text>
+
+      <!-- site 1: optic nerve -->
+      <g class="struct" data-svc="transport" data-title="① Optic nerve lesion" data-vn="Tổn thương thần kinh thị"
+         data-body="Monocular loss — that whole eye goes dark (or a central scotoma in optic neuritis).">
+        <text x="10" y="10" class="lbl">① nerve</text>
+        <circle cx="20" cy="40" r="16" fill="#111"/><circle cx="58" cy="40" r="16" fill="#fff" stroke="#374151"/>
+      </g>
+      <!-- site 2: chiasm -->
+      <g class="struct" data-svc="transport" data-title="② Chiasm lesion" data-vn="Tổn thương giao thoa"
+         data-body="Bitemporal hemianopia — both outer halves lost (tunnel-like). Pituitary tumor classic.">
+        <text x="150" y="10" class="lbl">② chiasm</text>
+        <path d="M144,24 A16 16 0 0 0 144 56 Z" fill="#fff" stroke="#374151"/>
+        <path d="M144,24 A16 16 0 0 1 144 56 Z" fill="#111"/>
+        <circle cx="160" cy="40" r="16" fill="none" stroke="#374151"/>
+        <path d="M198,24 A16 16 0 0 1 198 56 Z" fill="#fff" stroke="#374151"/>
+        <path d="M198,24 A16 16 0 0 0 198 56 Z" fill="#111"/>
+        <circle cx="198" cy="40" r="16" fill="none" stroke="#374151"/>
+      </g>
+      <!-- site 3: tract -->
+      <g class="struct" data-svc="transport" data-title="③ Optic tract lesion" data-vn="Tổn thương dải thị"
+         data-body="Homonymous hemianopia — same half lost in both eyes (here right field of each).">
+        <text x="300" y="10" class="lbl">③ tract</text>
+        <g transform="translate(296,24)">
+          <circle cx="16" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M16,0 A16 16 0 0 1 16 32 Z" fill="#111"/>
+          <circle cx="54" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M54,0 A16 16 0 0 1 54 32 Z" fill="#111"/>
+        </g>
+      </g>
+      <!-- site 4: temporal radiation -->
+      <g class="struct" data-svc="transport" data-title="④ Temporal (Meyer's loop)" data-vn="Quai Meyer (thái dương)"
+         data-body="Superior homonymous quadrantanopia — 'pie in the sky'. Temporal-lobe lesion.">
+        <text x="450" y="10" class="lbl">④ Meyer's loop</text>
+        <g transform="translate(446,24)">
+          <circle cx="16" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M16,16 L16,0 A16 16 0 0 1 32 16 Z" fill="#111"/>
+          <circle cx="54" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M54,16 L54,0 A16 16 0 0 1 70 16 Z" fill="#111"/>
+        </g>
+      </g>
+      <!-- site 5: parietal radiation -->
+      <g class="struct" data-svc="transport" data-title="⑤ Parietal radiation" data-vn="Tia thị đỉnh"
+         data-body="Inferior homonymous quadrantanopia — 'pie on the floor'.">
+        <text x="610" y="10" class="lbl">⑤ parietal</text>
+        <g transform="translate(606,24)">
+          <circle cx="16" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M16,16 L16,32 A16 16 0 0 0 32 16 Z" fill="#111"/>
+          <circle cx="54" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M54,16 L54,32 A16 16 0 0 0 70 16 Z" fill="#111"/>
+        </g>
+      </g>
+      <!-- site 6: occipital -->
+      <g class="struct" data-svc="transport" data-title="⑥ Occipital (V1)" data-vn="Vỏ chẩm (V1)"
+         data-body="Homonymous hemianopia with MACULAR SPARING — a sliver of central field survives. Stroke.">
+        <text x="760" y="10" class="lbl">⑥ occipital</text>
+        <g transform="translate(756,24)">
+          <circle cx="16" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M16,0 A16 16 0 0 1 16 32 Z" fill="#111"/>
+          <circle cx="16" cy="16" r="4" fill="#fff"/>
+          <circle cx="54" cy="16" r="16" fill="none" stroke="#374151"/>
+          <path d="M54,0 A16 16 0 0 1 54 32 Z" fill="#111"/>
+          <circle cx="54" cy="16" r="4" fill="#fff"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+  <p class="caption"><strong>Rule of thumb:</strong> defects in <em>one</em> eye = lesion
+    at or before the chiasm. <em>Homonymous</em> (both eyes, same side) = behind the
+    chiasm. Congruity increases the further back you go; macular sparing points to the
+    occipital cortex.</p>
+</section>
+
+<!-- ═══ SECTION 7 — EXTRAOCULAR MUSCLES + H-PATTERN ═══ -->
+<section id="eom">
+  <h2><span class="num">7</span>Extraocular muscles &amp; the H-pattern</h2>
+  <p class="lead">Six muscles per eye, three cranial nerves. The doctor traces an "H"
+    (or double-H) to test each muscle in its field of action. Diplopia + the direction it
+    worsens localizes the weak muscle and its nerve.</p>
+  <svg class="diagram" viewBox="0 0 920 460" role="img" aria-label="Extraocular muscles and motility H-pattern">
+    <!-- single eye with 6 muscles, color by CN -->
+    <g transform="translate(40,30)">
+      <text x="170" y="0" class="lbl key" text-anchor="middle">Right eye — muscles &amp; primary actions</text>
+      <circle cx="170" cy="200" r="80" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+      <circle cx="170" cy="200" r="26" fill="#1e3a5f"/>
+      <!-- recti: color CN VI lateral, CN III the rest, CN IV superior oblique -->
+      <g class="struct" data-svc="coordination" data-title="Medial rectus (CN III)" data-vn="Cơ thẳng trong"
+         data-body="Adducts (eye in toward nose). CN III. The yoke of the opposite lateral rectus in horizontal gaze.">
+        <rect x="250" y="188" width="120" height="24" fill="var(--coordination)" opacity="0.7"/>
+        <text x="378" y="204" class="lbl">Medial rectus · III</text>
+      </g>
+      <g class="struct" data-svc="coordination" data-title="Lateral rectus (CN VI)" data-vn="Cơ thẳng ngoài"
+         data-body="Abducts (eye out). CN VI — abducens. Sixth-nerve palsy = eye can't turn out, esotropia, horizontal diplopia worse at distance.">
+        <rect x="-30" y="188" width="120" height="24" fill="#fca5a5"/>
+        <text x="-34" y="204" class="lbl" text-anchor="end">Lateral rectus · VI</text>
+      </g>
+      <g class="struct" data-svc="coordination" data-title="Superior rectus (CN III)" data-vn="Cơ thẳng trên"
+         data-body="Primary elevator in abduction. CN III. Tested with eye turned OUT and up.">
+        <rect x="158" y="78" width="24" height="110" fill="var(--coordination)" opacity="0.7"/>
+        <text x="190" y="100" class="lbl">Superior rectus · III</text>
+      </g>
+      <g class="struct" data-svc="coordination" data-title="Inferior rectus (CN III)" data-vn="Cơ thẳng dưới"
+         data-body="Primary depressor in abduction. CN III. Entrapped in orbital floor (blow-out) fractures → restricted upgaze.">
+        <rect x="158" y="212" width="24" height="110" fill="var(--coordination)" opacity="0.7"/>
+        <text x="190" y="316" class="lbl">Inferior rectus · III</text>
+      </g>
+      <g class="struct" data-svc="coordination" data-title="Superior oblique (CN IV)" data-vn="Cơ chéo trên"
+         data-body="Intorts + depresses in adduction. CN IV — trochlear. Fourth-nerve palsy → vertical diplopia, head tilt away from the lesion (Bielschowsky).">
+        <rect x="108" y="120" width="80" height="20" fill="#fbbf24" transform="rotate(-32 148 130)"/>
+        <text x="60" y="120" class="lbl">Sup. oblique · IV</text>
+      </g>
+      <g class="struct" data-svc="coordination" data-title="Inferior oblique (CN III)" data-vn="Cơ chéo dưới"
+         data-body="Extorts + elevates in adduction. CN III. Tested with eye turned IN and up.">
+        <rect x="108" y="260" width="80" height="20" fill="var(--coordination)" opacity="0.7" transform="rotate(32 148 270)"/>
+        <text x="60" y="300" class="lbl">Inf. oblique · III</text>
+      </g>
+    </g>
+
+    <!-- H-pattern on the right -->
+    <g transform="translate(560,40)">
+      <text x="160" y="0" class="lbl key" text-anchor="middle">The H test (9 gaze positions)</text>
+      <!-- H lines -->
+      <g stroke="#9ca3af" stroke-width="2" fill="none">
+        <path d="M60,40 L60,300"/>
+        <path d="M260,40 L260,300"/>
+        <path d="M60,170 L260,170"/>
+      </g>
+      <!-- gaze dots with muscle labels -->
+      <g font-size="10">
+        <circle cx="60" cy="40" r="6" fill="var(--coordination)"/><text x="-2" y="36" class="lbl" text-anchor="end">RIO/LSR</text>
+        <circle cx="260" cy="40" r="6" fill="var(--coordination)"/><text x="270" y="36" class="lbl">LSR/RIO</text>
+        <circle cx="60" cy="170" r="6" fill="#fca5a5"/><text x="-2" y="174" class="lbl" text-anchor="end">R lat.rectus</text>
+        <circle cx="260" cy="170" r="6" fill="var(--coordination)"/><text x="270" y="174" class="lbl">R med.rectus</text>
+        <circle cx="60" cy="300" r="6" fill="#fbbf24"/><text x="-2" y="304" class="lbl" text-anchor="end">RSO/LIR</text>
+        <circle cx="260" cy="300" r="6" fill="#fbbf24"/><text x="270" y="304" class="lbl">LIR/RSO</text>
+      </g>
+      <text x="160" y="340" class="lbl" text-anchor="middle">eye follows target through the "H"</text>
+      <text x="160" y="356" class="lbl vn" text-anchor="middle">khám vận nhãn theo hình chữ H</text>
+    </g>
+  </svg>
+  <p class="caption">Color = innervating nerve:
+    <span class="pill" style="background:var(--coordination)">CN III</span> (four muscles + lid + pupil),
+    <span class="pill" style="background:#fbbf24;color:#1f2937">CN IV</span> (superior oblique only),
+    <span class="pill" style="background:#fca5a5;color:#1f2937">CN VI</span> (lateral rectus only).
+    Mnemonic <strong>LR<sub>6</sub>SO<sub>4</sub></strong> — all the rest are CN III.</p>
+</section>
+
+<!-- ═══ SECTION 8 — CRANIAL NERVE SUMMARY ═══ -->
+<section id="nerves">
+  <h2><span class="num">8</span>Cranial nerves for the eye — who does what</h2>
+  <p class="lead">Five cranial nerves plus the sympathetic chain run the eye. This is the
+    quick map of what each carries and how its lesion shows up at the slit lamp.</p>
+  <svg class="diagram" viewBox="0 0 920 430" role="img" aria-label="Cranial nerve summary for the eye">
+    <!-- central eye -->
+    <circle cx="460" cy="210" r="60" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+    <circle cx="460" cy="210" r="20" fill="#1e3a5f"/>
+    <text x="460" y="300" class="lbl" text-anchor="middle">eye</text>
+
+    <!-- CN II -->
+    <g class="struct" data-svc="transport" data-title="CN II — optic" data-vn="Dây II — thị giác"
+       data-body="Vision OUT. Afferent limb of the pupil light reflex. Lesion → afferent pupillary defect (RAPD), field loss, disc changes.">
+      <line x1="400" y1="210" x2="180" y2="120" stroke="var(--transport)" stroke-width="4"/>
+      <rect x="40" y="96" width="150" height="48" rx="8" fill="#fff" stroke="var(--transport)"/>
+      <text x="50" y="116" class="lbl key" fill="var(--transport)">CN II Optic</text>
+      <text x="50" y="134" class="lbl vn">Vision out · RAPD</text>
+    </g>
+    <!-- CN III -->
+    <g class="struct" data-svc="coordination" data-title="CN III — oculomotor" data-vn="Dây III — vận nhãn chung"
+       data-body="4 of 6 muscles + lid elevation (levator) + pupil CONSTRICTION (parasympathetic). Palsy → 'down-and-out' eye, ptosis, blown pupil. A dilated CN III is a surgical emergency (aneurysm).">
+      <line x1="408" y1="180" x2="190" y2="60" stroke="var(--coordination)" stroke-width="4"/>
+      <rect x="40" y="36" width="150" height="48" rx="8" fill="#fff" stroke="var(--coordination)"/>
+      <text x="50" y="56" class="lbl key" fill="var(--coordination)">CN III Oculomotor</text>
+      <text x="50" y="74" class="lbl vn">4 muscles + lid + pupil</text>
+    </g>
+    <!-- CN IV -->
+    <g class="struct" data-svc="coordination" data-title="CN IV — trochlear" data-vn="Dây IV — ròng rọc"
+       data-body="Superior oblique only. Palsy → vertical diplopia, compensatory head tilt. The longest, thinnest CN — vulnerable in head trauma.">
+      <line x1="412" y1="240" x2="190" y2="320" stroke="#ca8a04" stroke-width="4"/>
+      <rect x="40" y="296" width="150" height="48" rx="8" fill="#fff" stroke="#ca8a04"/>
+      <text x="50" y="316" class="lbl key" fill="#ca8a04">CN IV Trochlear</text>
+      <text x="50" y="334" class="lbl vn">Superior oblique only</text>
+    </g>
+    <!-- CN VI -->
+    <g class="struct" data-svc="coordination" data-title="CN VI — abducens" data-vn="Dây VI — vận nhãn ngoài"
+       data-body="Lateral rectus only. Palsy → eye can't abduct, esotropia, horizontal diplopia. A false-localizing sign in raised intracranial pressure.">
+      <line x1="404" y1="240" x2="190" y2="380" stroke="#dc2626" stroke-width="4"/>
+      <rect x="40" y="356" width="150" height="48" rx="8" fill="#fff" stroke="#dc2626"/>
+      <text x="50" y="376" class="lbl key" fill="#dc2626">CN VI Abducens</text>
+      <text x="50" y="394" class="lbl vn">Lateral rectus only</text>
+    </g>
+    <!-- CN V -->
+    <g class="struct" data-svc="surface" data-title="CN V — trigeminal" data-vn="Dây V — sinh ba"
+       data-body="Corneal SENSATION (afferent of the blink reflex). Loss → neurotrophic cornea that ulcerates painlessly. V1 also carries herpes zoster ophthalmicus.">
+      <line x1="512" y1="190" x2="730" y2="80" stroke="var(--surface)" stroke-width="4"/>
+      <rect x="730" y="56" width="160" height="48" rx="8" fill="#fff" stroke="var(--surface)"/>
+      <text x="742" y="76" class="lbl key" fill="var(--surface)">CN V Trigeminal</text>
+      <text x="742" y="94" class="lbl vn">Corneal sensation (blink in)</text>
+    </g>
+    <!-- CN VII -->
+    <g class="struct" data-svc="surface" data-title="CN VII — facial" data-vn="Dây VII — mặt"
+       data-body="Orbicularis oculi — the blink/closure MOTOR (efferent of the blink reflex). Palsy → can't close lid → exposure keratopathy.">
+      <line x1="512" y1="220" x2="730" y2="200" stroke="#0891b2" stroke-width="4"/>
+      <rect x="730" y="176" width="160" height="48" rx="8" fill="#fff" stroke="#0891b2"/>
+      <text x="742" y="196" class="lbl key" fill="#0891b2">CN VII Facial</text>
+      <text x="742" y="214" class="lbl vn">Eyelid closure (blink out)</text>
+    </g>
+    <!-- Sympathetic -->
+    <g class="struct" data-svc="autonomic" data-title="Sympathetic chain" data-vn="Chuỗi giao cảm"
+       data-body="Pupil DILATION + Müller's muscle (a few mm of lid lift). Interruption = Horner syndrome: ptosis + miosis + anhidrosis. The 3-neuron arc can be broken anywhere from hypothalamus to orbit.">
+      <line x1="508" y1="250" x2="730" y2="330" stroke="var(--autonomic)" stroke-width="4"/>
+      <rect x="730" y="306" width="160" height="56" rx="8" fill="#fff" stroke="var(--autonomic)"/>
+      <text x="742" y="326" class="lbl key" fill="var(--autonomic)">Sympathetic</text>
+      <text x="742" y="344" class="lbl vn">Pupil dilate + Müller lid</text>
+      <text x="742" y="358" class="lbl">lesion → Horner</text>
+    </g>
+  </svg>
+  <p class="caption"><strong>Pupil cheat-sheet:</strong> big pupil that won't constrict +
+    ptosis + down-and-out = CN III; small pupil + ptosis = Horner (sympathetic);
+    afferent defect (RAPD) = CN II / retina. Blink reflex tests CN V in, CN VII out.</p>
+</section>
+
+<!-- ═══ SECTION 9 — VN-EN ANATOMY TABLE ═══ -->
+<section id="vntable">
+  <h2><span class="num">9</span>Comprehensive VN-EN anatomy table</h2>
+  <p class="lead">The ~40 named structures across these diagrams, grouped by service. New
+    terms not already in <code>eye-exam-primer.md</code> §4. Color dot = primary service.</p>
+  <table class="vn" id="anatomy-table"><!-- rows injected by JS from STRUCTURES --></table>
+  <p class="caption">For equipment-side jargon (devices, imaging modalities, refraction
+    terms) see <code>eye-exam-primer.md</code> §4. This table covers anatomy only.</p>
+</section>
+
+<footer class="docfoot">
+  <p><strong>MAEC clinical anatomy reference.</strong> Schematic diagrams written from
+  training-data ophthalmology knowledge; <span class="check">[CHECK]</span>-flagged items
+  need clinical sign-off against AAO BCSC / AAO PPP before quoting to patients or vendors.</p>
+  <p>Companions: <code>docs/clinical-primer.md</code> (the hub) ·
+  <code>docs/eye-exam-primer.md</code> (equipment + jargon) ·
+  <code>CLAUDE.md#documented-patient-workflows-4</code> (clinic workflows).</p>
+</footer>
+
+</div>
+
+<!-- detail card -->
+<div id="detail">
+  <button class="dclose" aria-label="close">&times;</button>
+  <div class="dtitle"></div>
+  <div class="dvn"></div>
+  <span class="dsvc"></span>
+  <div class="dbody"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // 9-service registry — color + plane + one-line description
+  var SERVICES = {
+    optical:      {label:"Optical stack", vn:"Hệ quang học", plane:"Data plane", color:"var(--optical)",
+      desc:"Get light to the back, in focus: cornea → aqueous → pupil → lens → vitreous. Fails → refractive error, cataract."},
+    sensor:       {label:"Sensor (retina)", vn:"Cảm thụ — võng mạc", plane:"Data plane", color:"var(--sensor)",
+      desc:"Detect light: RPE + photoreceptors + bipolar + ganglion. Macula sub-service = high-res central. Fails → AMD, RP, detachment."},
+    transport:    {label:"Transport", vn:"Dẫn truyền", plane:"Data plane", color:"var(--transport)",
+      desc:"Carry signal to brain: optic nerve → chiasm → tract → LGN → V1. Fails → optic neuropathy, field defects."},
+    coordination: {label:"Coordination", vn:"Phối hợp hai mắt", plane:"Cross-plane", color:"var(--coordination)",
+      desc:"Aim both eyes together: 6 muscles × 2, CN III/IV/VI, brainstem, fusion. Fails → strabismus, diplopia, amblyopia."},
+    surface:      {label:"Surface", vn:"Bề mặt nhãn cầu", plane:"Support plane", color:"var(--surface)",
+      desc:"Keep the front wet and protected: tear film + lids + conjunctiva. Fails → dry eye, keratitis, exposure."},
+    pressure:     {label:"Pressure", vn:"Nhãn áp / thủy dịch", plane:"Support plane", color:"var(--pressure)",
+      desc:"Inflate the globe at the right pressure: ciliary production → trabecular outflow. Fails → glaucoma."},
+    vascular:     {label:"Vascular", vn:"Mạch máu", plane:"Support plane", color:"var(--vascular)",
+      desc:"Feed the tissue: central retinal artery/vein (inner) + choroid (outer). Fails → DR, RVO/RAO, AMD ischemia."},
+    immune:       {label:"Immune", vn:"Miễn dịch", plane:"Support plane", color:"var(--immune)",
+      desc:"Police the inside: uvea + lacrimal + lid lymphoid. Mis-fires → uveitis, scleritis."},
+    autonomic:    {label:"Autonomic", vn:"Thần kinh tự chủ", plane:"Support plane", color:"var(--autonomic)",
+      desc:"Tune pupil + accommodation + lid tone: sympathetic + parasympathetic. Fails → Horner, Adie, accommodative."}
+  };
+
+  function cssColor(v){
+    // resolve a 'var(--x)' string to a hex by reading the computed value
+    if(v.indexOf('var(')===0){
+      var name=v.slice(4,-1).trim();
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim()||v;
+    }
+    return v;
+  }
+
+  // ---- build the service legend cards ----
+  var legend=document.getElementById('legend');
+  Object.keys(SERVICES).forEach(function(key){
+    var s=SERVICES[key];
+    var col=cssColor(s.color);
+    var card=document.createElement('div');
+    card.className='svc';
+    card.dataset.svc=key;
+    card.innerHTML=
+      '<div><span class="dot" style="background:'+col+'"></span>'+
+      '<span class="name">'+s.label+'</span></div>'+
+      '<div class="plane">'+s.plane+' · '+s.vn+'</div>'+
+      '<div class="desc">'+s.desc+'</div>';
+    card.addEventListener('click',function(){
+      this.classList.toggle('open');
+    });
+    legend.appendChild(card);
+  });
+
+  // ---- detail card ----
+  var detail=document.getElementById('detail');
+  var dTitle=detail.querySelector('.dtitle');
+  var dVn=detail.querySelector('.dvn');
+  var dSvc=detail.querySelector('.dsvc');
+  var dBody=detail.querySelector('.dbody');
+  detail.querySelector('.dclose').addEventListener('click',function(){
+    detail.classList.remove('show');
+  });
+
+  function openDetail(g){
+    var svc=g.dataset.svc;
+    var s=SERVICES[svc];
+    dTitle.textContent=g.dataset.title||'';
+    dVn.textContent=g.dataset.vn||'';
+    if(s){
+      dSvc.textContent=s.label;
+      dSvc.style.background=cssColor(s.color);
+      dSvc.style.display='inline-block';
+    }else{
+      dSvc.style.display='none';
+    }
+    dBody.textContent=g.dataset.body||'';
+    detail.classList.add('show');
+  }
+
+  // ---- wire up every .struct group: click = detail, hover = highlight ----
+  var allStructs=Array.prototype.slice.call(document.querySelectorAll('.struct'));
+  allStructs.forEach(function(g){
+    if(!g.dataset.title) return;
+    g.addEventListener('click',function(e){
+      e.stopPropagation();
+      openDetail(g);
+    });
+    g.addEventListener('mouseenter',function(){
+      // dim siblings within the same SVG for focus
+      var svg=g.closest('svg');
+      if(!svg) return;
+      svg.querySelectorAll('.struct').forEach(function(o){
+        if(o!==g) o.classList.add('dim');
+      });
+      g.classList.add('hot');
+    });
+    g.addEventListener('mouseleave',function(){
+      var svg=g.closest('svg');
+      if(!svg) return;
+      svg.querySelectorAll('.struct').forEach(function(o){
+        o.classList.remove('dim');
+      });
+      g.classList.remove('hot');
+    });
+  });
+
+  // ---- build the VN-EN anatomy table from every titled .struct ----
+  // de-dupe by title, group by service in SERVICES order
+  var seen={};
+  var byService={};
+  allStructs.forEach(function(g){
+    var t=g.dataset.title;
+    if(!t||seen[t]) return;
+    seen[t]=true;
+    var svc=g.dataset.svc||'';
+    (byService[svc]=byService[svc]||[]).push({
+      en:t, vn:g.dataset.vn||'', body:g.dataset.body||'', svc:svc
+    });
+  });
+  var table=document.getElementById('anatomy-table');
+  var thead='<thead><tr><th>Service</th><th>Structure (EN)</th><th>VN</th><th>One-liner</th></tr></thead>';
+  var rows='';
+  Object.keys(SERVICES).forEach(function(svc){
+    (byService[svc]||[]).forEach(function(r){
+      var col=cssColor(SERVICES[svc].color);
+      // first sentence only for the one-liner
+      var one=r.body.split('. ')[0];
+      rows+='<tr>'+
+        '<td><span class="sd" style="background:'+col+'"></span>'+SERVICES[svc].label+'</td>'+
+        '<td>'+r.en+'</td><td>'+r.vn+'</td><td>'+one+'.</td></tr>';
+    });
+  });
+  table.innerHTML=thead+'<tbody>'+rows+'</tbody>';
+
+  // close detail on Escape
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape') detail.classList.remove('show');
+  });
+})();
+</script>
+</body>
+</html>

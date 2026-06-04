@@ -12,19 +12,26 @@ Companion to (not yet created):
 Original plan file (Windows-local, not portable):
 `C:\Users\ghost.vn\.claude\plans\i-want-a-practical-hazy-ocean.md`
 
-## Status — 2026-06-04
+## Status — 2026-06-04 (updated)
 
-Nothing built yet. Framework agreed, about to start with the HTML anatomy doc.
+Deliverables 1 + 2 shipped. **Paused at the approved review point** before the
+deep-dives.
 
 **Build order (all 4 approved):**
-1. `docs/clinical-anatomy.html` — visual anatomy with 8 SVG diagrams ← **next**
-2. `docs/clinical-primer.md` — hub doc
-3. `docs/clinical/*.md` — 8 sub-specialty deep-dives
+1. `docs/clinical-anatomy.html` — visual anatomy with 8 SVG diagrams — ✅ **done**
+   (1048 lines; 8 inline SVGs, 9-service legend, hover-highlight + click-detail
+   card, VN-EN table auto-built from the diagram data, light theme, no network)
+2. `docs/clinical-primer.md` — hub doc — ✅ **done** (384 lines; all 8 sections;
+   Hooks-for-MAEC verified against the real `Encounter` schema)
+3. ⏸️ **PAUSED HERE** — `docs/clinical/*.md` 8 sub-specialty deep-dives. Awaiting
+   user review of depth/tone on the hub before authoring (see below).
 4. Append clinical-primer entry to `FOLLOWUPS.md` + `serviceFindings[]` schema
-   design proposal
+   design proposal — pending (lands with / after the deep-dives).
 
-User has approved pausing after the hub for review of depth/tone before deep-dives
-are written.
+User approved pausing after the hub for review of depth/tone before deep-dives are
+written. **Resume by:** review `clinical-primer.md` + open `clinical-anatomy.html`;
+if depth/tone is right, author the 8 deep-dives in the build order in
+`## Deliverable 3`, then do deliverable 4 and delete this plan file.
 
 ## Context — why this doc exists
 
