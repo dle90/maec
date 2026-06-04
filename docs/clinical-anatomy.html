@@ -171,7 +171,7 @@
     lands on the retina at the back. Three concentric walls: fibrous (cornea + sclera),
     vascular (the uvea = iris + ciliary body + choroid), neural (retina). Tinted by
     service.</p>
-  <svg class="diagram" viewBox="0 0 920 540" role="img" aria-label="Eye sagittal cross-section">
+  <svg class="diagram" viewBox="0 0 920 560" role="img" aria-label="Eye sagittal cross-section">
     <defs>
       <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
         <path d="M0,0 L7,3 L0,6 Z" fill="#374151"/>
@@ -182,48 +182,48 @@
     <g class="struct" data-svc="surface"
        data-title="Sclera" data-vn="Củng mạc"
        data-body="The tough white fibrous shell — structural integrity of the globe. Continuous with the cornea at the limbus.">
-      <path d="M250,60 A 230 230 0 1 0 250 480 L250 470 A 220 220 0 1 1 250 70 Z"
-            fill="#f3f4f6" stroke="#9ca3af" stroke-width="2"/>
+      <path d="M255,182 A 210 210 0 1 1 255,378"
+            fill="none" stroke="#9ca3af" stroke-width="9" stroke-linecap="round"/>
     </g>
 
     <!-- Choroid (vascular layer, part of uvea) -->
     <g class="struct" data-svc="vascular"
        data-title="Choroid" data-vn="Hắc mạc / Màng mạch"
        data-body="The vascular middle layer (part of the uvea). Supplies the OUTER retina — photoreceptors + RPE. A separate blood tree from the central retinal artery.">
-      <path d="M255,72 A 218 218 0 0 1 255 468"
-            fill="none" stroke="var(--vascular)" stroke-width="9" opacity="0.55"/>
+      <path d="M264,187 A 199 199 0 1 1 264,373"
+            fill="none" stroke="var(--vascular)" stroke-width="9" opacity="0.55" stroke-linecap="round"/>
     </g>
 
     <!-- Retina (neural inner) -->
     <g class="struct" data-svc="sensor"
        data-title="Retina" data-vn="Võng mạc"
        data-body="The neural film at the back — converts light to signal. Photoreceptors (rods + cones) → bipolar → ganglion cells whose axons leave as the optic nerve.">
-      <path d="M262,80 A 210 210 0 0 1 262 460"
-            fill="none" stroke="var(--sensor)" stroke-width="11" opacity="0.5"/>
+      <path d="M274,192 A 188 188 0 1 1 274,368"
+            fill="none" stroke="var(--sensor)" stroke-width="11" opacity="0.5" stroke-linecap="round"/>
     </g>
 
     <!-- Vitreous -->
     <g class="struct" data-svc="optical"
        data-title="Vitreous cavity" data-vn="Buồng dịch kính"
        data-body="Clear gel filling the back two-thirds. Part of the optical path. Liquefies with age — posterior vitreous detachment causes floaters and can tear the retina.">
-      <ellipse cx="470" cy="270" rx="190" ry="195" fill="var(--optical)" opacity="0.06"/>
-      <text x="500" y="276" class="lbl" text-anchor="middle">Vitreous gel</text>
-      <text x="500" y="290" class="lbl vn" text-anchor="middle">Dịch kính</text>
+      <circle cx="440" cy="280" r="180" fill="var(--optical)" opacity="0.06"/>
+      <text x="488" y="282" class="lbl" text-anchor="middle">Vitreous gel</text>
+      <text x="488" y="296" class="lbl vn" text-anchor="middle">Dịch kính</text>
     </g>
 
     <!-- Cornea bulge (front, left) -->
     <g class="struct" data-svc="optical"
        data-title="Cornea" data-vn="Giác mạc"
        data-body="Clear front window. +43 D FIXED lens — does two-thirds of the eye's focusing. Avascular, richly innervated by CN V (so corneal abrasions hurt).">
-      <path d="M250,150 Q120,270 250,390"
-            fill="none" stroke="var(--optical)" stroke-width="10"/>
+      <path d="M255,182 Q180,280 255,378"
+            fill="none" stroke="var(--optical)" stroke-width="11" stroke-linecap="round"/>
     </g>
 
     <!-- Anterior chamber -->
     <g class="struct" data-svc="pressure"
        data-title="Anterior chamber" data-vn="Tiền phòng"
        data-body="Aqueous-filled space between cornea and iris. Its drainage angle (where iris meets cornea) is the glaucoma circuit. Shallow angle → angle-closure risk.">
-      <path d="M250,160 Q160,270 250,380 L262,360 Q200,270 262,180 Z"
+      <path d="M255,190 Q190,280 255,370 L280,350 Q236,280 280,210 Z"
             fill="var(--pressure)" opacity="0.10"/>
     </g>
 
@@ -231,15 +231,15 @@
     <g class="struct" data-svc="autonomic"
        data-title="Iris &amp; pupil" data-vn="Mống mắt &amp; đồng tử"
        data-body="The aperture. Sphincter (parasympathetic, CN III) constricts; dilator (sympathetic) widens. Pupil exam localizes autonomic and CN III lesions.">
-      <rect x="262" y="190" width="14" height="60" rx="4" fill="var(--autonomic)" opacity="0.8"/>
-      <rect x="262" y="290" width="14" height="60" rx="4" fill="var(--autonomic)" opacity="0.8"/>
+      <rect x="276" y="210" width="16" height="48" rx="4" fill="var(--autonomic)" opacity="0.8"/>
+      <rect x="276" y="302" width="16" height="48" rx="4" fill="var(--autonomic)" opacity="0.8"/>
     </g>
 
     <!-- Lens -->
     <g class="struct" data-svc="optical"
        data-title="Crystalline lens" data-vn="Thủy tinh thể"
        data-body="+20 D VARIABLE lens behind the iris. Changes shape (accommodation) via the ciliary muscle. Stiffens with age → presbyopia; clouds → cataract.">
-      <ellipse cx="300" cy="270" rx="26" ry="62" fill="var(--optical)" opacity="0.35"
+      <ellipse cx="314" cy="280" rx="26" ry="66" fill="var(--optical)" opacity="0.35"
                stroke="var(--optical)" stroke-width="2"/>
     </g>
 
@@ -247,37 +247,37 @@
     <g class="struct" data-svc="pressure"
        data-title="Ciliary body" data-vn="Thể mi"
        data-body="Ring of tissue behind the iris. PRODUCES aqueous humor (pressure service) AND holds the lens via zonules, driving accommodation (optical). Shared hardware.">
-      <path d="M270,182 q22,8 24,28 M270,358 q22,-8 24,-28"
-            fill="none" stroke="var(--pressure)" stroke-width="9" stroke-linecap="round"/>
+      <path d="M286,206 q-16,6 -16,28 M286,354 q-16,-6 -16,-28"
+            fill="none" stroke="var(--pressure)" stroke-width="10" stroke-linecap="round"/>
     </g>
 
     <!-- Macula -->
     <g class="struct" data-svc="sensor"
        data-title="Macula / fovea" data-vn="Hoàng điểm / hố trung tâm"
        data-body="Central 5 mm of retina; the fovea (1.5 mm) is all cones — your only high-resolution vision. AMD and DME attack here, which is why central acuity collapses early.">
-      <circle cx="668" cy="278" r="9" fill="var(--sensor)"/>
-      <text x="684" y="282" class="lbl key">Macula</text>
+      <circle cx="616" cy="304" r="9" fill="var(--sensor)"/>
+      <text x="632" y="308" class="lbl key">Macula</text>
     </g>
 
     <!-- Optic disc + nerve -->
     <g class="struct" data-svc="transport"
        data-title="Optic disc &amp; nerve" data-vn="Đĩa thị &amp; thần kinh thị giác"
        data-body="Where ganglion-cell axons exit. A physiological blind spot (no photoreceptors). Cupping of the disc = glaucoma; swelling = papilledema. CN II.">
-      <rect x="676" y="300" width="14" height="40" fill="var(--transport)" opacity="0.8"/>
-      <path d="M690,320 L780,330" stroke="var(--transport)" stroke-width="16" opacity="0.55"/>
-      <text x="700" y="370" class="lbl key">Optic nerve →</text>
-      <text x="700" y="384" class="lbl vn">Thần kinh thị giác (CN II)</text>
+      <rect x="606" y="236" width="14" height="34" fill="var(--transport)" opacity="0.8"/>
+      <path d="M618,253 L724,262" stroke="var(--transport)" stroke-width="16" opacity="0.55"/>
+      <text x="648" y="228" class="lbl key">Optic nerve →</text>
+      <text x="648" y="242" class="lbl vn">Thần kinh thị giác (CN II)</text>
     </g>
 
     <!-- Light arrow -->
-    <line x1="60" y1="270" x2="150" y2="270" stroke="#374151" stroke-width="2" marker-end="url(#arrow)"/>
-    <text x="60" y="258" class="lbl">light in</text>
-    <text x="60" y="290" class="lbl vn">ánh sáng</text>
+    <line x1="60" y1="280" x2="158" y2="280" stroke="#374151" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="60" y="268" class="lbl">light in</text>
+    <text x="60" y="300" class="lbl vn">ánh sáng</text>
 
     <!-- key labels -->
-    <g class="hint" data-target=""><text x="250" y="120" class="lbl">Sclera · Củng mạc</text></g>
-    <text x="120" y="430" class="lbl key" fill="var(--optical)">Cornea · Giác mạc</text>
-    <text x="300" y="360" class="lbl key" fill="var(--optical)" text-anchor="middle">Lens</text>
+    <text x="440" y="56" class="lbl" text-anchor="middle">Sclera · Củng mạc</text>
+    <text x="120" y="470" class="lbl key" fill="var(--optical)">Cornea · Giác mạc</text>
+    <text x="314" y="372" class="lbl key" fill="var(--optical)" text-anchor="middle">Lens</text>
   </svg>
   <p class="caption">Optical path = cornea → aqueous → pupil → lens → vitreous → retina.
     The uvea (<span class="pill" style="background:var(--vascular)">vascular</span> choroid +
