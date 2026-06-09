@@ -267,14 +267,286 @@ diagnostic spine.
 
 ---
 
-## Services 4–9 — TODO (continue the walkthrough)
+## Service 4 — Coordination 🟢 (two eyes as one) (covered in depth)
 
-Next: **Service 4 — Coordination** (two cameras on one rig — EOMs, CN III/IV/VI, fusion;
-strabismus, diplopia, amblyopia, cycloplegic refraction → ties to the cycloplegic-timer
-workflow). Then Surface, Pressure, Vascular, Immune, Autonomic. Same format (job → parts →
-mechanism → failure modes → tests → MAEC hooks). User asks confirming questions between
-services, so expect clarifications to fold in.
+**Job:** aim both eyes at the same target + let the brain **fuse** the two images into one
+3-D picture. Only *cross-plane* service. Camera analogy: two cameras on a rig that must stay
+aligned + a processor stitching stereo.
+
+**Why two eyes:** stereopsis (depth from the ~6cm offset) + wider field/redundancy. Cost:
+images must align or the brain sees double.
+
+**Parts:** 6 EOMs (extraocular muscles)/eye — 4 recti (sup/inf/med/lat; adduct=in,
+abduct=out) + 2 obliques. 3 nerves (**LR₆SO₄**): CN VI→lateral rectus, CN IV→superior
+oblique, CN III→the other 4 + lid lift + pupil. Brainstem **yokes** the pair; cortex
+**fuses**.
+
+**Failure modes:** **strabismus** (lác — eso=in, exo=out, hyper/hypo=up/down); **CN
+palsies** (VI→can't abduct/eso/horizontal diplopia; IV→vertical diplopia + head tilt;
+III→down-and-out + ptosis + maybe blown pupil = **aneurysm emergency**); **amblyopia**
+(nhược thị) — childhood-only: brain suppresses a mismatched/blurry eye → permanent if missed
+the **critical window (~age 7–8)**; eye is healthy, the *brain wiring* never developed.
+
+**Diplopia rule:** true binocular double vision **disappears when one eye is covered** →
+alignment problem. Monocular diplopia (one eye alone) → Optical (cataract/astigmatism).
+
+**Cycloplegic refraction (clarified — when to use):** kids' accommodation is strong+labile.
+Direction of error: **hyperopia gets HIDDEN** (they accommodate over it → manifest
+under-measures; cycloplegia reveals latent hyperopia — the cause of accommodative
+esotropia), **myopia gets OVER-stated** (over-minus/pseudomyopia). So cyclopege for: young
+kids, first exam, **any esotropia**, suspected hyperopia, amblyopia, inconsistent results.
+Can SKIP for cooperative older kids/teens with stable consistent myopia. Trust a manifest
+refraction *without* drops via **fogging / push-plus (max plus to best acuity)**, duochrome,
+retinoscopy, consistency + age-expected checks; escalate to drops if any flag. Don't always
+cyclopege: drops = 45-min wait + hours-to-days of blur/photophobia + small side-effect risk
++ the cycloplegic number needs interpreting (adjust hyperopia down before prescribing).
+
+**Tests:** cover test (alignment), motility H-pattern (localize weak muscle/nerve, HTML §7),
+VA each eye separately (amblyopia), stereopsis (Worth 4-dot), cycloplegic refraction, pupil/
+lid (CN III overlap).
+
+**MAEC hooks:** **the cycloplegic-wait timer/queue** (FOLLOWUPS P1) — make cyclopegia a
+*conditional* encounter step (triggered by age/eso/hyperopia/amblyopia/inconsistent manifest)
+so the 45-min timer fires only on that path; peds/amblyopia recall (racing the critical
+window); per-eye structured data (OD/OS asymmetry IS the signal); binocular-vision station =
+workflow #2.
+
+---
+
+## Service 5 — Surface 🩵 (tear film, lids, conjunctiva, cornea surface) (covered in depth)
+
+**Job:** keep the front wet, smooth, clear, defended — a smooth optical surface AND a
+barrier. **Highest-volume service** (dry eye everywhere).
+
+**Optical surprise:** the tear film is the eye's **first refracting surface** → breaks up →
+fluctuating blur even with perfect cornea/lens/retina. Tells: "blur that **clears on
+blinking**." Rule: **treat the surface before you measure** (dry film corrupts topo/biometry).
+
+**Parts:** **3-layer tear film** — oil/lipid (meibomian glands in lids; stops evaporation) /
+aqueous/water (lacrimal gland; bulk+nutrients) / mucin (conjunctival goblet cells; helps it
+stick). **Lids** = wipers (spread+pump tears, house oil glands). **Conjunctiva** = lining,
+makes mucin. **Corneal epithelium** = renewing barrier skin (CN V dense → very pain-
+sensitive). **Lacrimal plumbing** = gland (makes) + drain (puncta→...→nose). **Blink reflex**
+= CN V (sense) + CN VII (motor).
+
+**Mechanism:** each blink relays the film; between blinks it thins → **TBUT (tear break-up
+time, normal >10s)**; too fast → dry spots.
+
+**Failure modes:** **dry eye** (khô mắt) — evaporative (most common; **MGD** = clogged oil
+glands) vs aqueous-deficient (e.g. Sjögren's); mostly mixed/MGD-led → why tx is warm
+compress + lid hygiene, not just tears. **Paradox: dry eye → watery eyes** (reflex flood of
+bad tears). **Blepharitis** (lid-margin inflammation, MGD). **Conjunctivitis** (viral=watery
+contagious / bacterial=purulent / allergic=itchy bilateral). **Keratitis/corneal ulcer** —
+sight-threatening; bacterial/HSV(dendritic)/fungal/Acanthamoeba; **contact-lens overwear** a
+top cause. **Abrasion** (agonizing). **Exposure** (can't close lid — CN VII) /
+**neurotrophic** (lost CN V sensation → painless non-healing ulcer).
+
+**Tell:** Surface is **felt** (gritty/burn/itch/water/photophobia) — opposite of silent
+deep services. Itch→allergic; discharge→infective; pain+corneal spot+CL wearer→**urgent
+ulcer**.
+
+**Tests:** slit lamp (primary), TBUT, surface staining (fluorescein/lissamine), Schirmer
+(tear volume), meibography (gland dropout). Devices: slit lamp Keeler TB-002, SBM **IDRA**
+(surface analyzer, PDF+structured), Medmont (corrupted by bad surface).
+
+**Treatments:** dry eye/MGD = warm compress + lid hygiene/massage, omega-3, artificial tears,
+anti-inflammatory drops (cyclosporine/lifitegrast/steroid pulse), punctal plugs, IPL;
+conjunctivitis by cause; keratitis = urgent culture + intensive drops, stop CL.
+
+**Slit lamp (clarified — not "a flashlight"):** binocular **microscope** + a shapeable
+**slit/sheet of light**; the slit at an angle gives an **optical cross-section** of
+transparent tissue (which corneal layer; "cells & flare" in the aqueous like dust in a
+projector beam). Adjustable width/angle/filters (cobalt blue→fluorescein). A **platform**:
+hosts the tonometer, fundus/gonio lenses. The clinic's **anchor station**.
+
+**MAEC hooks:** highest volume → throughput; IDRA + meibography = structured + PDF →
+**document-path ingestor** (P2); **compare-over-time for meibography** (named in CLAUDE.md);
+CL follow-up (#4) ≈ a Surface check; "treat-before-measure" = workflow ordering rule;
+structured dry-eye metrics (TBUT/Schirmer/osmolarity/staining/meibo) = serviceFindings.
+
+---
+
+## Service 6 — Pressure 🟠 (aqueous production & drainage) (covered in depth)
+
+**Job:** keep the globe inflated at the right pressure (IOP 10–21 mmHg) by balancing fluid
+made vs drained. **Plus a nutrition role:** cornea+lens are **avascular** (clear because no
+vessels) → the **aqueous itself feeds them**.
+
+**Hydraulic loop (HTML §2):** ciliary body MAKES aqueous → posterior chamber → pupil →
+anterior chamber → ANGLE → trabecular meshwork → Schlemm's canal → episcleral veins (~90%
+conventional, ~10% uveoscleral). **IOP = flow vs outflow-resistance**; production ~constant,
+so resistance is the variable. Every glaucoma drug = ↓production or ↑outflow.
+
+**Failure modes — the two-way drain fork:**
+- **Open-angle (POAG):** angle open but meshwork clogged → slow silent IOP rise (most
+  common; the silent thief).
+- **Angle-closure (PACG):** iris blocks the angle. **Acute crisis** = sudden severe pain,
+  red eye, halos, nausea, mid-dilated fixed pupil, rock-hard eye, very high IOP =
+  **emergency**. Predisposed: shallow AC, small/hyperopic eyes, older; **dilation can trigger
+  it** → assess angle before dilating.
+- **Secondary** (pigment/pseudoexfoliation/blood-hyphema/uveitis/neovascular[Vascular→]/
+  steroid). **Ocular hypertension** (high IOP, healthy nerve). **Normal-tension** (damage at
+  normal IOP). **Hypotony** (IOP too low → macular wrinkling).
+
+**Measurement:** **tonometry** — Goldmann applanation (gold standard, on slit lamp), air-
+puff (screening), **handheld (TB-020, "IOP follows the patient")**. Catch: **pachymetry**
+(corneal thickness) skews it — thick reads falsely high, thin falsely low. **Gonioscopy**
+(mirror lens) to see open vs closed angle. Diagnosis = **triad: IOP + structure (disc/RNFL)
++ function (visual field)**.
+
+**Treatment ladder (↓production or ↑outflow):** drops (prostaglandins↑outflow=1st line;
+beta-blockers/CAIs/alpha↓production; rho-kinase↑trabecular; pilocarpine for closure); laser
+(**SLT** trabecular; **LPI** iridotomy for closure); surgery (trabeculectomy, tubes, MIGS,
+cyclophotocoagulation). Acute closure = emergency IOP-lowering then LPI.
+
+**MAEC hooks:** IOP = screening vital on every comprehensive exam; **portable IOP "follows
+the patient"** (mobile v1 scope); glaucoma lifelong monitoring → structured IOP + compare-
+over-time + register/recall; **angle/dilation safety flag** in encounter form; pachymetry =
+interpretation modifier (value needs context).
+
+---
+
+## Service 7 — Vascular 🔴 (blood supply) (covered in depth)
+
+**Job:** deliver O₂/nutrients + clear waste to retina + optic nerve via 2 circuits behind a
+tight barrier. Retina = one of the hungriest tissues → very ischemia-sensitive.
+
+**Supply (HTML §5):** **central retinal artery** (end-artery, no backup) → inner retina;
+**choroid** (via short posterior ciliary arteries) → outer retina (photoreceptors+RPE,
+highest blood flow/gram); optic-nerve-head own supply → NAION.
+
+**Choroid anatomy (clarified):** it's a **vascular SHEET** (layers: Bruch's → choriocapillaris
+capillary mat → Sattler medium → Haller large → suprachoroid). Fed by ~15–20 **short
+posterior ciliary arteries that PIERCE the sclera from outside, near the optic nerve** (not
+one tree — many pipes through the wall into a hidden mat); drained by **vortex veins piercing
+the sclera at the equator**. Opposite architecture to the retinal artery's single "tree" off
+the disc. Feeds photoreceptors by **diffusion across Bruch's** → cracks in Bruch's = wet AMD.
+
+**Blood-retina barrier:** tight seals keep blood contents OUT of retina. Most vascular
+disease = barrier breakdown → **leak → edema → blur**.
+
+**Two mechanisms:** blockage (ischemia/infarct) or leak/wall-damage. Linked by **VEGF**:
+ischemia → VEGF → leakage + **neovascularization** (fragile new vessels). → anti-VEGF blocks
+signal; PRP laser destroys ischemic tissue making the signal.
+
+**Failure modes:** **diabetic retinopathy (DR)** — NPDR (microaneurysms, hemorrhages,
+exudates, **DME**) → PDR (neovascular → vitreous hemorrhage, tractional detachment,
+neovascular glaucoma[→Pressure]); ETDRS-graded; tx = control sugar + anti-VEGF + PRP +
+vitrectomy. **Hypertensive retinopathy** (AV nicking). **RVO** (vein clot → backed-up edema;
+CRVO/BRVO). **RAO** = "eye stroke" — sudden painless loss, cherry-red spot, **embolic →
+urgent stroke workup**, retina dies ~90min. Cascades: wet AMD (→Sensor), NAION (→Transport),
+neovascular glaucoma (→Pressure). **ROP** (premature babies, screen).
+
+**Window on the body:** retina = only place to *see* live vessels → diabetes/HTN often first
+caught here; embolus = stroke/heart flag.
+
+**Tests:** fundus exam/photo, OCT (edema), **FA** (dye — leakage/non-perfusion), OCT-A
+(dye-free); systemic HbA1c/BP/carotid. Device: RS-330 (OCT+fundus+OCT-A).
+
+**MAEC hooks:** **DR screening big for VN** (fundus-photo screening, structured DR-stage, AI-
+grading candidate); anti-VEGF injection tracking + compare-over-time (shared w/ Sensor);
+link eye↔systemic (HbA1c/BP) + referral loop; RAO = red-flag triage; cross-service cascades
+= the inter-service reasoning layer argument.
+
+---
+
+## Service 8 — Immune 🟢 (defense system) (covered in depth)
+
+**Job:** defend + police inside the eye (infection, debris) without damaging clear tissue.
+Most disease = inflammation (overactive), not infection.
+
+**Immune privilege:** the eye dials *down* internal immunity to stay transparent (barriers +
+calming environment). Trade-off: internal **infections are devastating** (slow response) AND
+immunity **over-reacts** when it fires → most inflammatory eye disease.
+
+**Parts:** **uvea (màng bồ đào = iris+ciliary body+choroid)** = main battleground (vascular →
+immune-cell access); inflammation = **uveitis**. Shared hardware → spills into Pressure/
+Optical/Vascular. **Sclera** → scleritis. Conjunctiva/lacrimal (surface, allergy).
+
+**Mechanism:** inflammation spills cells+protein into the anterior chamber → **"cells and
+flare"** on slit lamp (dust+haze in a projector beam) = active intraocular inflammation.
+
+**Failure modes:** **uveitis** by location — anterior/iritis (most common; pain+red+
+photophobia+small pupil; HLA-B27, ankylosing spondylitis, IBD), intermediate (vitreous,
+floaters), posterior (retina/choroid; toxoplasmosis, CMV), pan. Causes: autoimmune/systemic
+(sarcoid, Behçet, JIA), infectious (toxo/herpes/TB/syphilis/CMV), idiopathic. Tx: steroids +
+cycloplegic + immunomodulators/biologics + anti-infective if infectious. Complications
+(cascades): glaucoma (inflammatory/steroid→Pressure), cataract, synechiae, **CME**(→Sensor).
+**Scleritis** (deep boring pain, RA/vasculitis, can perforate; vs benign episcleritis).
+**Endophthalmitis** (infection INSIDE eye — post-op/injection/trauma — **emergency**;
+intravitreal abx + vitrectomy). **Allergic** (itch; overlaps Surface). **Sympathetic
+ophthalmia** (injury to 1 eye → autoimmune attack on both). **Graft rejection**.
+
+**Window on body:** uveitis/scleritis often = eye sign of systemic autoimmune/infectious
+disease → systemic workup + co-manage rheum/ID.
+
+**Tests:** slit lamp (cells & flare, keratic precipitates, synechiae), dilated exam/OCT
+(posterior, CME), FA/OCT-A (vasculitis), IOP (inflammatory glaucoma), systemic workup.
+
+**MAEC hooks:** chronic relapsing systemic-linked → longitudinal tracking + link systemic
+dx/meds + recall; **steroid-use safety rule** (monitor IOP+lens — steroid glaucoma/cataract)
+= encounter-form flag; **endophthalmitis red-flag** (pain+vision drop after injection/op →
+emergency) in injection-tracking workflow; cross-service cascades.
+
+---
+
+## Service 9 — Autonomic 🟡 (automatic settings) (covered in depth)
+
+**Job:** auto-tune pupil size (aperture), focusing (autofocus), lid tone — involuntarily.
+Mostly valuable as a **diagnostic readout** (pupil = visible window to deep wiring).
+
+**Two opposing wires:** **parasympathetic** (CN III) → constricts pupil (miosis) + drives
+accommodation; **sympathetic** (long 3-stage path brain→chest→neck/carotid→eye) → dilates
+pupil (mydriasis) + lifts lid (Müller's).
+
+**Pupil reflexes:** light reflex — IN = optic nerve (afferent, Transport) → brainstem → OUT =
+CN III (efferent, this service); **consensual** (both constrict). Near reflex triad =
+converge + accommodate + constrict.
+
+**Afferent vs efferent (key split):** **RAPD + EQUAL pupils = Transport** (IN wire); **UNEQUAL
+pupils (anisocoria) = Autonomic** (OUT wire).
+
+**Failure modes:** **Horner** (sympathetic cut → small pupil + ptosis + ↓sweat; long path →
+serious causes: Pancoast tumor, **carotid dissection**, stroke → hunt cause). **CN III palsy
++ blown pupil** (compression/**aneurysm** = emergency; "**rule of the pupil**" —
+compressive involves pupil, ischemic/diabetic spares it). **Adie's tonic pupil** (large,
+light-near dissociation, benign). **Argyll Robertson** (small, reacts to near not light —
+neurosyphilis). **Accommodation**: spasm/pseudomyopia (over-focus — the cyclo-refraction
+issue), insufficiency; distinguish from **presbyopia** (lens hardware stiffening = Optical,
+not the drive). Drug pupils (atropine→big, opioids→pinpoint).
+
+**Anisocoria workup:** bigger pupil abnormal (won't constrict → parasym/CN III, worse in
+light) vs smaller abnormal (won't dilate → sympathetic/Horner, worse in dark); physiologic
+anisocoria (equal in light+dark) is benign/common.
+
+**Window on body/brain:** pupil = core neuro vital (blown pupil in trauma = brain herniation).
+
+**Tests:** pupil exam (size light/dark, direct+consensual, near, swinging-flashlight/RAPD,
+light-vs-dark anisocoria), pharmacologic drops (Horner/Adie), accommodation measures,
+MRI/CTA for red flags (aneurysm, dissection). Tx: mostly treat the cause; reading add/vision
+therapy for accommodation; the service's drugs are also *tools* (mydriatics to dilate,
+cycloplegics to refract).
+
+**MAEC hooks:** structured per-eye pupil fields (size light/dark, reactivity, RAPD); dilation
+safety flag (mydriatics → angle-closure, Autonomic→Pressure); red-flag triage (blown-pupil
+CN III, new Horner → neuro/emergency); cycloplegia/accommodation ties to the cyclo-wait timer.
+
+---
+
+## All 9 covered. Next steps
+
+The full map: **data plane** Optical→Sensor→Transport · **cross-plane** Coordination ·
+**support plane** Surface·Pressure·Vascular·Immune·Autonomic. Load-bearing theme = shared
+hardware + cascades (Pressure→Transport, Vascular→Sensor, Immune→multi, Vascular→Pressure).
+
+Remaining options discussed with user:
+- Synthesis pass — full cross-service cascade map; run real complaints through the diagnostic
+  spine end-to-end (e.g. "red painful eye", "sudden painless vision loss").
+- Turn this into deliverable 3 (the `docs/clinical/*.md` deep-dives).
 
 > Possible doc improvement flagged during Transport: redraw anatomy HTML §6 with the
 > explicit "by-eye → by-field-side" re-sort framing (currently shows only lesion sites +
 > defect pictograms).
+> User preference (from Service 7 on): keep a plain-language gloss next to every jargon term
+> + abbreviation. Earlier services 1–6 in this doc are terser/jargon-first; re-gloss if these
+> notes get promoted to the real deep-dives.
