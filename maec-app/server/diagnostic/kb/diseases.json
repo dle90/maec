@@ -1005,6 +1005,21 @@
     "provenance": { "sources": ["AAO BCSC §5"], "checkFlags": [] }
   },
   {
+    "_id": "d-migraine-with-aura",
+    "name": "Migraine with aura",
+    "nameVi": "Đau nửa đầu có hào quang thị giác",
+    "services": ["transport"],
+    "codes": { "snomed": "37796009", "icd11": "8A80.1" },
+    "redFlag": false,
+    "urgency": "routine",
+    "ageMin": 12,
+    "ageMax": 70,
+    "prevalenceTag": "common",
+    "summary": "Reversible visual aura (classically zigzag scintillating scotoma, fortification spectra, or bilateral flashes lasting 15-60 minutes) preceding or accompanying a unilateral throbbing headache, often with nausea or photophobia. Recurrent in a young-to-middle-aged patient with a personal or family history. NOT a retinal detachment despite the flashes — bilateral involvement and the temporal pattern distinguish.",
+    "treatments": ["abortive_triptan_or_NSAID", "preventive_topiramate_or_propranolol_if_frequent", "trigger_avoidance", "neurology_referral_if_first_episode_or_atypical"],
+    "provenance": { "sources": ["AAO BCSC §5", "ICHD-3 1.2.1"], "checkFlags": [] }
+  },
+  {
     "_id": "d-asthenopia",
     "name": "Asthenopia / digital eye strain",
     "nameVi": "Mỏi mắt do nhìn gần / hội chứng mắt do dùng màn hình",

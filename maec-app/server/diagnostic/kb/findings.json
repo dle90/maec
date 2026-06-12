@@ -54,7 +54,7 @@
     "kind": "symptom",
     "serviceHints": ["transport", "vascular"],
     "aliases": ["altitudinal_loss", "horizontal_field_loss"],
-    "implies": ["field_loss"]
+    "implies": ["field_loss", "vision_loss_sudden"]
   },
   {
     "_id": "field_loss_homonymous",
@@ -885,6 +885,14 @@
     "serviceHints": ["optical"],
     "implies": ["vision_blur_gradual"],
     "aliases": ["presbyopia_pattern", "near_blur_distance_clear", "mờ_đọc_sách"]
+  },
+  {
+    "_id": "visual_aura_zigzag",
+    "name": "Zigzag / scintillating visual aura, bilateral, 15-60 minutes",
+    "nameVi": "Hào quang thị giác hình zigzag, hai bên, 15-60 phút",
+    "kind": "symptom",
+    "serviceHints": ["transport"],
+    "aliases": ["scintillating_scotoma", "migraine_aura", "fortification_spectrum", "hào_quang_zigzag"]
   },
   {
     "_id": "distance_only_blur",

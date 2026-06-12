@@ -66,8 +66,8 @@
     "nameVi": "NAION (nhồi máu thần kinh thị không do viêm động mạch)",
     "description": "Sudden painless monocular vision loss with an altitudinal field defect, often a swollen optic disc. Age 50+ with vascular risk factors (HTN, diabetes, sleep apnea). Must still rule out GCA in parallel.",
     "trigger": {
-      "hasAllSymptoms": ["vision_loss_sudden", "monocular"],
-      "hasAnySymptoms": ["field_loss_altitudinal", "disc_swelling_unilateral"],
+      "hasAllSymptoms": ["monocular"],
+      "hasAnySymptoms": ["vision_loss_sudden", "field_loss_altitudinal", "disc_swelling_unilateral"],
       "patientContext": { "ageMinYears": 50 }
     },
     "services": ["vascular", "transport"],

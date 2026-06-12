@@ -271,6 +271,13 @@
   { "diseaseId": "d-myopia", "findingId": "distance_only_blur", "frequency": 0.95, "evokingStrength": 0.9 },
   { "diseaseId": "d-astigmatism", "findingId": "distance_only_blur", "frequency": 0.3, "evokingStrength": 0.15 },
 
+  { "diseaseId": "d-migraine-with-aura", "findingId": "visual_aura_zigzag", "frequency": 0.9, "evokingStrength": 0.95 },
+  { "diseaseId": "d-migraine-with-aura", "findingId": "flashes", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-migraine-with-aura", "findingId": "headache", "frequency": 0.85, "evokingStrength": 0.6 },
+  { "diseaseId": "d-migraine-with-aura", "findingId": "binocular", "frequency": 0.75, "evokingStrength": 0.4 },
+  { "diseaseId": "d-migraine-with-aura", "findingId": "nausea_vomiting", "frequency": 0.5, "evokingStrength": 0.2 },
+  { "diseaseId": "d-migraine-with-aura", "findingId": "photophobia", "frequency": 0.6, "evokingStrength": 0.25 },
+
   { "diseaseId": "d-orbital-cellulitis", "findingId": "fever_or_systemic", "frequency": 0.85, "evokingStrength": 0.4 },
   { "diseaseId": "d-orbital-cellulitis", "findingId": "periorbital_swelling", "frequency": 0.98, "evokingStrength": 0.85 },
   { "diseaseId": "d-orbital-cellulitis", "findingId": "proptosis", "frequency": 0.8, "evokingStrength": 0.95 },
