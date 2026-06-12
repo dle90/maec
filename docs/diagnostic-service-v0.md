@@ -43,11 +43,11 @@ Seeded from version-controlled JSON in `maec-app/server/diagnostic/kb/`:
 | Collection | Entries | Source file |
 |---|---|---|
 | `dxservices` | 9 | `kb/services.json` |
-| `dxdiseases` | 63 | `kb/diseases.json` |
-| `dxfindings` | 83 | `kb/findings.json` |
+| `dxdiseases` | 64 | `kb/diseases.json` |
+| `dxfindings` | 91 | `kb/findings.json` |
 | `dxtests` | 28 | `kb/tests.json` |
-| `dxredflags` | 14 | `kb/redFlags.json` |
-| `dxedges` | 179 | `kb/edges.json` |
+| `dxredflags` | 19 | `kb/redFlags.json` |
+| `dxedges` | 189 | `kb/edges.json` |
 
 Edit the JSON, re-run the seeder. Clinical reviewers work in the JSON, not the
 DB. Cross-references are validated at seed time — typos in disease IDs, missing
@@ -158,7 +158,9 @@ Returns the current session state.
 ### `POST /api/diagnostic/sessions/:id/observations`
 
 Add a finding from the exam (e.g. tonometry just measured 48 mmHg, slit-lamp
-showed cells and flare). The engine re-ranks.
+showed cells and flare). The engine re-ranks. **Observations also feed the
+red-flag gate** — a dendritic corneal ulcer added during slit-lamp will fire
+`rf-hsv-keratitis` even though it was not in the initial complaint.
 
 **Request**
 ```json

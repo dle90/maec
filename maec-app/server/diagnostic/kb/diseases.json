@@ -930,6 +930,21 @@
     "provenance": { "sources": ["disease-index.md"], "checkFlags": [] }
   },
   {
+    "_id": "d-orbital-cellulitis",
+    "name": "Orbital cellulitis",
+    "nameVi": "Viêm mô hốc mắt",
+    "services": ["immune", "coordination"],
+    "codes": { "snomed": "194450004" },
+    "redFlag": true,
+    "urgency": "emergency",
+    "ageMin": 1,
+    "ageMax": 100,
+    "prevalenceTag": "rare_critical",
+    "summary": "Bacterial infection behind the orbital septum, often spreading from ethmoid sinusitis. Periorbital swelling + fever + proptosis + pain on eye movement + restricted motility. Can extend intracranially (cavernous sinus thrombosis, abscess). Paediatric emergency.",
+    "treatments": ["IV_broad_spectrum_antibiotics", "CT_orbits_with_contrast", "ENT_and_ophth_consult", "surgical_drainage_if_abscess"],
+    "provenance": { "sources": ["AAO_PPP_2023_orbital_cellulitis"], "checkFlags": ["[CHECK] preseptal vs orbital distinction depends on motility + proptosis; clinical reviewer should confirm thresholds"] }
+  },
+  {
     "_id": "d-pcv-coats",
     "name": "Coats disease / other paediatric retinal cause of leukocoria",
     "nameVi": "Bệnh Coats / nguyên nhân võng mạc trẻ em",

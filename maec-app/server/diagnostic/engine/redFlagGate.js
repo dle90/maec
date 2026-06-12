@@ -103,11 +103,22 @@ function matchRedFlag(complaint, rule) {
   }
 }
 
-async function runRedFlagGate(complaint) {
+async function runRedFlagGate(complaint, observations = []) {
   const rules = await DxRedFlag.find({}).lean()
+
+  // Observations are findings entered during the exam — they should be able
+  // to fire red-flags too (e.g. a dendritic ulcer seen on slit-lamp must
+  // trigger rf-hsv-keratitis even though the initial complaint was vague).
+  // Union them into the symptom set for matching purposes only.
+  const observedTags = (observations || []).map(o => o.findingId).filter(Boolean)
+  const augmented = {
+    ...complaint,
+    symptoms: [...(complaint.symptoms || []), ...observedTags],
+  }
+
   const matches = []
   for (const rule of rules) {
-    const m = matchRedFlag(complaint, rule)
+    const m = matchRedFlag(augmented, rule)
     if (m) matches.push(m)
   }
   // Stable ordering: emergency before urgent_referral before urgent.

@@ -156,7 +156,7 @@ const cases = [
     expectRedFlag: ['rf-cn3-blown-pupil'],
   },
   {
-    name: 'RF: GCA (age 70 + sudden loss + jaw claudication)',
+    name: 'RF: GCA (age 72 + sudden loss + jaw claudication)',
     complaint: {
       text: 'Mất thị lực đột ngột mắt phải, đau đầu, đau cơ hàm khi nhai',
       symptoms: ['vision_loss_sudden', 'monocular', 'headache', 'jaw_claudication', 'scalp_tenderness'],
@@ -165,7 +165,67 @@ const cases = [
       patientContext: { ageYears: 72 },
     },
     expectInTop: ['d-gca'],
-    expectRedFlag: ['rf-naion-or-gca'],
+    expectRedFlag: ['rf-gca'],
+  },
+  {
+    name: 'RF: NAION split (age 65 + sudden loss + altitudinal)',
+    complaint: {
+      text: 'Mất thị lực nửa trên đột ngột mắt phải, không đau',
+      symptoms: ['vision_loss_sudden', 'monocular', 'field_loss_altitudinal'],
+      onset: 'sudden',
+      pain: 'none',
+      patientContext: { ageYears: 65 },
+    },
+    expectInTop: ['d-naion'],
+    expectRedFlag: ['rf-naion'],
+  },
+  {
+    name: 'RF: orbital cellulitis (child + swelling + proptosis + fever)',
+    complaint: {
+      text: 'Trẻ 6 tuổi, mắt phải sưng nhiều, lồi ra, đau khi liếc, đang sốt',
+      symptoms: ['periorbital_swelling', 'proptosis', 'pain_on_eye_movement', 'fever_or_systemic'],
+      pain: 'moderate',
+      patientContext: { ageYears: 6 },
+    },
+    expectInTop: ['d-orbital-cellulitis'],
+    expectRedFlag: ['rf-orbital-cellulitis'],
+  },
+  {
+    name: 'RF: hyphema after trauma',
+    complaint: {
+      text: 'Bị bóng tennis va vào mắt 2 giờ trước, thấy lớp máu dưới giác mạc',
+      symptoms: ['trauma_recent', 'blood_in_AC', 'vision_drop'],
+      onset: 'sudden',
+      pain: 'moderate',
+      patientContext: { ageYears: 22, recentTrauma: true },
+    },
+    expectInTop: ['d-hyphema'],
+    expectRedFlag: ['rf-hyphema'],
+  },
+  {
+    name: 'RF: severe scleritis (deep boring + tender + violet)',
+    complaint: {
+      text: 'Đau sâu kiểu khoan mắt phải, đau hơn về đêm, đau khi sờ',
+      symptoms: ['pain_deep_boring', 'tender_globe', 'violet_hue_sclera'],
+      pain: 'severe',
+      patientContext: { ageYears: 48, systemic: ['rheumatoid_arthritis'] },
+    },
+    expectInTop: ['d-scleritis'],
+    expectRedFlag: ['rf-scleritis-severe'],
+  },
+  {
+    name: 'RF: HSV keratitis fires from observation (dendritic ulcer)',
+    complaint: {
+      text: 'Đau mắt + sợ ánh sáng, không đeo CL',
+      symptoms: ['pain_severe_or_moderate', 'photophobia'],
+      pain: 'moderate',
+      patientContext: { ageYears: 35, isContactLensWearer: false },
+    },
+    observations: [
+      { findingId: 'dendritic_corneal_ulcer', eye: 'OD', source: 'manual' },
+    ],
+    expectInTop: ['d-hsv-keratitis'],
+    expectRedFlag: ['rf-hsv-keratitis'],
   },
   {
     name: 'RF: endophthalmitis (post-injection)',
@@ -215,7 +275,7 @@ const cases = [
 
 async function runCase(c) {
   console.log(`\n▸ ${c.name}`)
-  const result = await runDiagnostic(c.complaint, [])
+  const result = await runDiagnostic(c.complaint, c.observations || [])
   const top = topDiseaseIds(result, 6)
   const rfs = redFlagIds(result)
   console.log(`  differential: ${top.join(', ') || '(empty)'}`)

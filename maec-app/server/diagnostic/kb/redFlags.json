@@ -6,7 +6,7 @@
     "description": "Sudden severe pain + red + halos + nausea. Mid-dilated fixed pupil; rock-hard globe. IOP often 40-80 mmHg. Emergency — minutes to vision loss.",
     "trigger": {
       "hasAllSymptoms": ["pain_severe", "halos"],
-      "qualifiers": { "onset": "sudden", "redness": "moderate_or_worse" }
+      "qualifiers": { "onset": "sudden", "redness": { "min": "moderate" } }
     },
     "services": ["pressure"],
     "candidateDiseases": ["d-acute-angle-closure"],
@@ -45,19 +45,36 @@
     "actionGuidanceEn": "Stroke emergency. Refer to ED/stroke unit immediately (CT/CT-A, carotid workup) — manage like a brain stroke. Quick fundus exam to confirm cherry-red spot. Vision rarely recovers; systemic workup is critical to prevent the next event."
   },
   {
-    "_id": "rf-naion-or-gca",
-    "name": "Optic nerve infarct (NAION / GCA)",
-    "nameVi": "Nhồi máu thần kinh thị (NAION / GCA)",
-    "description": "Sudden painless vision loss, often altitudinal (top or bottom half). In age 50+, must rule out giant cell arteritis (headache, scalp tenderness, jaw claudication, polymyalgia) — GCA is treatable with high-dose steroids and missing it blinds the other eye in days.",
+    "_id": "rf-gca",
+    "name": "Giant cell arteritis",
+    "nameVi": "Viêm động mạch tế bào khổng lồ (GCA)",
+    "description": "Sudden monocular vision loss in a patient age 50+ with any of jaw claudication, scalp tenderness, polymyalgia, headache. Untreated GCA blinds the fellow eye within days — treat empirically while awaiting confirmation.",
     "trigger": {
       "hasAllSymptoms": ["vision_loss_sudden", "monocular"],
-      "hasAnySymptoms": ["field_loss_altitudinal", "headache", "jaw_claudication", "scalp_tenderness"]
+      "hasAnySymptoms": ["jaw_claudication", "scalp_tenderness"],
+      "patientContext": { "ageMinYears": 50 }
     },
-    "services": ["transport", "vascular"],
-    "candidateDiseases": ["d-naion", "d-gca", "d-rao"],
+    "services": ["vascular", "immune", "transport"],
+    "candidateDiseases": ["d-gca", "d-naion", "d-rao"],
     "urgency": "emergency",
-    "actionGuidance": "Cấp cứu. Nếu trên 50 tuổi và/hoặc có đau đầu/đau cơ vai/sốt nhẹ: xét nghiệm ESR + CRP ngay, bắt đầu corticoid liều cao (methylprednisolone) trong khi chờ kết quả; sinh thiết động mạch thái dương sớm. Mục tiêu là cứu mắt còn lại.",
-    "actionGuidanceEn": "Emergency. If age 50+ and/or headache / polymyalgia / fever: order ESR + CRP immediately, start high-dose steroids empirically while awaiting results; arrange temporal artery biopsy soon. Goal is to save the fellow eye."
+    "actionGuidance": "Cấp cứu. Xét nghiệm ESR + CRP ngay. BẮT ĐẦU corticoid liều cao (methylprednisolone IV 1g x 3 ngày, sau đó prednisolone uống) NGAY trong khi chờ kết quả — không trì hoãn. Sinh thiết động mạch thái dương sớm (trong 1-2 tuần, vẫn dương tính dù đã dùng steroid). Mục tiêu: cứu mắt còn lại.",
+    "actionGuidanceEn": "Emergency. Order ESR + CRP immediately. START high-dose steroids (IV methylprednisolone 1g x 3 days, then oral prednisolone) WHILE AWAITING results — do not delay. Temporal artery biopsy within 1-2 weeks (still positive after steroid started). Goal: save the fellow eye."
+  },
+  {
+    "_id": "rf-naion",
+    "name": "NAION (non-arteritic anterior ischemic optic neuropathy)",
+    "nameVi": "NAION (nhồi máu thần kinh thị không do viêm động mạch)",
+    "description": "Sudden painless monocular vision loss with an altitudinal field defect, often a swollen optic disc. Age 50+ with vascular risk factors (HTN, diabetes, sleep apnea). Must still rule out GCA in parallel.",
+    "trigger": {
+      "hasAllSymptoms": ["vision_loss_sudden", "monocular"],
+      "hasAnySymptoms": ["field_loss_altitudinal", "disc_swelling_unilateral"],
+      "patientContext": { "ageMinYears": 50 }
+    },
+    "services": ["vascular", "transport"],
+    "candidateDiseases": ["d-naion", "d-gca", "d-rao"],
+    "urgency": "urgent",
+    "actionGuidance": "Khám pupil RAPD + thị trường + soi đĩa thị. Xét nghiệm ESR + CRP ngay để LOẠI TRỪ GCA (nếu nghi GCA → corticoid liều cao). Quản lý nguy cơ mạch máu (huyết áp, đường, ngưng thở khi ngủ). Không có điều trị đặc hiệu cho NAION nhưng quản lý yếu tố nguy cơ giảm rủi ro mắt còn lại.",
+    "actionGuidanceEn": "Check RAPD + visual field + disc exam. Order ESR + CRP immediately to RULE OUT GCA (if any suspicion, treat with high-dose steroids while awaiting biopsy). Manage vascular risk factors (BP, glucose, sleep apnea). No proven specific treatment for NAION, but risk-factor control reduces fellow-eye risk."
   },
   {
     "_id": "rf-optic-neuritis",
@@ -102,6 +119,20 @@
     "urgency": "urgent_referral",
     "actionGuidance": "Khẩn cấp. Khám đèn khe + nhuộm fluorescein. Cấy giác mạc (nếu được) trước khi nhỏ kháng sinh. Kháng sinh nhỏ phổ rộng (fluoroquinolone hoặc fortified) tần suất cao. NGỪNG đeo kính tiếp xúc. Tái khám trong 24-48h.",
     "actionGuidanceEn": "Urgent. Slit-lamp + fluorescein staining. Corneal culture (if available) BEFORE starting drops. Broad-spectrum topical antibiotics (fluoroquinolone or fortified) frequent dosing. STOP contact-lens wear. Re-examine in 24-48h."
+  },
+  {
+    "_id": "rf-hsv-keratitis",
+    "name": "Herpes simplex keratitis (dendritic ulcer)",
+    "nameVi": "Viêm giác mạc do herpes (loét hình cành cây)",
+    "description": "A branching (dendritic) corneal ulcer on fluorescein staining is essentially pathognomonic for HSV epithelial keratitis. The treatment is different from bacterial keratitis — topical steroid alone makes it worse. This rule fires whenever the dendritic finding is observed (initial complaint or added during slit-lamp exam).",
+    "trigger": {
+      "hasAllSymptoms": ["dendritic_corneal_ulcer"]
+    },
+    "services": ["surface", "immune"],
+    "candidateDiseases": ["d-hsv-keratitis"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Bắt đầu thuốc kháng virus (acyclovir uống hoặc ganciclovir nhỏ mắt). KHÔNG nhỏ corticoid đơn thuần — làm nặng thêm. Tái khám trong 1-3 ngày để theo dõi lành. Tránh đeo kính tiếp xúc cho đến khi giác mạc lành hoàn toàn.",
+    "actionGuidanceEn": "Start antiviral therapy (oral acyclovir or topical ganciclovir). DO NOT use topical steroid alone — it worsens the disease. Re-examine in 1-3 days for healing. No contact lenses until cornea is completely healed."
   },
   {
     "_id": "rf-endophthalmitis",
@@ -206,5 +237,50 @@
     "urgency": "urgent_referral",
     "actionGuidance": "Khẩn cấp. Chụp CT-angiography từ nền sọ đến đỉnh ngực để loại trừ bóc tách động mạch cảnh và u Pancoast. Tham vấn thần kinh và mạch máu.",
     "actionGuidanceEn": "Urgent. CT-angiography from the skull base to the lung apex to rule out carotid dissection and Pancoast tumour. Neurology + vascular consult."
+  },
+  {
+    "_id": "rf-orbital-cellulitis",
+    "name": "Orbital cellulitis",
+    "nameVi": "Viêm mô hốc mắt",
+    "description": "Periorbital swelling + fever + proptosis + restricted / painful eye movement. Bacterial infection behind the orbital septum, often spreading from ethmoid sinusitis. Paediatric emergency; can extend intracranially.",
+    "trigger": {
+      "hasAllSymptoms": ["periorbital_swelling"],
+      "hasAnySymptoms": ["proptosis", "pain_on_eye_movement", "restricted_motility", "fever_or_systemic"]
+    },
+    "services": ["immune", "coordination"],
+    "candidateDiseases": ["d-orbital-cellulitis"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu. Chụp CT hốc mắt + xoang có thuốc cản quang ngay. Bắt đầu kháng sinh phổ rộng IV (vancomycin + ceftriaxone hoặc tương đương). Tham vấn TMH + mắt + nhi. Phẫu thuật dẫn lưu nếu có áp xe trên CT. Theo dõi sát thị lực, RAPD, vận nhãn — dấu hiệu xấu đi = phẫu thuật ngay.",
+    "actionGuidanceEn": "Emergency. CT orbits + sinuses with contrast immediately. Start broad-spectrum IV antibiotics (vancomycin + ceftriaxone or equivalent). ENT + ophth + paediatrics consult. Surgical drainage if abscess on CT. Monitor VA, RAPD, motility closely — deterioration = urgent surgery."
+  },
+  {
+    "_id": "rf-hyphema",
+    "name": "Hyphema (blood in anterior chamber) after trauma",
+    "nameVi": "Xuất huyết tiền phòng sau chấn thương",
+    "description": "Trauma + a layer of blood behind the cornea. Watch for rebleed (day 3-5) and IOP spike; sickle-cell patients are at much higher risk for optic-nerve damage at lower pressures.",
+    "trigger": {
+      "hasAllSymptoms": ["trauma_recent"],
+      "hasAnySymptoms": ["blood_in_AC"]
+    },
+    "services": ["vascular", "pressure"],
+    "candidateDiseases": ["d-hyphema"],
+    "urgency": "urgent",
+    "actionGuidance": "Đặt tấm chắn cứng, nằm nghỉ đầu cao 30°. Đo nhãn áp hàng ngày (tăng đột ngột ngày 3-5 do tái xuất huyết). Corticoid nhỏ + cycloplegic. Tránh aspirin/NSAID. Tầm soát hồng cầu liềm nếu có nguy cơ — bệnh nhân hồng cầu liềm tổn thương thần kinh ở nhãn áp thấp hơn.",
+    "actionGuidanceEn": "Rigid shield, bed rest with head elevated 30°. Daily IOP checks (rebleed spike days 3-5). Topical steroid + cycloplegic. Avoid aspirin / NSAIDs. Screen for sickle cell if at-risk population — sickle cell patients have nerve damage at lower IOPs."
+  },
+  {
+    "_id": "rf-scleritis-severe",
+    "name": "Scleritis (severe — risk of perforation)",
+    "nameVi": "Viêm củng mạc (nặng — nguy cơ thủng)",
+    "description": "Deep boring eye pain that wakes the patient, tender to touch, sometimes a violet hue of the sclera. Often a sign of systemic autoimmune disease (RA, vasculitis). Necrotising scleritis can perforate.",
+    "trigger": {
+      "hasAllSymptoms": ["pain_deep_boring"],
+      "hasAnySymptoms": ["tender_globe", "violet_hue_sclera"]
+    },
+    "services": ["immune"],
+    "candidateDiseases": ["d-scleritis"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khám đèn khe và soi củng mạc. Xét nghiệm hệ thống loại trừ bệnh tự miễn (RF, ANA, ANCA, axit uric, sàng lọc nhiễm trùng). Bắt đầu NSAID đường uống; nếu nặng / hoại tử: corticoid + thuốc ức chế miễn dịch. Tham vấn thấp khớp.",
+    "actionGuidanceEn": "Slit-lamp + scleral exam. Systemic workup to rule out autoimmune disease (RF, ANA, ANCA, uric acid, infectious screen). Start oral NSAID; if severe / necrotising: systemic steroid + immunomodulator. Rheumatology consult."
   }
 ]

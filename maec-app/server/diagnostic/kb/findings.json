@@ -102,6 +102,13 @@
     "serviceHints": []
   },
   {
+    "_id": "pain",
+    "name": "Eye pain (any severity)",
+    "nameVi": "Đau mắt (bất kỳ mức độ)",
+    "kind": "symptom",
+    "serviceHints": ["surface", "pressure", "immune"]
+  },
+  {
     "_id": "pain_on_eye_movement",
     "name": "Pain on eye movement",
     "nameVi": "Đau khi liếc mắt",
@@ -620,5 +627,55 @@
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
     "serviceHints": ["sensor"]
+  },
+  {
+    "_id": "fever_or_systemic",
+    "name": "Fever or systemic illness signs",
+    "nameVi": "Sốt hoặc dấu hiệu nhiễm trùng toàn thân",
+    "kind": "context",
+    "serviceHints": ["immune"]
+  },
+  {
+    "_id": "periorbital_swelling",
+    "name": "Swelling around the eye (eyelid / periorbital tissue)",
+    "nameVi": "Sưng quanh mắt / mi mắt",
+    "kind": "sign",
+    "serviceHints": ["immune", "surface"]
+  },
+  {
+    "_id": "proptosis",
+    "name": "Proptosis (eye pushed forward)",
+    "nameVi": "Lồi mắt",
+    "kind": "sign",
+    "serviceHints": ["immune"]
+  },
+  {
+    "_id": "restricted_motility",
+    "name": "Restricted eye movement (painful or mechanical)",
+    "nameVi": "Hạn chế vận nhãn",
+    "kind": "sign",
+    "serviceHints": ["coordination", "immune"]
+  },
+  {
+    "_id": "blood_in_AC",
+    "name": "Blood layered in the anterior chamber (hyphema)",
+    "nameVi": "Máu trong tiền phòng",
+    "kind": "test_result",
+    "producedByTest": "t-slit-lamp",
+    "serviceHints": ["vascular"]
+  },
+  {
+    "_id": "tender_globe",
+    "name": "Tender globe (tender to touch)",
+    "nameVi": "Nhãn cầu đau khi sờ",
+    "kind": "sign",
+    "serviceHints": ["immune"]
+  },
+  {
+    "_id": "violet_hue_sclera",
+    "name": "Violet / blue hue of the sclera",
+    "nameVi": "Củng mạc có ánh tím / xanh",
+    "kind": "sign",
+    "serviceHints": ["immune"]
   }
 ]

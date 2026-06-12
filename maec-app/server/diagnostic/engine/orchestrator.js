@@ -12,7 +12,7 @@ const DISCLAIMER = 'Decision support only. A licensed clinician must confirm bef
   'This system suggests possibilities and next tests; it does not diagnose.'
 
 async function runDiagnostic(complaint, observations = []) {
-  const redFlags = await runRedFlagGate(complaint)
+  const redFlags = await runRedFlagGate(complaint, observations)
   const differential = await rankDifferential(complaint, observations, redFlags)
   const activeFindings = collectActiveFindings(complaint, observations)
   const recommendedNextTests = await suggestNextTests(differential, activeFindings)
