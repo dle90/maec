@@ -836,5 +836,63 @@
     "kind": "sign",
     "serviceHints": ["immune"],
     "aliases": ["violet_sclera", "scleral_thinning_hue"]
+  },
+  {
+    "_id": "lid_lump_painful",
+    "name": "Painful tender lump on the eyelid",
+    "nameVi": "Cục sưng đỏ đau ở mí mắt",
+    "kind": "symptom",
+    "serviceHints": ["surface", "immune"],
+    "aliases": ["stye_appearance", "lẹo", "tender_lid_nodule", "acute_lid_swelling_localized"]
+  },
+  {
+    "_id": "lid_lump_painless",
+    "name": "Painless firm nodule on the eyelid (chronic)",
+    "nameVi": "Cục cứng không đau ở mí mắt, mạn tính",
+    "kind": "symptom",
+    "serviceHints": ["surface"],
+    "aliases": ["chalazion_appearance", "chắp", "chronic_lid_nodule", "firm_painless_lid_lump"]
+  },
+  {
+    "_id": "eyelid_twitch",
+    "name": "Eyelid twitching (myokymia)",
+    "nameVi": "Co giật mí mắt",
+    "kind": "symptom",
+    "serviceHints": ["coordination"],
+    "aliases": ["myokymia", "lid_fasciculation", "co_giat_mi"]
+  },
+  {
+    "_id": "near_work_strain",
+    "name": "Eye strain / fatigue from prolonged near work or screens",
+    "nameVi": "Mỏi mắt khi dùng máy tính / nhìn gần lâu",
+    "kind": "symptom",
+    "serviceHints": ["optical", "autonomic"],
+    "aliases": ["asthenopia", "digital_eye_strain", "computer_vision_syndrome", "screen_fatigue", "mỏi_mắt_máy_tính"]
+  },
+  {
+    "_id": "pterygium_visible",
+    "name": "Visible fleshy growth from the conjunctiva onto the cornea",
+    "nameVi": "Mộng thịt đỏ phát triển từ kết mạc vào giác mạc",
+    "kind": "symptom",
+    "serviceHints": ["surface"],
+    "aliases": ["pterygium_finding", "fleshy_growth_on_eye", "mộng_thịt", "thịt_mọc_trên_mắt"]
+  },
+  {
+    "_id": "near_only_blur",
+    "name": "Blur at near only — distance vision is clear",
+    "nameVi": "Mờ khi đọc gần, nhìn xa vẫn rõ",
+    "kind": "symptom",
+    "serviceHints": ["optical"],
+    "implies": ["vision_blur_gradual"],
+    "aliases": ["presbyopia_pattern", "near_blur_distance_clear", "mờ_đọc_sách"]
+  },
+  {
+    "_id": "distance_only_blur",
+    "name": "Blur at distance only — near vision is clear",
+    "nameVi": "Mờ khi nhìn xa, đọc gần vẫn rõ",
+    "kind": "symptom",
+    "serviceHints": ["optical"],
+    "implies": ["vision_blur_gradual"],
+    "aliases": ["myopia_pattern", "distance_blur_near_clear", "mờ_xa"]
   }
 ]

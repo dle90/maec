@@ -75,10 +75,17 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
     }
 
     const prevalence = PREVALENCE_WEIGHT[d.prevalenceTag] ?? 0.5
+    // Graduated age penalty so a candidate wildly out of its age band drops
+    // off the top of the list rather than hovering at 0.4× (which intruded
+    // — e.g. cataract for a 12-year-old appearing at #2 with score 0.18).
     let ageFactor = 1.0
     if (typeof age === 'number') {
-      if (typeof d.ageMin === 'number' && age < d.ageMin) ageFactor = 0.4
-      if (typeof d.ageMax === 'number' && age > d.ageMax) ageFactor = 0.4
+      let gap = 0
+      if (typeof d.ageMin === 'number' && age < d.ageMin) gap = d.ageMin - age
+      else if (typeof d.ageMax === 'number' && age > d.ageMax) gap = age - d.ageMax
+      if (gap > 0) {
+        ageFactor = gap > 20 ? 0.1 : gap > 10 ? 0.25 : 0.4
+      }
     }
 
     let score = baseScore * prevalence * ageFactor
@@ -86,8 +93,9 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
     const isRedFlagCandidate = redFlagDiseases.has(did)
     if (isRedFlagCandidate && score < RED_FLAG_FLOOR) score = RED_FLAG_FLOOR
 
-    // Drop pure-zero non-red-flag candidates — no signal at all.
-    if (score <= 0 && !isRedFlagCandidate) continue
+    // Drop very-low non-red-flag candidates — keeps the differential
+    // readable rather than padded with score < 0.05 noise.
+    if (score < 0.05 && !isRedFlagCandidate) continue
 
     ranked.push({
       diseaseId: did,

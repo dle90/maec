@@ -251,6 +251,26 @@
 
   { "diseaseId": "d-pcv-coats", "findingId": "white_pupillary_reflex", "frequency": 0.7, "evokingStrength": 0.5 },
 
+  { "diseaseId": "d-hordeolum", "findingId": "lid_lump_painful", "frequency": 0.98, "evokingStrength": 0.95 },
+  { "diseaseId": "d-hordeolum", "findingId": "pain", "frequency": 0.85, "evokingStrength": 0.15 },
+  { "diseaseId": "d-hordeolum", "findingId": "periorbital_swelling", "frequency": 0.6, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-chalazion", "findingId": "lid_lump_painless", "frequency": 0.95, "evokingStrength": 0.95 },
+
+  { "diseaseId": "d-eyelid-myokymia", "findingId": "eyelid_twitch", "frequency": 0.98, "evokingStrength": 0.98 },
+
+  { "diseaseId": "d-asthenopia", "findingId": "near_work_strain", "frequency": 0.95, "evokingStrength": 0.85 },
+  { "diseaseId": "d-asthenopia", "findingId": "headache", "frequency": 0.55, "evokingStrength": 0.25 },
+  { "diseaseId": "d-asthenopia", "findingId": "vision_blur_gradual", "frequency": 0.5, "evokingStrength": 0.2 },
+  { "diseaseId": "d-asthenopia", "findingId": "gritty_burning", "frequency": 0.5, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-pterygium", "findingId": "pterygium_visible", "frequency": 0.98, "evokingStrength": 0.95 },
+
+  { "diseaseId": "d-presbyopia", "findingId": "near_only_blur", "frequency": 0.95, "evokingStrength": 0.9 },
+  { "diseaseId": "d-hyperopia", "findingId": "near_only_blur", "frequency": 0.45, "evokingStrength": 0.3 },
+  { "diseaseId": "d-myopia", "findingId": "distance_only_blur", "frequency": 0.95, "evokingStrength": 0.9 },
+  { "diseaseId": "d-astigmatism", "findingId": "distance_only_blur", "frequency": 0.3, "evokingStrength": 0.15 },
+
   { "diseaseId": "d-orbital-cellulitis", "findingId": "fever_or_systemic", "frequency": 0.85, "evokingStrength": 0.4 },
   { "diseaseId": "d-orbital-cellulitis", "findingId": "periorbital_swelling", "frequency": 0.98, "evokingStrength": 0.85 },
   { "diseaseId": "d-orbital-cellulitis", "findingId": "proptosis", "frequency": 0.8, "evokingStrength": 0.95 },
