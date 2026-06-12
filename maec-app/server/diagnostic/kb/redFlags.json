@@ -215,7 +215,7 @@
     "description": "Pain + red + photophobia + a small (sometimes irregular) pupil + cells and flare on slit-lamp. Can recur; often linked to HLA-B27 / ankylosing spondylitis / IBD / sarcoid.",
     "trigger": {
       "hasAllSymptoms": ["pain", "photophobia"],
-      "hasAnySymptoms": ["redness_circumcorneal", "small_pupil_unilateral"]
+      "hasAnySymptoms": ["redness_circumcorneal", "pupil_small_unilateral"]
     },
     "services": ["immune"],
     "candidateDiseases": ["d-anterior-uveitis"],

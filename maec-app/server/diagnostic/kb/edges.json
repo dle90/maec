@@ -15,6 +15,7 @@
   { "diseaseId": "d-cataract", "findingId": "lens_opacity", "frequency": 0.95, "evokingStrength": 0.95 },
   { "diseaseId": "d-cataract", "findingId": "diplopia_monocular", "frequency": 0.3, "evokingStrength": 0.5 },
   { "diseaseId": "d-cataract", "findingId": "pinhole_no_improvement", "frequency": 0.5, "evokingStrength": 0.3 },
+  { "diseaseId": "d-cataract", "findingId": "night_glare_no_blur", "frequency": 0.7, "evokingStrength": 0.7 },
 
   { "diseaseId": "d-dry-amd", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.3 },
   { "diseaseId": "d-dry-amd", "findingId": "central_scotoma", "frequency": 0.6, "evokingStrength": 0.7 },
@@ -142,6 +143,7 @@
 
   { "diseaseId": "d-dry-eye-aqueous", "findingId": "gritty_burning", "frequency": 0.9, "evokingStrength": 0.5 },
   { "diseaseId": "d-dry-eye-aqueous", "findingId": "low_TBUT", "frequency": 0.8, "evokingStrength": 0.5 },
+  { "diseaseId": "d-dry-eye-aqueous", "findingId": "dry_mouth", "frequency": 0.4, "evokingStrength": 0.85 },
 
   { "diseaseId": "d-blepharitis", "findingId": "itching", "frequency": 0.5, "evokingStrength": 0.3 },
   { "diseaseId": "d-blepharitis", "findingId": "gritty_burning", "frequency": 0.7, "evokingStrength": 0.4 },
@@ -178,13 +180,21 @@
 
   { "diseaseId": "d-pterygium", "findingId": "gritty_burning", "frequency": 0.5, "evokingStrength": 0.2 },
 
+  { "diseaseId": "d-recurrent-corneal-erosion", "findingId": "eye_pain_morning_subsides", "frequency": 0.95, "evokingStrength": 0.95 },
+  { "diseaseId": "d-recurrent-corneal-erosion", "findingId": "trauma_recent", "frequency": 0.4, "evokingStrength": 0.2 },
+  { "diseaseId": "d-recurrent-corneal-erosion", "findingId": "pain", "frequency": 0.85, "evokingStrength": 0.2 },
+  { "diseaseId": "d-recurrent-corneal-erosion", "findingId": "photophobia", "frequency": 0.6, "evokingStrength": 0.2 },
+  { "diseaseId": "d-recurrent-corneal-erosion", "findingId": "discharge_watery", "frequency": 0.5, "evokingStrength": 0.2 },
+
   { "diseaseId": "d-dr-npdr", "findingId": "retinal_hemorrhages", "frequency": 0.95, "evokingStrength": 0.7 },
   { "diseaseId": "d-dr-npdr", "findingId": "cotton_wool_spots", "frequency": 0.4, "evokingStrength": 0.5 },
+  { "diseaseId": "d-dr-npdr", "findingId": "vision_fluctuates_with_blood_sugar", "frequency": 0.3, "evokingStrength": 0.7 },
 
   { "diseaseId": "d-dr-pdr", "findingId": "vision_loss_sudden", "frequency": 0.6, "evokingStrength": 0.3 },
   { "diseaseId": "d-dr-pdr", "findingId": "neovascularization", "frequency": 0.98, "evokingStrength": 0.9 },
   { "diseaseId": "d-dr-pdr", "findingId": "floaters_new", "frequency": 0.5, "evokingStrength": 0.3 },
   { "diseaseId": "d-dr-pdr", "findingId": "retinal_hemorrhages", "frequency": 0.9, "evokingStrength": 0.4 },
+  { "diseaseId": "d-dr-pdr", "findingId": "vision_fluctuates_with_blood_sugar", "frequency": 0.3, "evokingStrength": 0.5 },
 
   { "diseaseId": "d-htn-retinopathy", "findingId": "retinal_hemorrhages", "frequency": 0.7, "evokingStrength": 0.3 },
   { "diseaseId": "d-htn-retinopathy", "findingId": "cotton_wool_spots", "frequency": 0.5, "evokingStrength": 0.4 },
@@ -200,7 +210,8 @@
   { "diseaseId": "d-anterior-uveitis", "findingId": "pain_severe_or_moderate", "frequency": 0.85, "evokingStrength": 0.5 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "photophobia", "frequency": 0.95, "evokingStrength": 0.6 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "redness_circumcorneal", "frequency": 0.85, "evokingStrength": 0.85 },
-  { "diseaseId": "d-anterior-uveitis", "findingId": "small_pupil_unilateral", "frequency": 0.6, "evokingStrength": 0.7 },
+  { "diseaseId": "d-anterior-uveitis", "findingId": "pupil_small_unilateral", "frequency": 0.6, "evokingStrength": 0.7 },
+  { "diseaseId": "d-anterior-uveitis", "findingId": "morning_back_stiffness", "frequency": 0.2, "evokingStrength": 0.7 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "cells_and_flare", "frequency": 0.98, "evokingStrength": 0.95 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "keratic_precipitates", "frequency": 0.7, "evokingStrength": 0.85 },
 

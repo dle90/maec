@@ -5,7 +5,7 @@
     "nameVi": "Quầng sáng quanh đèn",
     "kind": "symptom",
     "serviceHints": ["pressure", "optical"],
-    "aliases": ["halo", "rainbow_halo"]
+    "aliases": ["halo", "rainbow_halo", "glare_halo"]
   },
   {
     "_id": "flashes",
@@ -13,7 +13,7 @@
     "nameVi": "Chớp sáng",
     "kind": "symptom",
     "serviceHints": ["sensor"],
-    "aliases": ["photopsia", "lightning"]
+    "aliases": ["photopsia", "lightning", "sparks_in_vision"]
   },
   {
     "_id": "floaters_new",
@@ -21,7 +21,15 @@
     "nameVi": "Ruồi bay mới xuất hiện",
     "kind": "symptom",
     "serviceHints": ["sensor"],
-    "aliases": ["floaters", "cobwebs"]
+    "aliases": ["new_floaters", "shower_of_floaters", "cobwebs", "spots_in_vision"]
+  },
+  {
+    "_id": "floaters_chronic_stable",
+    "name": "Chronic stable floaters (longstanding, not changing)",
+    "nameVi": "Ruồi bay mạn tính, ổn định",
+    "kind": "symptom",
+    "serviceHints": ["sensor"],
+    "aliases": ["old_floaters", "longstanding_floaters", "benign_floaters"]
   },
   {
     "_id": "curtain",
@@ -29,273 +37,343 @@
     "nameVi": "Như có màn che / bóng đen",
     "kind": "symptom",
     "serviceHints": ["sensor"],
-    "aliases": ["shadow", "veil"]
+    "aliases": ["shadow", "veil", "dark_curtain"]
   },
   {
     "_id": "field_loss",
     "name": "Visual field loss",
     "nameVi": "Mất thị trường",
     "kind": "symptom",
-    "serviceHints": ["sensor", "transport"]
+    "serviceHints": ["sensor", "transport"],
+    "aliases": ["visual_field_loss", "missing_part_of_vision"]
   },
   {
     "_id": "field_loss_altitudinal",
     "name": "Altitudinal field loss",
     "nameVi": "Mất thị trường nửa trên hoặc dưới",
     "kind": "symptom",
-    "serviceHints": ["transport", "vascular"]
+    "serviceHints": ["transport", "vascular"],
+    "aliases": ["altitudinal_loss", "horizontal_field_loss"]
   },
   {
     "_id": "field_loss_homonymous",
     "name": "Homonymous field loss (same side both eyes)",
     "nameVi": "Mất thị trường đồng danh",
     "kind": "sign",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["homonymous_hemianopia", "same_side_loss"]
   },
   {
     "_id": "field_loss_bitemporal",
     "name": "Bitemporal hemianopia",
     "nameVi": "Mất thị trường thái dương 2 bên",
     "kind": "sign",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["bitemporal_hemianopia", "tunnel_chiasm"]
   },
   {
     "_id": "vision_loss_sudden",
     "name": "Sudden vision loss",
     "nameVi": "Mất thị lực đột ngột",
     "kind": "symptom",
-    "serviceHints": ["vascular", "sensor", "transport"]
+    "serviceHints": ["vascular", "sensor", "transport"],
+    "aliases": ["sudden_vision_loss", "acute_vision_loss", "abrupt_vision_loss"]
   },
   {
     "_id": "vision_loss_subacute",
     "name": "Subacute vision loss (hours-days)",
     "nameVi": "Mất thị lực bán cấp (giờ-ngày)",
     "kind": "symptom",
-    "serviceHints": ["transport", "immune"]
+    "serviceHints": ["transport", "immune"],
+    "aliases": ["subacute_vision_loss", "progressive_vision_loss_days"]
   },
   {
     "_id": "vision_drop",
     "name": "Drop in vision",
     "nameVi": "Giảm thị lực",
     "kind": "symptom",
-    "serviceHints": ["optical", "sensor", "transport"]
+    "serviceHints": ["optical", "sensor", "transport"],
+    "aliases": ["decreased_vision", "loss_of_vision", "vision_decrease"]
   },
   {
     "_id": "vision_blur_gradual",
     "name": "Gradual blur",
     "nameVi": "Mờ tăng dần",
     "kind": "symptom",
-    "serviceHints": ["optical", "sensor"]
+    "serviceHints": ["optical", "sensor"],
+    "aliases": ["gradual_blur", "progressive_blur", "slow_onset_blur"]
+  },
+  {
+    "_id": "vision_fluctuates_with_blood_sugar",
+    "name": "Vision fluctuates with blood sugar (diabetic refractive shift)",
+    "nameVi": "Thị lực thay đổi theo đường huyết",
+    "kind": "symptom",
+    "serviceHints": ["optical", "vascular"],
+    "aliases": ["diabetic_refractive_shift", "sugar_dependent_blur"]
+  },
+  {
+    "_id": "night_glare_no_blur",
+    "name": "Night glare without daytime blur (early cataract pattern)",
+    "nameVi": "Loá chói ban đêm, ban ngày vẫn rõ",
+    "kind": "symptom",
+    "serviceHints": ["optical"],
+    "aliases": ["night_glare", "early_cataract_glare", "headlight_glare"]
   },
   {
     "_id": "monocular",
     "name": "One eye only",
     "nameVi": "Một mắt",
     "kind": "qualifier",
-    "serviceHints": []
+    "serviceHints": [],
+    "aliases": ["one_eye", "unilateral", "single_eye"]
   },
   {
     "_id": "binocular",
     "name": "Both eyes",
     "nameVi": "Hai mắt",
     "kind": "qualifier",
-    "serviceHints": []
+    "serviceHints": [],
+    "aliases": ["both_eyes", "bilateral", "two_eyes"]
   },
   {
     "_id": "pain",
     "name": "Eye pain (any severity)",
     "nameVi": "Đau mắt (bất kỳ mức độ)",
     "kind": "symptom",
-    "serviceHints": ["surface", "pressure", "immune"]
+    "serviceHints": ["surface", "pressure", "immune"],
+    "aliases": ["eye_pain", "ocular_pain", "sore_eye"]
   },
   {
     "_id": "pain_on_eye_movement",
     "name": "Pain on eye movement",
     "nameVi": "Đau khi liếc mắt",
     "kind": "symptom",
-    "serviceHints": ["transport", "immune"]
+    "serviceHints": ["transport", "immune"],
+    "aliases": ["retrobulbar_pain", "pain_with_motion", "EOM_pain"]
   },
   {
     "_id": "pain_severe",
     "name": "Severe eye pain",
     "nameVi": "Đau mắt dữ dội",
     "kind": "symptom",
-    "serviceHints": ["pressure", "surface", "immune"]
+    "serviceHints": ["pressure", "surface", "immune"],
+    "aliases": ["severe_eye_pain", "intense_eye_pain"]
   },
   {
     "_id": "pain_severe_or_moderate",
     "name": "Moderate-to-severe pain",
     "nameVi": "Đau vừa-dữ dội",
     "kind": "symptom",
-    "serviceHints": ["pressure", "surface", "immune"]
+    "serviceHints": ["pressure", "surface", "immune"],
+    "aliases": ["moderate_or_severe_pain"]
   },
   {
     "_id": "pain_deep_boring",
     "name": "Deep boring pain",
     "nameVi": "Đau sâu kiểu khoan",
     "kind": "symptom",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["boring_pain", "deep_scleral_pain", "drilling_pain"]
+  },
+  {
+    "_id": "eye_pain_morning_subsides",
+    "name": "Eye pain on awakening that subsides during the day",
+    "nameVi": "Đau mắt khi mở mắt sáng, đỡ dần trong ngày",
+    "kind": "symptom",
+    "serviceHints": ["surface"],
+    "aliases": ["morning_eye_pain", "recurrent_erosion_pattern"]
   },
   {
     "_id": "photophobia",
     "name": "Photophobia (light hurts)",
     "nameVi": "Sợ ánh sáng",
     "kind": "symptom",
-    "serviceHints": ["immune", "surface"]
+    "serviceHints": ["immune", "surface"],
+    "aliases": ["light_sensitivity", "photosensitivity"]
   },
   {
     "_id": "itching",
     "name": "Itchy eyes",
     "nameVi": "Ngứa mắt",
     "kind": "symptom",
-    "serviceHints": ["immune", "surface"]
+    "serviceHints": ["immune", "surface"],
+    "aliases": ["eye_itch", "pruritus", "itchy_eyes"]
   },
   {
     "_id": "discharge",
     "name": "Eye discharge",
     "nameVi": "Tiết dịch mắt",
     "kind": "symptom",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["eye_discharge", "ocular_discharge"]
   },
   {
     "_id": "discharge_purulent",
     "name": "Purulent (yellow-green) discharge",
     "nameVi": "Tiết dịch mủ",
     "kind": "symptom",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["purulent_discharge", "pus", "yellow_discharge"]
   },
   {
     "_id": "discharge_watery",
     "name": "Watery discharge",
     "nameVi": "Tiết dịch nước",
     "kind": "symptom",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["watery_discharge", "clear_discharge"]
   },
   {
     "_id": "tearing_paradoxical",
     "name": "Paradoxical tearing in a dry eye",
     "nameVi": "Chảy nước mắt trong bệnh khô mắt",
     "kind": "symptom",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["watery_dry_eye", "reflex_tearing"]
   },
   {
     "_id": "gritty_burning",
     "name": "Gritty, burning sensation",
     "nameVi": "Cảm giác cộm, rát",
     "kind": "symptom",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["burning_eyes", "foreign_body_sensation", "grit_sensation"]
   },
   {
     "_id": "blur_that_clears_with_blink",
     "name": "Blur that clears with a blink",
     "nameVi": "Mờ rồi đỡ khi chớp mắt",
     "kind": "symptom",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["blink_clears_blur", "fluctuating_blur"]
+  },
+  {
+    "_id": "dry_mouth",
+    "name": "Dry mouth (xerostomia) — Sjögren clue",
+    "nameVi": "Khô miệng",
+    "kind": "symptom",
+    "serviceHints": ["surface", "immune"],
+    "aliases": ["xerostomia", "oral_dryness"]
+  },
+  {
+    "_id": "morning_back_stiffness",
+    "name": "Morning back stiffness lasting > 30 minutes (spondyloarthritis clue)",
+    "nameVi": "Cứng lưng buổi sáng kéo dài",
+    "kind": "symptom",
+    "serviceHints": ["immune"],
+    "aliases": ["spondyloarthritis_clue", "inflammatory_back_pain"]
   },
   {
     "_id": "metamorphopsia",
     "name": "Metamorphopsia (straight lines look wavy)",
     "nameVi": "Méo hình",
     "kind": "symptom",
-    "serviceHints": ["sensor"]
+    "serviceHints": ["sensor"],
+    "aliases": ["distortion", "wavy_lines", "amsler_distortion"]
   },
   {
     "_id": "central_scotoma",
     "name": "Central blind spot (scotoma)",
     "nameVi": "Ám điểm trung tâm",
     "kind": "symptom",
-    "serviceHints": ["sensor", "transport"]
+    "serviceHints": ["sensor", "transport"],
+    "aliases": ["central_blind_spot", "centrocecal_scotoma"]
   },
   {
     "_id": "night_blindness",
     "name": "Night blindness",
     "nameVi": "Quáng gà",
     "kind": "symptom",
-    "serviceHints": ["sensor"]
+    "serviceHints": ["sensor"],
+    "aliases": ["nyctalopia", "poor_night_vision"]
   },
   {
     "_id": "tunnel_vision",
     "name": "Tunnel vision (peripheral loss)",
     "nameVi": "Thị trường hình ống",
     "kind": "symptom",
-    "serviceHints": ["transport", "sensor"]
+    "serviceHints": ["transport", "sensor"],
+    "aliases": ["constricted_field", "peripheral_loss"]
   },
   {
     "_id": "diplopia_binocular",
     "name": "Double vision that goes away when one eye is covered",
     "nameVi": "Song thị (mất khi che 1 mắt)",
     "kind": "symptom",
-    "serviceHints": ["coordination"]
+    "serviceHints": ["coordination"],
+    "aliases": ["binocular_diplopia", "double_vision_binocular"]
   },
   {
     "_id": "diplopia_monocular",
     "name": "Double vision in one eye even when the other is covered",
     "nameVi": "Song thị 1 mắt",
     "kind": "symptom",
-    "serviceHints": ["optical"]
+    "serviceHints": ["optical"],
+    "aliases": ["monocular_diplopia", "double_vision_monocular"]
   },
   {
     "_id": "ptosis",
     "name": "Drooping eyelid",
     "nameVi": "Sụp mi",
     "kind": "sign",
-    "serviceHints": ["autonomic", "coordination"]
+    "serviceHints": ["autonomic", "coordination"],
+    "aliases": ["drooping_eyelid", "blepharoptosis"]
   },
   {
     "_id": "pupil_dilated_unilateral",
     "name": "Dilated pupil on one side",
     "nameVi": "Đồng tử giãn một bên",
     "kind": "sign",
-    "serviceHints": ["autonomic", "coordination"]
+    "serviceHints": ["autonomic", "coordination"],
+    "aliases": ["anisocoria_dilated", "mydriasis_unilateral", "blown_pupil"]
   },
   {
     "_id": "pupil_small_unilateral",
-    "name": "Small pupil on one side",
-    "nameVi": "Đồng tử nhỏ một bên",
-    "kind": "sign",
-    "serviceHints": ["autonomic"]
-  },
-  {
-    "_id": "small_pupil_unilateral",
     "name": "Small or irregular pupil on one side",
     "nameVi": "Đồng tử nhỏ / bất thường một bên",
     "kind": "sign",
-    "serviceHints": ["immune", "autonomic"]
+    "serviceHints": ["autonomic", "immune"],
+    "aliases": ["anisocoria_small", "miosis_unilateral", "small_pupil_unilateral"]
   },
   {
     "_id": "headache",
     "name": "Headache",
     "nameVi": "Đau đầu",
     "kind": "symptom",
-    "serviceHints": ["transport", "vascular"]
+    "serviceHints": ["transport", "vascular"],
+    "aliases": ["cephalgia", "head_pain"]
   },
   {
     "_id": "jaw_claudication",
     "name": "Jaw claudication",
     "nameVi": "Đau cơ hàm khi nhai",
     "kind": "symptom",
-    "serviceHints": ["vascular"]
+    "serviceHints": ["vascular"],
+    "aliases": ["jaw_pain_with_chewing"]
   },
   {
     "_id": "scalp_tenderness",
     "name": "Scalp tenderness",
     "nameVi": "Đau da đầu",
     "kind": "symptom",
-    "serviceHints": ["vascular"]
+    "serviceHints": ["vascular"],
+    "aliases": ["temporal_tenderness", "scalp_pain"]
   },
   {
     "_id": "neck_pain",
     "name": "Neck pain",
     "nameVi": "Đau cổ",
     "kind": "symptom",
-    "serviceHints": ["autonomic"]
+    "serviceHints": ["autonomic"],
+    "aliases": ["cervical_pain"]
   },
   {
     "_id": "nausea_vomiting",
     "name": "Nausea or vomiting",
     "nameVi": "Buồn nôn / nôn",
     "kind": "symptom",
-    "serviceHints": ["pressure"]
+    "serviceHints": ["pressure"],
+    "aliases": ["nausea", "vomiting", "GI_distress"]
   },
   {
     "_id": "white_pupillary_reflex",
@@ -303,42 +381,47 @@
     "nameVi": "Đồng tử trắng (mất ánh đồng tử đỏ)",
     "kind": "sign",
     "serviceHints": ["sensor"],
-    "aliases": ["leukocoria"]
+    "aliases": ["leukocoria", "cat_eye_reflex", "white_reflex"]
   },
   {
     "_id": "corneal_white_spot",
     "name": "Visible white spot on the cornea",
     "nameVi": "Đốm trắng giác mạc",
     "kind": "sign",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["corneal_opacity", "corneal_infiltrate_visible"]
   },
   {
     "_id": "redness_circumcorneal",
     "name": "Redness around the cornea (ciliary flush)",
     "nameVi": "Đỏ quanh giác mạc (cương tụ rìa)",
     "kind": "sign",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["ciliary_flush", "circumcorneal_injection"]
   },
   {
     "_id": "chemical_exposure",
     "name": "Recent chemical splash to the eye",
     "nameVi": "Bị hóa chất văng vào mắt",
     "kind": "context",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["chemical_splash", "acid_or_alkali_in_eye"]
   },
   {
     "_id": "trauma_recent",
     "name": "Recent trauma to the eye / orbit",
     "nameVi": "Chấn thương mắt gần đây",
     "kind": "context",
-    "serviceHints": ["surface", "vascular", "sensor"]
+    "serviceHints": ["surface", "vascular", "sensor"],
+    "aliases": ["eye_trauma", "recent_injury", "blunt_trauma"]
   },
   {
     "_id": "misshapen_globe",
     "name": "Misshapen / distorted globe",
     "nameVi": "Nhãn cầu biến dạng",
     "kind": "sign",
-    "serviceHints": ["surface", "vascular"]
+    "serviceHints": ["surface", "vascular"],
+    "aliases": ["globe_deformity", "irregular_globe"]
   },
   {
     "_id": "seidel_positive",
@@ -346,14 +429,16 @@
     "nameVi": "Seidel dương tính",
     "kind": "test_result",
     "producedByTest": "t-seidel",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["Seidel_positive", "aqueous_leak"]
   },
   {
     "_id": "transient_visual_obscurations",
     "name": "Transient grey-outs of vision",
     "nameVi": "Mờ thoáng qua",
     "kind": "symptom",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["TVO", "grey_outs", "obscurations"]
   },
   {
     "_id": "disc_swelling_bilateral",
@@ -361,7 +446,8 @@
     "nameVi": "Phù gai thị 2 bên",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["bilateral_disc_edema", "papilledema_finding"]
   },
   {
     "_id": "disc_swelling_unilateral",
@@ -369,7 +455,8 @@
     "nameVi": "Phù gai thị 1 bên",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["transport", "vascular"]
+    "serviceHints": ["transport", "vascular"],
+    "aliases": ["unilateral_disc_edema", "one_sided_papilledema"]
   },
   {
     "_id": "glaucomatous_cupping",
@@ -377,7 +464,8 @@
     "nameVi": "Lõm gai thị do glôcôm",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["transport", "pressure"]
+    "serviceHints": ["transport", "pressure"],
+    "aliases": ["increased_CDR", "deep_cup", "cupping"]
   },
   {
     "_id": "disc_pallor",
@@ -385,7 +473,8 @@
     "nameVi": "Gai thị bạc màu",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["optic_atrophy", "pale_disc"]
   },
   {
     "_id": "elevated_IOP",
@@ -394,7 +483,8 @@
     "kind": "test_result",
     "producedByTest": "t-tonometry",
     "serviceHints": ["pressure"],
-    "qualifiers": ["eye", "value_mmHg"]
+    "qualifiers": ["eye", "value_mmHg"],
+    "aliases": ["high_IOP", "raised_IOP"]
   },
   {
     "_id": "low_IOP",
@@ -402,7 +492,8 @@
     "nameVi": "Hạ nhãn áp",
     "kind": "test_result",
     "producedByTest": "t-tonometry",
-    "serviceHints": ["pressure"]
+    "serviceHints": ["pressure"],
+    "aliases": ["hypotony", "low_pressure"]
   },
   {
     "_id": "rapd",
@@ -410,7 +501,8 @@
     "nameVi": "Khiếm khuyết đồng tử hướng tâm tương đối (RAPD)",
     "kind": "test_result",
     "producedByTest": "t-pupil-exam",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["RAPD", "Marcus_Gunn_pupil", "swinging_flashlight_positive"]
   },
   {
     "_id": "color_desaturation",
@@ -418,7 +510,8 @@
     "nameVi": "Giảm cảm nhận màu một mắt",
     "kind": "test_result",
     "producedByTest": "t-color-vision",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["dyschromatopsia", "red_desaturation"]
   },
   {
     "_id": "cells_and_flare",
@@ -426,7 +519,8 @@
     "nameVi": "Tế bào và tia trong tiền phòng",
     "kind": "test_result",
     "producedByTest": "t-slit-lamp",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["anterior_chamber_reaction", "AC_cells", "uveitis_finding"]
   },
   {
     "_id": "keratic_precipitates",
@@ -434,7 +528,8 @@
     "nameVi": "Tủa giác mạc",
     "kind": "test_result",
     "producedByTest": "t-slit-lamp",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["KP", "mutton_fat_KP", "corneal_KP"]
   },
   {
     "_id": "hypopyon",
@@ -442,7 +537,8 @@
     "nameVi": "Mủ tiền phòng",
     "kind": "test_result",
     "producedByTest": "t-slit-lamp",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["pus_in_AC", "AC_hypopyon"]
   },
   {
     "_id": "synechiae",
@@ -450,7 +546,8 @@
     "nameVi": "Dính mống mắt sau",
     "kind": "test_result",
     "producedByTest": "t-slit-lamp",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["posterior_synechiae", "iris_lens_adhesion"]
   },
   {
     "_id": "lens_opacity",
@@ -458,7 +555,8 @@
     "nameVi": "Đục thuỷ tinh thể trên đèn khe",
     "kind": "test_result",
     "producedByTest": "t-slit-lamp",
-    "serviceHints": ["optical"]
+    "serviceHints": ["optical"],
+    "aliases": ["cataract_on_exam", "cloudy_lens", "NS_PSC_CS_pattern"]
   },
   {
     "_id": "dendritic_corneal_ulcer",
@@ -466,7 +564,8 @@
     "nameVi": "Loét giác mạc hình cành cây",
     "kind": "test_result",
     "producedByTest": "t-fluorescein-stain",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["dendrite", "HSV_dendrite", "branching_ulcer"]
   },
   {
     "_id": "corneal_infiltrate",
@@ -474,7 +573,8 @@
     "nameVi": "Thâm nhiễm / loét giác mạc",
     "kind": "test_result",
     "producedByTest": "t-slit-lamp",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["corneal_ulcer", "stromal_infiltrate"]
   },
   {
     "_id": "drusen",
@@ -482,7 +582,8 @@
     "nameVi": "Drusen",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["sensor"]
+    "serviceHints": ["sensor"],
+    "aliases": ["hard_drusen", "soft_drusen", "macular_deposits"]
   },
   {
     "_id": "subretinal_fluid",
@@ -490,7 +591,8 @@
     "nameVi": "Dịch dưới võng mạc trên OCT",
     "kind": "test_result",
     "producedByTest": "t-oct-macula",
-    "serviceHints": ["sensor", "vascular"]
+    "serviceHints": ["sensor", "vascular"],
+    "aliases": ["SRF", "subretinal_fluid_OCT"]
   },
   {
     "_id": "intraretinal_fluid",
@@ -498,7 +600,8 @@
     "nameVi": "Dịch trong võng mạc (kiểu phù hoàng điểm)",
     "kind": "test_result",
     "producedByTest": "t-oct-macula",
-    "serviceHints": ["vascular", "sensor"]
+    "serviceHints": ["vascular", "sensor"],
+    "aliases": ["IRF", "macular_edema_OCT", "DME_pattern"]
   },
   {
     "_id": "retinal_hemorrhages",
@@ -506,7 +609,8 @@
     "nameVi": "Xuất huyết võng mạc",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["vascular"]
+    "serviceHints": ["vascular"],
+    "aliases": ["dot_blot_hemorrhages", "flame_hemorrhages", "intraretinal_hemorrhage"]
   },
   {
     "_id": "cotton_wool_spots",
@@ -514,7 +618,8 @@
     "nameVi": "Đốm bông gòn",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["vascular"]
+    "serviceHints": ["vascular"],
+    "aliases": ["CWS", "soft_exudates", "nerve_fiber_infarct"]
   },
   {
     "_id": "neovascularization",
@@ -522,7 +627,8 @@
     "nameVi": "Tân mạch võng mạc / đĩa thị",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["vascular"]
+    "serviceHints": ["vascular"],
+    "aliases": ["NV", "new_vessels", "NVD", "NVE"]
   },
   {
     "_id": "cherry_red_spot",
@@ -530,7 +636,8 @@
     "nameVi": "Đốm đỏ anh đào ở hoàng điểm",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["vascular"]
+    "serviceHints": ["vascular"],
+    "aliases": ["CRS", "macular_cherry_red", "RAO_sign"]
   },
   {
     "_id": "closed_angle_gonioscopy",
@@ -538,7 +645,8 @@
     "nameVi": "Góc tiền phòng đóng",
     "kind": "test_result",
     "producedByTest": "t-gonioscopy",
-    "serviceHints": ["pressure"]
+    "serviceHints": ["pressure"],
+    "aliases": ["closed_angle", "occluded_angle", "narrow_angle_closed"]
   },
   {
     "_id": "pinhole_corrects_blur",
@@ -546,7 +654,8 @@
     "nameVi": "Cải thiện thị lực qua lỗ kim",
     "kind": "test_result",
     "producedByTest": "t-pinhole",
-    "serviceHints": ["optical"]
+    "serviceHints": ["optical"],
+    "aliases": ["pinhole_improves_VA", "refractive_blur_confirmed"]
   },
   {
     "_id": "pinhole_no_improvement",
@@ -554,7 +663,8 @@
     "nameVi": "Lỗ kim không cải thiện thị lực",
     "kind": "test_result",
     "producedByTest": "t-pinhole",
-    "serviceHints": ["sensor", "transport"]
+    "serviceHints": ["sensor", "transport"],
+    "aliases": ["pinhole_no_improvement", "non_refractive_blur"]
   },
   {
     "_id": "low_TBUT",
@@ -562,7 +672,8 @@
     "nameVi": "Thời gian vỡ phim nước mắt < 10 giây",
     "kind": "test_result",
     "producedByTest": "t-tbut",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["TBUT_low", "fast_TBUT", "dry_eye_finding"]
   },
   {
     "_id": "meibography_dropout",
@@ -570,7 +681,8 @@
     "nameVi": "Mất tuyến Meibomian trên meibography",
     "kind": "test_result",
     "producedByTest": "t-meibography",
-    "serviceHints": ["surface"]
+    "serviceHints": ["surface"],
+    "aliases": ["MG_dropout", "MGD_finding"]
   },
   {
     "_id": "rnfl_thinning",
@@ -578,7 +690,8 @@
     "nameVi": "Mỏng RNFL trên OCT",
     "kind": "test_result",
     "producedByTest": "t-oct-rnfl",
-    "serviceHints": ["transport", "pressure"]
+    "serviceHints": ["transport", "pressure"],
+    "aliases": ["RNFL_loss", "thin_RNFL"]
   },
   {
     "_id": "vf_arcuate",
@@ -586,7 +699,8 @@
     "nameVi": "Khiếm khuyết thị trường hình cung",
     "kind": "test_result",
     "producedByTest": "t-perimetry",
-    "serviceHints": ["transport", "pressure"]
+    "serviceHints": ["transport", "pressure"],
+    "aliases": ["arcuate_scotoma", "glaucoma_VF_pattern"]
   },
   {
     "_id": "vf_altitudinal",
@@ -594,7 +708,8 @@
     "nameVi": "Khiếm khuyết thị trường nửa trên/dưới",
     "kind": "test_result",
     "producedByTest": "t-perimetry",
-    "serviceHints": ["transport", "vascular"]
+    "serviceHints": ["transport", "vascular"],
+    "aliases": ["altitudinal_VF", "NAION_VF_pattern"]
   },
   {
     "_id": "vf_bitemporal",
@@ -602,7 +717,8 @@
     "nameVi": "Bán manh thái dương 2 bên trên đo thị trường",
     "kind": "test_result",
     "producedByTest": "t-perimetry",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["bitemporal_hemianopia_perimetry", "chiasm_VF_pattern"]
   },
   {
     "_id": "vf_homonymous",
@@ -610,7 +726,8 @@
     "nameVi": "Bán manh đồng danh",
     "kind": "test_result",
     "producedByTest": "t-perimetry",
-    "serviceHints": ["transport"]
+    "serviceHints": ["transport"],
+    "aliases": ["homonymous_hemianopia_perimetry", "post_chiasmal_VF"]
   },
   {
     "_id": "corneal_steepening_topo",
@@ -618,7 +735,8 @@
     "nameVi": "Cong giác mạc bất thường ở phần dưới",
     "kind": "test_result",
     "producedByTest": "t-topography",
-    "serviceHints": ["surface", "optical"]
+    "serviceHints": ["surface", "optical"],
+    "aliases": ["inferior_steepening", "asymmetric_K", "keratoconus_pattern"]
   },
   {
     "_id": "macular_atrophy_GA",
@@ -626,35 +744,40 @@
     "nameVi": "Teo dạng địa lý tại hoàng điểm",
     "kind": "test_result",
     "producedByTest": "t-fundus-exam",
-    "serviceHints": ["sensor"]
+    "serviceHints": ["sensor"],
+    "aliases": ["GA", "geographic_atrophy"]
   },
   {
     "_id": "fever_or_systemic",
     "name": "Fever or systemic illness signs",
     "nameVi": "Sốt hoặc dấu hiệu nhiễm trùng toàn thân",
     "kind": "context",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["fever", "systemic_illness"]
   },
   {
     "_id": "periorbital_swelling",
     "name": "Swelling around the eye (eyelid / periorbital tissue)",
     "nameVi": "Sưng quanh mắt / mi mắt",
     "kind": "sign",
-    "serviceHints": ["immune", "surface"]
+    "serviceHints": ["immune", "surface"],
+    "aliases": ["lid_swelling", "eyelid_edema", "periorbital_edema"]
   },
   {
     "_id": "proptosis",
     "name": "Proptosis (eye pushed forward)",
     "nameVi": "Lồi mắt",
     "kind": "sign",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["exophthalmos", "bulging_eye"]
   },
   {
     "_id": "restricted_motility",
     "name": "Restricted eye movement (painful or mechanical)",
     "nameVi": "Hạn chế vận nhãn",
     "kind": "sign",
-    "serviceHints": ["coordination", "immune"]
+    "serviceHints": ["coordination", "immune"],
+    "aliases": ["ophthalmoplegia", "limited_EOM"]
   },
   {
     "_id": "blood_in_AC",
@@ -662,20 +785,23 @@
     "nameVi": "Máu trong tiền phòng",
     "kind": "test_result",
     "producedByTest": "t-slit-lamp",
-    "serviceHints": ["vascular"]
+    "serviceHints": ["vascular"],
+    "aliases": ["hyphema_finding", "AC_blood", "layered_blood"]
   },
   {
     "_id": "tender_globe",
     "name": "Tender globe (tender to touch)",
     "nameVi": "Nhãn cầu đau khi sờ",
     "kind": "sign",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["scleritis_tender", "globe_tenderness"]
   },
   {
     "_id": "violet_hue_sclera",
     "name": "Violet / blue hue of the sclera",
     "nameVi": "Củng mạc có ánh tím / xanh",
     "kind": "sign",
-    "serviceHints": ["immune"]
+    "serviceHints": ["immune"],
+    "aliases": ["violet_sclera", "scleral_thinning_hue"]
   }
 ]

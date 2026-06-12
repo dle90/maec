@@ -645,6 +645,21 @@
     "provenance": { "sources": ["disease-index.md"], "checkFlags": [] }
   },
   {
+    "_id": "d-recurrent-corneal-erosion",
+    "name": "Recurrent corneal erosion",
+    "nameVi": "Loét giác mạc tái phát (trợt biểu mô)",
+    "services": ["surface"],
+    "codes": { "snomed": "247027009" },
+    "redFlag": false,
+    "urgency": "routine",
+    "ageMin": 18,
+    "ageMax": 100,
+    "prevalenceTag": "common",
+    "summary": "The corneal epithelium fails to re-adhere to its basement membrane (often after an old abrasion or in epithelial basement membrane dystrophy). Classic pattern: sharp pain on awakening that subsides during the day; episodic, recurrent over months-years.",
+    "treatments": ["lubricating_ointment_at_bedtime", "hyperosmotic_drops", "bandage_contact_lens", "anterior_stromal_puncture", "PTK_phototherapeutic_keratectomy"],
+    "provenance": { "sources": ["AAO_PPP_2023_corneal_disease"], "checkFlags": [] }
+  },
+  {
     "_id": "d-pterygium",
     "name": "Pterygium",
     "nameVi": "Mộng thịt",

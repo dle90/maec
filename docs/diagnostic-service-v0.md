@@ -43,11 +43,11 @@ Seeded from version-controlled JSON in `maec-app/server/diagnostic/kb/`:
 | Collection | Entries | Source file |
 |---|---|---|
 | `dxservices` | 9 | `kb/services.json` |
-| `dxdiseases` | 64 | `kb/diseases.json` |
-| `dxfindings` | 91 | `kb/findings.json` |
+| `dxdiseases` | 65 | `kb/diseases.json` |
+| `dxfindings` | 96 | `kb/findings.json` (all entries aliased; 232 alias terms total) |
 | `dxtests` | 28 | `kb/tests.json` |
 | `dxredflags` | 19 | `kb/redFlags.json` |
-| `dxedges` | 189 | `kb/edges.json` |
+| `dxedges` | 199 | `kb/edges.json` |
 
 Edit the JSON, re-run the seeder. Clinical reviewers work in the JSON, not the
 DB. Cross-references are validated at seed time — typos in disease IDs, missing
