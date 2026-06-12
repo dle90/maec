@@ -186,10 +186,11 @@
     "services": ["transport", "sensor", "pressure"],
     "expensive": true,
     "invasiveness": "none",
-    "availableInClinic": true,
+    "availableInClinic": false,
     "svcCode": "SVC-VF",
     "producesFindings": ["vf_arcuate", "vf_altitudinal", "vf_bitemporal", "vf_homonymous"],
-    "harmIfSkipped": 4
+    "harmIfSkipped": 4,
+    "notes": "MAEC does not have a Humphrey/Octopus perimeter yet — set to false until equipment is acquired. Glaucoma + neuro patients are referred for VF testing externally. Confrontation fields (t-confrontation-vf) is the in-clinic substitute."
   },
   {
     "_id": "t-gonioscopy",
@@ -334,5 +335,97 @@
     "svcCode": null,
     "producesFindings": [],
     "harmIfSkipped": 5
+  },
+  {
+    "_id": "t-anterior-oct",
+    "name": "Anterior segment OCT",
+    "nameVi": "OCT bán phần trước",
+    "services": ["pressure", "surface", "optical"],
+    "expensive": true,
+    "invasiveness": "none",
+    "availableInClinic": true,
+    "svcCode": "SVC-OCT-ANT",
+    "producesFindings": ["closed_angle_gonioscopy"],
+    "harmIfSkipped": 3,
+    "notes": "Same RS-330 hardware as posterior OCT, different mode. Imaging-confirms angle status (alternative to gonioscopy when patient can't tolerate the mirror lens) and gives anterior chamber depth + cornea cross-section."
+  },
+  {
+    "_id": "t-pachymetry",
+    "name": "Pachymetry (corneal thickness)",
+    "nameVi": "Đo độ dày giác mạc",
+    "services": ["pressure", "surface", "optical"],
+    "expensive": false,
+    "invasiveness": "topical",
+    "availableInClinic": true,
+    "svcCode": "SVC-PACHY",
+    "producesFindings": ["thin_cornea", "thick_cornea"],
+    "harmIfSkipped": 3,
+    "notes": "Used as an interpretation modifier for IOP (thin cornea → IOP under-reads, thick → over-reads) and as a screening for keratoconus (sub-450 µm thinning) and refractive surgery candidacy."
+  },
+  {
+    "_id": "t-amsler-grid",
+    "name": "Amsler grid",
+    "nameVi": "Lưới Amsler",
+    "services": ["sensor"],
+    "expensive": false,
+    "invasiveness": "none",
+    "availableInClinic": true,
+    "svcCode": "SVC-AMSLER",
+    "producesFindings": ["metamorphopsia", "central_scotoma"],
+    "harmIfSkipped": 2,
+    "notes": "Both a clinic test and the canonical at-home AMD monitoring tool. Patient-reported distortion or a scotoma on the grid drives an urgent recheck — value is in the time series."
+  },
+  {
+    "_id": "t-stereopsis",
+    "name": "Stereopsis test (Worth 4-dot / Titmus)",
+    "nameVi": "Test phối hợp 2 mắt (Worth 4-dot / Titmus)",
+    "services": ["coordination"],
+    "expensive": false,
+    "invasiveness": "none",
+    "availableInClinic": true,
+    "svcCode": "SVC-TG2M",
+    "producesFindings": [],
+    "harmIfSkipped": 2,
+    "notes": "Records a stereoacuity value (arcseconds) and a fusion status (fused / suppressed / diplopic). Used in the binocular vision workflow (#2) and for amblyopia / strabismus tracking."
+  },
+  {
+    "_id": "t-oct-angiography",
+    "name": "OCT-Angiography (OCT-A)",
+    "nameVi": "OCT mạch máu",
+    "services": ["vascular", "sensor"],
+    "expensive": true,
+    "invasiveness": "none",
+    "availableInClinic": true,
+    "svcCode": "SVC-OCT-POST",
+    "producesFindings": ["neovascularization", "intraretinal_fluid", "subretinal_fluid"],
+    "harmIfSkipped": 3,
+    "notes": "Dye-free retinal vascular imaging. RS-330 supports it. Substitute for FA in many wet-AMD, DR, RVO cases — no IV access, no contrast risk, but lacks dynamic leakage information."
+  },
+  {
+    "_id": "t-bscan-ultrasound",
+    "name": "Ocular B-scan ultrasound",
+    "nameVi": "Siêu âm B mắt",
+    "services": ["sensor", "vascular"],
+    "expensive": false,
+    "invasiveness": "topical",
+    "availableInClinic": false,
+    "svcCode": null,
+    "producesFindings": [],
+    "harmIfSkipped": 4,
+    "notes": "Required when the fundus view is blocked (dense cataract, vitreous hemorrhage) to rule out RD / mass / IOFB. MAEC doesn't have one yet — refer for any blocked-view case where a posterior segment emergency is suspected."
+  },
+  {
+    "_id": "t-corneal-culture",
+    "name": "Corneal scraping for culture",
+    "nameVi": "Cấy giác mạc",
+    "services": ["surface", "immune"],
+    "expensive": false,
+    "invasiveness": "invasive",
+    "availableInClinic": false,
+    "svcCode": null,
+    "producesFindings": [],
+    "harmIfSkipped": 5,
+    "notes": "Treatment-defining for bacterial / fungal / Acanthamoeba keratitis. Must be done BEFORE starting topical antibiotics. Not in-house at MAEC — referral to a hospital microbiology lab. Listed here so the rf-bacterial-keratitis actionGuidance has a real KB entry to point at."
   }
 ]
+

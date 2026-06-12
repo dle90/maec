@@ -748,6 +748,24 @@
     "aliases": ["GA", "geographic_atrophy"]
   },
   {
+    "_id": "thin_cornea",
+    "name": "Thin cornea on pachymetry (< 500 µm)",
+    "nameVi": "Giác mạc mỏng (< 500 µm)",
+    "kind": "test_result",
+    "producedByTest": "t-pachymetry",
+    "serviceHints": ["surface", "pressure"],
+    "aliases": ["corneal_thinning", "pachymetry_thin"]
+  },
+  {
+    "_id": "thick_cornea",
+    "name": "Thick cornea on pachymetry (> 580 µm)",
+    "nameVi": "Giác mạc dày (> 580 µm)",
+    "kind": "test_result",
+    "producedByTest": "t-pachymetry",
+    "serviceHints": ["pressure"],
+    "aliases": ["corneal_thickening", "pachymetry_thick"]
+  },
+  {
     "_id": "fever_or_systemic",
     "name": "Fever or systemic illness signs",
     "nameVi": "Sốt hoặc dấu hiệu nhiễm trùng toàn thân",

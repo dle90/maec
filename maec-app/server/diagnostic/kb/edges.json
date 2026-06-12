@@ -177,6 +177,7 @@
 
   { "diseaseId": "d-keratoconus", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.2 },
   { "diseaseId": "d-keratoconus", "findingId": "corneal_steepening_topo", "frequency": 0.95, "evokingStrength": 0.95 },
+  { "diseaseId": "d-keratoconus", "findingId": "thin_cornea", "frequency": 0.7, "evokingStrength": 0.5 },
 
   { "diseaseId": "d-pterygium", "findingId": "gritty_burning", "frequency": 0.5, "evokingStrength": 0.2 },
 
