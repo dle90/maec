@@ -174,20 +174,18 @@ export default function Diagnostic() {
               onExclude={handleExcludeRedFlag}
               outcomeClosed={!!session.clinicianOutcome?.closedAt}
             />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <DifferentialPanel
-                differential={session.differential || []}
-                outcome={session.clinicianOutcome}
-                onConfirm={handleConfirmOutcome}
-                busy={busy}
-              />
-              <NextTestsPanel
-                tests={session.recommendedNextTests || []}
-                observations={session.observations || []}
-                onAddObservation={handleAddObservation}
-                busy={busy}
-              />
-            </div>
+            <NextTestsPanel
+              tests={session.recommendedNextTests || []}
+              observations={session.observations || []}
+              onAddObservation={handleAddObservation}
+              busy={busy}
+            />
+            <DifferentialPanel
+              differential={session.differential || []}
+              outcome={session.clinicianOutcome}
+              onConfirm={handleConfirmOutcome}
+              busy={busy}
+            />
             <OutcomePanel
               session={session}
               onConfirm={handleConfirmOutcome}
@@ -598,52 +596,45 @@ function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
 // Next tests panel — per-eye observation entry
 // ─────────────────────────────────────────────────────────────────
 function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
-  const [showFindingFor, setShow] = useState(null)  // testId being expanded
-  const [eye, setEye]             = useState('OD')
-  const [value, setValue]         = useState('')
-  const [unit, setUnit]           = useState('')
-
   const observedFindings = useMemo(() => new Set(observations.map(o => o.findingId)), [observations])
-
-  async function submit(findingId) {
-    if (!findingId) return
-    await onAddObservation({ findingId, eye, value: value || undefined, unit: unit || undefined, source: 'manual' })
-    setShow(null); setValue(''); setUnit('')
-  }
+  const hero = tests[0]
+  const rest = tests.slice(1)
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4">
-      <h2 className="text-base font-semibold text-gray-800 mb-3">Xét nghiệm đề xuất tiếp theo</h2>
+    <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500">
+      <div className="flex items-baseline justify-between mb-2">
+        <h2 className="text-base font-semibold text-gray-800">🎯 Bước tiếp theo</h2>
+        <span className="text-xs text-gray-500">Nhập kết quả → danh sách chẩn đoán cập nhật tự động</span>
+      </div>
       {tests.length === 0 ? (
-        <div className="text-sm text-gray-500 italic">Không còn xét nghiệm đề xuất — hệ thống đã có đủ thông tin để xếp hạng.</div>
+        <div className="text-sm text-gray-500 italic py-2">Đã có đủ thông tin — không cần thêm xét nghiệm. Chuyển sang xác nhận chẩn đoán.</div>
       ) : (
-        <div className="space-y-1.5">
-          {tests.map(t => (
-            <div key={t.testId} className="rounded-lg border border-gray-200 bg-white p-2.5">
-              <div className="flex items-center gap-2">
-                <span className="flex-1 text-sm font-medium text-gray-800">{t.nameVi || t.name}</span>
-                <span className="text-xs text-gray-500 font-mono">{t.svcCode}</span>
-                <span className="text-xs font-mono text-gray-600 w-12 text-right">{t.expectedUtility.toFixed(2)}</span>
-                <button onClick={() => setShow(t.testId === showFindingFor ? null : t.testId)}
-                  className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded">
-                  💾 Nhập KQ
-                </button>
-              </div>
-              <div className="pl-1 mt-1 text-xs text-gray-500">{t.rationale}</div>
-              {showFindingFor === t.testId && (
-                <ObservationInput
-                  test={t}
+        <>
+          {/* Hero card for the highest-utility test */}
+          {hero && (
+            <TestCard
+              t={hero}
+              isHero={true}
+              observedFindings={observedFindings}
+              onAddObservation={onAddObservation}
+              busy={busy}
+            />
+          )}
+          {rest.length > 0 && (
+            <div className="space-y-1.5 mt-2">
+              {rest.map(t => (
+                <TestCard
+                  key={t.testId}
+                  t={t}
+                  isHero={false}
                   observedFindings={observedFindings}
-                  eye={eye} setEye={setEye}
-                  value={value} setValue={setValue}
-                  unit={unit} setUnit={setUnit}
-                  onSubmit={submit}
+                  onAddObservation={onAddObservation}
                   busy={busy}
                 />
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {observations.length > 0 && (
@@ -666,41 +657,72 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
   )
 }
 
-function ObservationInput({ test, observedFindings, eye, setEye, value, setValue, unit, setUnit, onSubmit, busy }) {
-  const candidates = test.producesFindings || []
+// One card per recommended test. Each card holds its OWN eye/value/unit state
+// so opening multiple cards doesn't share a single OD/OS toggle.
+function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
+  const [open, setOpen] = useState(isHero)  // hero auto-expands
+  const [eye, setEye]   = useState('OD')
+  const [value, setVal] = useState('')
+  const [unit, setUnit] = useState('')
+  const candidates = t.producesFindings || []
   const [picked, setPicked] = useState(candidates[0] || '')
-  useEffect(() => { setPicked(candidates[0] || '') }, [test.testId])
+  useEffect(() => { setPicked(candidates[0] || '') }, [t.testId])
+
+  async function submit() {
+    if (!picked) return
+    await onAddObservation({ findingId: picked, eye, value: value || undefined, unit: unit || undefined, source: 'manual' })
+    setVal(''); setUnit('')
+  }
+
+  const wrap = isHero
+    ? 'rounded-xl border-2 border-blue-400 bg-blue-50/40 p-3 shadow-sm'
+    : 'rounded-lg border border-gray-200 bg-white p-2.5'
 
   return (
-    <div className="mt-2 pt-2 border-t border-gray-100 space-y-2">
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-gray-600">Mắt:</span>
-        {['OD', 'OS', 'OU'].map(e => (
-          <button key={e} onClick={() => setEye(e)}
-            className={`px-2 py-0.5 rounded ${eye === e ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>{e}</button>
-        ))}
+    <div className={wrap}>
+      <div className="flex items-center gap-2">
+        {isHero && <span className="text-blue-600 text-sm font-semibold">⭐ Ưu tiên</span>}
+        <span className={`flex-1 ${isHero ? 'text-base font-semibold' : 'text-sm font-medium'} text-gray-800`}>{t.nameVi || t.name}</span>
+        <span className="text-xs text-gray-500 font-mono">{t.svcCode}</span>
+        <span className="text-xs font-mono text-gray-600 w-12 text-right">{t.expectedUtility.toFixed(2)}</span>
+        <button onClick={() => setOpen(!open)}
+          className={`text-xs px-2.5 py-1 rounded ${isHero ? 'bg-blue-600 hover:bg-blue-700 text-white font-medium' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>
+          {open ? '↑' : '💾 Nhập KQ'}
+        </button>
       </div>
-      {candidates.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {candidates.map(f => (
-            <button key={f} onClick={() => setPicked(f)}
-              className={`text-xs px-2 py-1 rounded border ${picked === f ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-white border-gray-200 hover:border-blue-300'} ${observedFindings.has(f) ? 'opacity-60' : ''}`}>
-              {f} {observedFindings.has(f) && '✓'}
-            </button>
-          ))}
+      <div className="pl-1 mt-1 text-xs text-gray-500">{t.rationale}</div>
+      {open && (
+        <div className="mt-2 pt-2 border-t border-gray-200 space-y-2">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-gray-600">Mắt:</span>
+            {['OD', 'OS', 'OU'].map(e => (
+              <button key={e} onClick={() => setEye(e)}
+                className={`px-2 py-0.5 rounded ${eye === e ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>{e}</button>
+            ))}
+          </div>
+          {candidates.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {candidates.map(f => (
+                <button key={f} onClick={() => setPicked(f)}
+                  className={`text-xs px-2 py-1 rounded border ${picked === f ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-white border-gray-200 hover:border-blue-300'} ${observedFindings.has(f) ? 'opacity-60' : ''}`}>
+                  {f} {observedFindings.has(f) && '✓'}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input value={value} onChange={e => setVal(e.target.value)}
+              placeholder="Giá trị (tuỳ chọn)"
+              className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-32" />
+            <input value={unit} onChange={e => setUnit(e.target.value)}
+              placeholder="Đơn vị"
+              className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-16" />
+            <button onClick={submit}
+              disabled={busy || !picked}
+              className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">Lưu</button>
+          </div>
         </div>
       )}
-      <div className="flex items-center gap-2">
-        <input value={value} onChange={e => setValue(e.target.value)}
-          placeholder="Giá trị (tuỳ chọn)"
-          className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-32" />
-        <input value={unit} onChange={e => setUnit(e.target.value)}
-          placeholder="Đơn vị"
-          className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-16" />
-        <button onClick={() => onSubmit(picked)}
-          disabled={busy || !picked}
-          className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">Lưu</button>
-      </div>
     </div>
   )
 }

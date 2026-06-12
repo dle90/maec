@@ -840,6 +840,21 @@
     "provenance": { "sources": ["disease-index.md"], "checkFlags": [] }
   },
   {
+    "_id": "d-uveitic-glaucoma",
+    "name": "Uveitic glaucoma (inflammatory secondary glaucoma)",
+    "nameVi": "Glôcôm thứ phát do viêm màng bồ đào",
+    "services": ["immune", "pressure", "transport"],
+    "codes": { "snomed": "192018008" },
+    "redFlag": false,
+    "urgency": "urgent",
+    "ageMin": 18,
+    "ageMax": 80,
+    "prevalenceTag": "uncommon",
+    "summary": "Secondary IOP rise in the setting of active or chronic anterior uveitis. Mechanisms: trabeculitis (inflammatory cells blocking outflow), steroid response from chronic topical steroid use, posterior synechiae causing pupillary block, or peripheral anterior synechiae. Recurrent uveitis + elevated IOP. Treat the inflammation AND the pressure simultaneously.",
+    "treatments": ["topical_steroid_to_quiet_inflammation", "IOP_lowering_drops_non_PGA_first", "cycloplegic_to_break_synechiae", "laser_or_surgical_if_refractory"],
+    "provenance": { "sources": ["AAO BCSC §9 Uveitis", "AAO PPP Glaucoma"], "checkFlags": [] }
+  },
+  {
     "_id": "d-horner-syndrome",
     "name": "Horner syndrome",
     "nameVi": "Hội chứng Horner",

@@ -168,9 +168,11 @@
   { "diseaseId": "d-hsv-keratitis", "findingId": "dendritic_corneal_ulcer", "frequency": 0.85, "evokingStrength": 0.95 },
   { "diseaseId": "d-hsv-keratitis", "findingId": "pain_severe", "frequency": 0.5, "evokingStrength": 0.3 },
   { "diseaseId": "d-hsv-keratitis", "findingId": "photophobia", "frequency": 0.85, "evokingStrength": 0.3 },
+  { "diseaseId": "d-hsv-keratitis", "findingId": "pain_out_of_proportion", "frequency": 0.3, "evokingStrength": 0.4 },
 
   { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "pain_severe", "frequency": 0.95, "evokingStrength": 0.4 },
   { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "photophobia", "frequency": 0.9, "evokingStrength": 0.3 },
+  { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "pain_out_of_proportion", "frequency": 0.8, "evokingStrength": 0.9 },
 
   { "diseaseId": "d-corneal-abrasion", "findingId": "pain_severe", "frequency": 0.85, "evokingStrength": 0.4 },
   { "diseaseId": "d-corneal-abrasion", "findingId": "trauma_recent", "frequency": 0.7, "evokingStrength": 0.5 },
@@ -213,6 +215,14 @@
   { "diseaseId": "d-anterior-uveitis", "findingId": "redness_circumcorneal", "frequency": 0.85, "evokingStrength": 0.85 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "pupil_small_unilateral", "frequency": 0.6, "evokingStrength": 0.7 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "morning_back_stiffness", "frequency": 0.2, "evokingStrength": 0.7 },
+
+  { "diseaseId": "d-uveitic-glaucoma", "findingId": "cells_and_flare", "frequency": 0.95, "evokingStrength": 0.6 },
+  { "diseaseId": "d-uveitic-glaucoma", "findingId": "elevated_IOP", "frequency": 0.95, "evokingStrength": 0.7 },
+  { "diseaseId": "d-uveitic-glaucoma", "findingId": "synechiae", "frequency": 0.5, "evokingStrength": 0.7 },
+  { "diseaseId": "d-uveitic-glaucoma", "findingId": "pain_severe_or_moderate", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-uveitic-glaucoma", "findingId": "photophobia", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-uveitic-glaucoma", "findingId": "redness_circumcorneal", "frequency": 0.7, "evokingStrength": 0.4 },
+  { "diseaseId": "d-uveitic-glaucoma", "findingId": "keratic_precipitates", "frequency": 0.5, "evokingStrength": 0.6 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "cells_and_flare", "frequency": 0.98, "evokingStrength": 0.95 },
   { "diseaseId": "d-anterior-uveitis", "findingId": "keratic_precipitates", "frequency": 0.7, "evokingStrength": 0.85 },
 

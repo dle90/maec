@@ -1,0 +1,33 @@
+name: Diagnostic KB validation
+
+# Runs the pure-JSON KB cross-reference validator on every push and PR
+# that touches diagnostic KB files. No Mongo, no LLM key needed — runs in
+# ~5 seconds and catches the most common regression (typo in a tag, dangling
+# reference, duplicate ID, implies cycle, weight out of range).
+#
+# The full clinical-eval.js is intentionally NOT in CI — it requires an
+# Anthropic API key and Mongo connection, takes ~5 min, and costs ~$0.20 per
+# run. Engineers run it locally before shipping KB changes.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'maec-app/server/diagnostic/kb/**'
+      - 'maec-app/server/diagnostic/validate-kb.js'
+      - '.github/workflows/diagnostic-kb-validate.yml'
+  pull_request:
+    paths:
+      - 'maec-app/server/diagnostic/kb/**'
+      - 'maec-app/server/diagnostic/validate-kb.js'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate KB cross-references
+        run: node maec-app/server/diagnostic/validate-kb.js

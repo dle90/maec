@@ -43,11 +43,13 @@ Seeded from version-controlled JSON in `maec-app/server/diagnostic/kb/`:
 | Collection | Entries | Source file |
 |---|---|---|
 | `dxservices` | 9 | `kb/services.json` |
-| `dxdiseases` | 70 | `kb/diseases.json` |
-| `dxfindings` | 106 | `kb/findings.json` (all aliased) |
+| `dxdiseases` | 71 | `kb/diseases.json` |
+| `dxfindings` | 107 | `kb/findings.json` (all aliased) |
 | `dxtests` | 35 | `kb/tests.json` (28 in-clinic + 7 referral-only / external) |
 | `dxredflags` | 19 | `kb/redFlags.json` |
-| `dxedges` | 220 | `kb/edges.json` |
+| `dxedges` | 229 | `kb/edges.json` |
+
+KB cross-references validated by `validate-kb.js` on every push (GitHub Action: `.github/workflows/diagnostic-kb-validate.yml`). Pure-JSON validator, no Mongo/LLM needed, runs in ~5 sec.
 
 Edit the JSON, re-run the seeder. Clinical reviewers work in the JSON, not the
 DB. Cross-references are validated at seed time — typos in disease IDs, missing

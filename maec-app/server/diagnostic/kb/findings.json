@@ -887,6 +887,15 @@
     "aliases": ["presbyopia_pattern", "near_blur_distance_clear", "mờ_đọc_sách"]
   },
   {
+    "_id": "pain_out_of_proportion",
+    "name": "Pain disproportionately severe relative to exam findings",
+    "nameVi": "Đau mất tỉ lệ với dấu hiệu khám",
+    "kind": "symptom",
+    "serviceHints": ["surface", "immune"],
+    "implies": ["pain_severe", "pain"],
+    "aliases": ["disproportionate_pain", "pain_exceeds_findings", "đau_mất_tỉ_lệ", "đau_cả_khi_nhắm_mắt"]
+  },
+  {
     "_id": "visual_aura_zigzag",
     "name": "Zigzag / scintillating visual aura, bilateral, 15-60 minutes",
     "nameVi": "Hào quang thị giác hình zigzag, hai bên, 15-60 phút",
