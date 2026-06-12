@@ -9,6 +9,7 @@
 
 const DxDisease = require('../models/DxDisease')
 const DxEdge = require('../models/DxEdge')
+const { expandFindings } = require('./findingExpansion')
 
 const PREVALENCE_WEIGHT = {
   very_common: 1.0,
@@ -20,15 +21,17 @@ const PREVALENCE_WEIGHT = {
 
 const RED_FLAG_FLOOR = 0.05
 
-function collectActiveFindings(complaint, observations) {
-  return new Set([
+async function collectActiveFindings(complaint, observations) {
+  // Includes everything the implies graph entails — e.g. observing pain_severe
+  // also activates the parent `pain` tag, so generic-pain edges contribute.
+  return await expandFindings([
     ...(complaint.symptoms || []),
     ...(observations || []).map(o => o.findingId).filter(Boolean),
   ])
 }
 
 async function rankDifferential(complaint, observations, redFlags, limit = 10) {
-  const activeFindings = collectActiveFindings(complaint, observations)
+  const activeFindings = await collectActiveFindings(complaint, observations)
 
   // Force-include any disease that a triggered red-flag points at.
   const redFlagDiseases = new Set()

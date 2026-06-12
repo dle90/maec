@@ -53,7 +53,8 @@
     "nameVi": "Mất thị trường nửa trên hoặc dưới",
     "kind": "symptom",
     "serviceHints": ["transport", "vascular"],
-    "aliases": ["altitudinal_loss", "horizontal_field_loss"]
+    "aliases": ["altitudinal_loss", "horizontal_field_loss"],
+    "implies": ["field_loss"]
   },
   {
     "_id": "field_loss_homonymous",
@@ -61,7 +62,8 @@
     "nameVi": "Mất thị trường đồng danh",
     "kind": "sign",
     "serviceHints": ["transport"],
-    "aliases": ["homonymous_hemianopia", "same_side_loss"]
+    "aliases": ["homonymous_hemianopia", "same_side_loss"],
+    "implies": ["field_loss"]
   },
   {
     "_id": "field_loss_bitemporal",
@@ -69,7 +71,8 @@
     "nameVi": "Mất thị trường thái dương 2 bên",
     "kind": "sign",
     "serviceHints": ["transport"],
-    "aliases": ["bitemporal_hemianopia", "tunnel_chiasm"]
+    "aliases": ["bitemporal_hemianopia", "tunnel_chiasm"],
+    "implies": ["field_loss"]
   },
   {
     "_id": "vision_loss_sudden",
@@ -77,7 +80,8 @@
     "nameVi": "Mất thị lực đột ngột",
     "kind": "symptom",
     "serviceHints": ["vascular", "sensor", "transport"],
-    "aliases": ["sudden_vision_loss", "acute_vision_loss", "abrupt_vision_loss"]
+    "aliases": ["sudden_vision_loss", "acute_vision_loss", "abrupt_vision_loss"],
+    "implies": ["vision_drop"]
   },
   {
     "_id": "vision_loss_subacute",
@@ -85,7 +89,8 @@
     "nameVi": "Mất thị lực bán cấp (giờ-ngày)",
     "kind": "symptom",
     "serviceHints": ["transport", "immune"],
-    "aliases": ["subacute_vision_loss", "progressive_vision_loss_days"]
+    "aliases": ["subacute_vision_loss", "progressive_vision_loss_days"],
+    "implies": ["vision_drop"]
   },
   {
     "_id": "vision_drop",
@@ -149,7 +154,8 @@
     "nameVi": "Đau khi liếc mắt",
     "kind": "symptom",
     "serviceHints": ["transport", "immune"],
-    "aliases": ["retrobulbar_pain", "pain_with_motion", "EOM_pain"]
+    "aliases": ["retrobulbar_pain", "pain_with_motion", "EOM_pain"],
+    "implies": ["pain"]
   },
   {
     "_id": "pain_severe",
@@ -157,7 +163,8 @@
     "nameVi": "Đau mắt dữ dội",
     "kind": "symptom",
     "serviceHints": ["pressure", "surface", "immune"],
-    "aliases": ["severe_eye_pain", "intense_eye_pain"]
+    "aliases": ["severe_eye_pain", "intense_eye_pain"],
+    "implies": ["pain_severe_or_moderate", "pain"]
   },
   {
     "_id": "pain_severe_or_moderate",
@@ -165,7 +172,8 @@
     "nameVi": "Đau vừa-dữ dội",
     "kind": "symptom",
     "serviceHints": ["pressure", "surface", "immune"],
-    "aliases": ["moderate_or_severe_pain"]
+    "aliases": ["moderate_or_severe_pain"],
+    "implies": ["pain"]
   },
   {
     "_id": "pain_deep_boring",
@@ -173,7 +181,8 @@
     "nameVi": "Đau sâu kiểu khoan",
     "kind": "symptom",
     "serviceHints": ["immune"],
-    "aliases": ["boring_pain", "deep_scleral_pain", "drilling_pain"]
+    "aliases": ["boring_pain", "deep_scleral_pain", "drilling_pain"],
+    "implies": ["pain"]
   },
   {
     "_id": "eye_pain_morning_subsides",
@@ -213,7 +222,8 @@
     "nameVi": "Tiết dịch mủ",
     "kind": "symptom",
     "serviceHints": ["surface"],
-    "aliases": ["purulent_discharge", "pus", "yellow_discharge"]
+    "aliases": ["purulent_discharge", "pus", "yellow_discharge"],
+    "implies": ["discharge"]
   },
   {
     "_id": "discharge_watery",
@@ -221,7 +231,8 @@
     "nameVi": "Tiết dịch nước",
     "kind": "symptom",
     "serviceHints": ["surface"],
-    "aliases": ["watery_discharge", "clear_discharge"]
+    "aliases": ["watery_discharge", "clear_discharge"],
+    "implies": ["discharge"]
   },
   {
     "_id": "tearing_paradoxical",
@@ -700,7 +711,8 @@
     "kind": "test_result",
     "producedByTest": "t-perimetry",
     "serviceHints": ["transport", "pressure"],
-    "aliases": ["arcuate_scotoma", "glaucoma_VF_pattern"]
+    "aliases": ["arcuate_scotoma", "glaucoma_VF_pattern"],
+    "implies": ["field_loss"]
   },
   {
     "_id": "vf_altitudinal",
@@ -709,7 +721,8 @@
     "kind": "test_result",
     "producedByTest": "t-perimetry",
     "serviceHints": ["transport", "vascular"],
-    "aliases": ["altitudinal_VF", "NAION_VF_pattern"]
+    "aliases": ["altitudinal_VF", "NAION_VF_pattern"],
+    "implies": ["field_loss_altitudinal", "field_loss"]
   },
   {
     "_id": "vf_bitemporal",
@@ -718,7 +731,8 @@
     "kind": "test_result",
     "producedByTest": "t-perimetry",
     "serviceHints": ["transport"],
-    "aliases": ["bitemporal_hemianopia_perimetry", "chiasm_VF_pattern"]
+    "aliases": ["bitemporal_hemianopia_perimetry", "chiasm_VF_pattern"],
+    "implies": ["field_loss_bitemporal", "field_loss"]
   },
   {
     "_id": "vf_homonymous",
@@ -727,7 +741,8 @@
     "kind": "test_result",
     "producedByTest": "t-perimetry",
     "serviceHints": ["transport"],
-    "aliases": ["homonymous_hemianopia_perimetry", "post_chiasmal_VF"]
+    "aliases": ["homonymous_hemianopia_perimetry", "post_chiasmal_VF"],
+    "implies": ["field_loss_homonymous", "field_loss"]
   },
   {
     "_id": "corneal_steepening_topo",

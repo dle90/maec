@@ -10,6 +10,7 @@
 // the cost of missing one is catastrophic.
 
 const DxRedFlag = require('../models/DxRedFlag')
+const { expandFindings } = require('./findingExpansion')
 
 const ORDINAL_SCALES = {
   pain: ['none', 'mild', 'moderate', 'severe'],
@@ -111,9 +112,12 @@ async function runRedFlagGate(complaint, observations = []) {
   // trigger rf-hsv-keratitis even though the initial complaint was vague).
   // Union them into the symptom set for matching purposes only.
   const observedTags = (observations || []).map(o => o.findingId).filter(Boolean)
+  // Expand via the implies graph: pain_severe → pain so a rule needing 'pain'
+  // matches a patient reporting 'pain_severe'.
+  const expanded = await expandFindings([...(complaint.symptoms || []), ...observedTags])
   const augmented = {
     ...complaint,
-    symptoms: [...(complaint.symptoms || []), ...observedTags],
+    symptoms: [...expanded],
   }
 
   const matches = []

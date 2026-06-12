@@ -12,6 +12,14 @@ const dxFindingSchema = new mongoose.Schema({
   serviceHints: [String],
   qualifiers: [String],
   aliases: [String],
+  // When this finding is present, these other findings are implicitly present
+  // too (clinical entailment). pain_severe implies pain; vf_altitudinal implies
+  // field_loss_altitudinal which implies field_loss. The engine expands the
+  // active-findings set along these edges before matching/ranking.
+  implies: [String],
+  // Free-form notes (e.g. KB authoring caveats, [CHECK] flags). Not used by
+  // the engine.
+  notes: String,
 }, { _id: false, collection: 'dxfindings' })
 
 dxFindingSchema.index({ kind: 1 })
