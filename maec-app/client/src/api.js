@@ -116,4 +116,16 @@ export const downloadEncounterPrintout = async (encounterId, patientName = 'phie
   setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
+// Diagnostic decision-support v0 — see diagnostic-service-v0.md
+export const dxParseComplaint   = (text) => api.post('/diagnostic/parse-complaint', { text }).then(r => r.data)
+export const dxCreateSession    = (data) => api.post('/diagnostic/sessions', data).then(r => r.data)
+export const dxGetSession       = (id)   => api.get(`/diagnostic/sessions/${id}`).then(r => r.data)
+export const dxAddObservation   = (sessionId, data) => api.post(`/diagnostic/sessions/${sessionId}/observations`, data).then(r => r.data)
+export const dxExcludeRedFlag   = (sessionId, redFlagId, data) => api.post(`/diagnostic/sessions/${sessionId}/redFlags/${redFlagId}/exclude`, data).then(r => r.data)
+export const dxConfirmOutcome   = (sessionId, data) => api.post(`/diagnostic/sessions/${sessionId}/outcome`, data).then(r => r.data)
+export const dxGetServices      = () => api.get('/diagnostic/kb/services').then(r => r.data)
+export const dxGetDiseases      = (params) => api.get('/diagnostic/kb/diseases', { params }).then(r => r.data)
+export const dxGetTests         = (params) => api.get('/diagnostic/kb/tests', { params }).then(r => r.data)
+export const dxGetFindings      = (params) => api.get('/diagnostic/kb/findings', { params }).then(r => r.data)
+
 export default api

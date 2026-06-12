@@ -31,6 +31,10 @@ const NAV = [
     items: [{ path: '/kham', label: 'Khám', icon: '🩺', workflowOnly: true }]
   },
   {
+    group: 'shortcut-diagnostic', headerless: true,
+    items: [{ path: '/diagnostic', label: 'Hỗ trợ chẩn đoán', icon: '🧠', workflowOnly: true }]
+  },
+  {
     group: 'shortcut-thungan', headerless: true,
     items: [{ path: '/thu-ngan', label: 'Thu ngân', icon: '💵', workflowOnly: true }]
   },

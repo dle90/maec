@@ -17,6 +17,7 @@ import Marketing from './pages/Marketing'
 import Billing from './pages/Billing'
 import Inventory from './pages/Inventory'
 import Equipment from './pages/Equipment'
+import Diagnostic from './pages/Diagnostic'
 import Catalogs from './pages/Catalogs'
 import BookingForm from './pages/BookingForm'
 import PatientLogin from './pages/PatientLogin'
@@ -61,6 +62,7 @@ function AuthenticatedRoutes() {
 
             {isWorkflowUser && <Route path="/inventory" element={<Inventory />} />}
             {isWorkflowUser && <Route path="/equipment" element={<Equipment />} />}
+            {isWorkflowUser && <Route path="/diagnostic" element={<Diagnostic />} />}
             {isWorkflowUser && <Route path="/catalogs" element={<Catalogs />} />}
             {isWorkflowUser && <Route path="/catalogs/:catalogKey" element={<Catalogs />} />}
             {isWorkflowUser && <Route path="/reports" element={<Reports />} />}
