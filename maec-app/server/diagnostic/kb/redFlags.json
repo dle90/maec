@@ -1,0 +1,210 @@
+[
+  {
+    "_id": "rf-acute-angle-closure",
+    "name": "Acute angle-closure glaucoma",
+    "nameVi": "Glôcôm góc đóng cấp",
+    "description": "Sudden severe pain + red + halos + nausea. Mid-dilated fixed pupil; rock-hard globe. IOP often 40-80 mmHg. Emergency — minutes to vision loss.",
+    "trigger": {
+      "hasAllSymptoms": ["pain_severe", "halos"],
+      "qualifiers": { "onset": "sudden", "redness": "moderate_or_worse" }
+    },
+    "services": ["pressure"],
+    "candidateDiseases": ["d-acute-angle-closure"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu. Đo nhãn áp ngay, soi góc tiền phòng. Hạ nhãn áp khẩn (acetazolamide đường uống/IV, thuốc nhỏ hạ nhãn áp), tránh thuốc giãn đồng tử. Chuyển/khám BS chuyên glôcôm để LPI laser ngay khi nhãn áp xuống.",
+    "actionGuidanceEn": "Emergency. Measure IOP and perform gonioscopy. Lower IOP urgently (oral/IV acetazolamide + topical IOP-lowering); avoid mydriatics. Refer to glaucoma specialist for LPI as soon as IOP drops."
+  },
+  {
+    "_id": "rf-retinal-detachment",
+    "name": "Retinal detachment",
+    "nameVi": "Bong võng mạc",
+    "description": "Flashes + shower of new floaters + dark curtain across the vision. Often follows a posterior vitreous detachment causing a retinal tear. Surgical urgency.",
+    "trigger": {
+      "hasAllSymptoms": ["flashes", "floaters_new"],
+      "hasAnySymptoms": ["curtain", "field_loss"]
+    },
+    "services": ["sensor"],
+    "candidateDiseases": ["d-retinal-detachment", "d-pvd-with-tear"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khẩn cấp. Khám đáy mắt với đồng tử giãn cùng ngày. Nghi bong võng mạc → chuyển bác sĩ võng mạc trong vòng 24h để mổ (vitrectomy hoặc đai củng mạc). Trong khi chờ: nằm yên, tư thế đầu phù hợp với vị trí bong.",
+    "actionGuidanceEn": "Urgent. Same-day dilated fundus exam. Suspected RD → refer retinal surgeon within 24h (vitrectomy or scleral buckle). While waiting: bed rest, head position matched to detachment location."
+  },
+  {
+    "_id": "rf-rao",
+    "name": "Retinal artery occlusion (eye stroke)",
+    "nameVi": "Tắc động mạch trung tâm võng mạc",
+    "description": "Sudden painless severe vision loss in one eye. Pale retina with a cherry-red spot at the macula. Embolic in most cases — same urgency as a brain stroke.",
+    "trigger": {
+      "hasAllSymptoms": ["vision_loss_sudden", "monocular"],
+      "qualifiers": { "pain": "none", "onset": "sudden" }
+    },
+    "services": ["vascular"],
+    "candidateDiseases": ["d-rao", "d-naion", "d-gca"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu mạch máu não. Chuyển ngay đến bệnh viện có đột quỵ (CT/CT-A, đánh giá cảnh báo), tương tự đột quỵ não. Khám đáy mắt nhanh xác nhận điểm cherry-red. Hiếm khi thị lực phục hồi nhưng cần workup hệ thống (cảnh báo đột quỵ tiếp).",
+    "actionGuidanceEn": "Stroke emergency. Refer to ED/stroke unit immediately (CT/CT-A, carotid workup) — manage like a brain stroke. Quick fundus exam to confirm cherry-red spot. Vision rarely recovers; systemic workup is critical to prevent the next event."
+  },
+  {
+    "_id": "rf-naion-or-gca",
+    "name": "Optic nerve infarct (NAION / GCA)",
+    "nameVi": "Nhồi máu thần kinh thị (NAION / GCA)",
+    "description": "Sudden painless vision loss, often altitudinal (top or bottom half). In age 50+, must rule out giant cell arteritis (headache, scalp tenderness, jaw claudication, polymyalgia) — GCA is treatable with high-dose steroids and missing it blinds the other eye in days.",
+    "trigger": {
+      "hasAllSymptoms": ["vision_loss_sudden", "monocular"],
+      "hasAnySymptoms": ["field_loss_altitudinal", "headache", "jaw_claudication", "scalp_tenderness"]
+    },
+    "services": ["transport", "vascular"],
+    "candidateDiseases": ["d-naion", "d-gca", "d-rao"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu. Nếu trên 50 tuổi và/hoặc có đau đầu/đau cơ vai/sốt nhẹ: xét nghiệm ESR + CRP ngay, bắt đầu corticoid liều cao (methylprednisolone) trong khi chờ kết quả; sinh thiết động mạch thái dương sớm. Mục tiêu là cứu mắt còn lại.",
+    "actionGuidanceEn": "Emergency. If age 50+ and/or headache / polymyalgia / fever: order ESR + CRP immediately, start high-dose steroids empirically while awaiting results; arrange temporal artery biopsy soon. Goal is to save the fellow eye."
+  },
+  {
+    "_id": "rf-optic-neuritis",
+    "name": "Optic neuritis",
+    "nameVi": "Viêm thần kinh thị",
+    "description": "Subacute one-eye blur over hours-days + pain on eye movement + colour desaturation + RAPD. Often the first sign of multiple sclerosis (young adult, F>M).",
+    "trigger": {
+      "hasAllSymptoms": ["vision_loss_subacute", "monocular", "pain_on_eye_movement"]
+    },
+    "services": ["transport", "immune"],
+    "candidateDiseases": ["d-optic-neuritis"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khám pupil RAPD + thị lực + thị giác màu + soi đĩa thị. Chụp MRI não/hốc mắt (có gadolinium) sớm để đánh giá MS. Tham vấn thần kinh; cân nhắc IV methylprednisolone theo phác đồ ONTT.",
+    "actionGuidanceEn": "Check RAPD, VA, colour vision, disc exam. Order MRI brain/orbits with gadolinium to evaluate for MS. Refer neurology; consider IV methylprednisolone per the ONTT protocol."
+  },
+  {
+    "_id": "rf-cn3-blown-pupil",
+    "name": "CN III palsy with a blown pupil",
+    "nameVi": "Liệt dây III có giãn đồng tử",
+    "description": "New diplopia + ptosis + eye sits down-and-out + a dilated unresponsive pupil. Pupil involvement implies external compression — most dangerous cause is a posterior communicating artery aneurysm.",
+    "trigger": {
+      "hasAllSymptoms": ["diplopia_binocular", "ptosis", "pupil_dilated_unilateral"]
+    },
+    "services": ["coordination", "autonomic"],
+    "candidateDiseases": ["d-cn3-palsy-compressive", "d-cn3-palsy-ischemic"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu. Chụp CT-angiography hoặc MRA não khẩn cấp loại trừ phình động mạch thông sau. Tham vấn thần kinh / phẫu thuật thần kinh ngay.",
+    "actionGuidanceEn": "Emergency. Urgent CT-angiography or MRA of the brain to rule out a posterior communicating artery aneurysm. Immediate neurology / neurosurgery consult."
+  },
+  {
+    "_id": "rf-bacterial-keratitis",
+    "name": "Infectious keratitis (corneal ulcer)",
+    "nameVi": "Loét giác mạc nhiễm khuẩn",
+    "description": "Pain + red + photophobia + a white spot on the cornea, usually a contact-lens wearer. Can perforate and scar within days.",
+    "trigger": {
+      "hasAllSymptoms": ["pain_severe_or_moderate", "photophobia"],
+      "hasAnySymptoms": ["corneal_white_spot", "discharge"],
+      "patientContext": { "isContactLensWearerOrUnknown": true }
+    },
+    "services": ["surface"],
+    "candidateDiseases": ["d-bacterial-keratitis", "d-hsv-keratitis", "d-acanthamoeba-keratitis"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khẩn cấp. Khám đèn khe + nhuộm fluorescein. Cấy giác mạc (nếu được) trước khi nhỏ kháng sinh. Kháng sinh nhỏ phổ rộng (fluoroquinolone hoặc fortified) tần suất cao. NGỪNG đeo kính tiếp xúc. Tái khám trong 24-48h.",
+    "actionGuidanceEn": "Urgent. Slit-lamp + fluorescein staining. Corneal culture (if available) BEFORE starting drops. Broad-spectrum topical antibiotics (fluoroquinolone or fortified) frequent dosing. STOP contact-lens wear. Re-examine in 24-48h."
+  },
+  {
+    "_id": "rf-endophthalmitis",
+    "name": "Endophthalmitis (infection inside the eye)",
+    "nameVi": "Viêm nội nhãn",
+    "description": "Pain + vision drop in the days/weeks after intraocular surgery or an intravitreal injection. Hypopyon (pus level in the anterior chamber). Vision-destroying — hours matter.",
+    "trigger": {
+      "hasAllSymptoms": ["pain", "vision_drop"],
+      "patientContext": { "recentIntraocularSurgeryOrInjection": true }
+    },
+    "services": ["immune"],
+    "candidateDiseases": ["d-endophthalmitis"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu. Chuyển bác sĩ võng mạc / dịch kính ngay. Cấy dịch kính + tiêm nội nhãn kháng sinh (vancomycin + ceftazidime) trong giờ. Cân nhắc vitrectomy nếu thị lực rất kém.",
+    "actionGuidanceEn": "Emergency. Refer retina/vitreous immediately. Vitreous tap + intravitreal antibiotics (vancomycin + ceftazidime) within the hour. Consider vitrectomy if vision is hand-motion or worse."
+  },
+  {
+    "_id": "rf-chemical-burn",
+    "name": "Chemical burn (acid / alkali splash)",
+    "nameVi": "Bỏng hóa chất",
+    "description": "Acid or alkali splash to the eye. Alkali (kiềm) is far worse because it penetrates. Irrigation is the only first step that matters — before any history, exam, or transport.",
+    "trigger": {
+      "hasAnySymptoms": ["chemical_exposure"]
+    },
+    "services": ["surface"],
+    "candidateDiseases": ["d-chemical-burn"],
+    "urgency": "emergency",
+    "actionGuidance": "RỬA NGAY — nước hoặc nước muối sinh lý, tối thiểu 15-30 phút, lật mi trên/dưới, lau sạch hạt rắn. Đo pH bề mặt sau rửa và tiếp tục cho đến pH 7.0-7.4. CHỈ sau đó: khám, soi đèn khe, thuốc.",
+    "actionGuidanceEn": "IRRIGATE FIRST — water or saline, minimum 15-30 minutes, evert both lids, wipe away any solid particles. Check surface pH after irrigation and continue until 7.0-7.4. Only THEN: examine, slit-lamp, treatment."
+  },
+  {
+    "_id": "rf-open-globe",
+    "name": "Open globe injury",
+    "nameVi": "Vỡ nhãn cầu (chấn thương xuyên)",
+    "description": "Trauma + a misshapen eye, very low VA, prolapsed uvea or vitreous, or a positive Seidel test. NEVER press on the eye, never measure IOP.",
+    "trigger": {
+      "hasAllSymptoms": ["trauma_recent"],
+      "hasAnySymptoms": ["misshapen_globe", "vision_loss_sudden", "seidel_positive"]
+    },
+    "services": ["surface", "sensor", "vascular"],
+    "candidateDiseases": ["d-open-globe"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu phẫu thuật. ĐẶT TẤM CHẮN cứng (không băng ép). Nhịn ăn uống. Kháng sinh tĩnh mạch + tiêm phòng uốn ván. Chuyển bác sĩ võng mạc/giác mạc để mổ trong vòng giờ. KHÔNG đo nhãn áp, không nhỏ thuốc, không ép.",
+    "actionGuidanceEn": "Surgical emergency. PLACE A RIGID SHIELD (no pressure dressing). NPO. IV antibiotics + tetanus prophylaxis. Refer to retina/cornea surgeon for repair within hours. Do NOT measure IOP, do NOT instill drops, do NOT press."
+  },
+  {
+    "_id": "rf-leukocoria-child",
+    "name": "White pupillary reflex in a child",
+    "nameVi": "Đồng tử trắng ở trẻ",
+    "description": "A white reflex (leukocoria) instead of red on flash photos or exam in a child under ~6 years. Must rule out retinoblastoma — cancer; delays cost lives and eyes.",
+    "trigger": {
+      "hasAllSymptoms": ["white_pupillary_reflex"],
+      "patientContext": { "ageMaxYears": 8 }
+    },
+    "services": ["sensor"],
+    "candidateDiseases": ["d-retinoblastoma", "d-congenital-cataract", "d-pcv-coats"],
+    "urgency": "emergency",
+    "actionGuidance": "Khẩn cấp. Khám đáy mắt với đồng tử giãn (nếu cần, gây mê). Siêu âm B + MRI hốc mắt. Chuyển trung tâm chuyên ung bướu nhi mắt trong ngày-tuần. Đừng chờ.",
+    "actionGuidanceEn": "Urgent. Dilated fundus exam (under anaesthesia if needed). B-scan ultrasound + orbital MRI. Refer to a paediatric ocular oncology centre within days, not weeks. Do not delay."
+  },
+  {
+    "_id": "rf-papilledema",
+    "name": "Papilledema (raised intracranial pressure)",
+    "nameVi": "Phù gai thị (tăng áp lực nội sọ)",
+    "description": "Bilateral disc swelling + headache + transient visual obscurations + sometimes diplopia from CN VI palsy. Implies a brain mass, hydrocephalus, or idiopathic intracranial hypertension.",
+    "trigger": {
+      "hasAllSymptoms": ["headache"],
+      "hasAnySymptoms": ["transient_visual_obscurations", "diplopia_binocular", "disc_swelling_bilateral"]
+    },
+    "services": ["transport"],
+    "candidateDiseases": ["d-papilledema", "d-iih"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Chụp MRI não + MRV trong 24-48h loại trừ khối u / huyết khối tĩnh mạch. Nếu MRI bình thường: chọc dò thắt lưng đo áp lực dịch não tủy (chẩn đoán IIH). Tham vấn thần kinh.",
+    "actionGuidanceEn": "MRI brain + MRV within 24-48h to rule out a mass or sinus thrombosis. If MRI normal: lumbar puncture with opening pressure (to diagnose IIH). Neurology consult."
+  },
+  {
+    "_id": "rf-acute-uveitis",
+    "name": "Acute anterior uveitis (iritis)",
+    "nameVi": "Viêm màng bồ đào trước cấp",
+    "description": "Pain + red + photophobia + a small (sometimes irregular) pupil + cells and flare on slit-lamp. Can recur; often linked to HLA-B27 / ankylosing spondylitis / IBD / sarcoid.",
+    "trigger": {
+      "hasAllSymptoms": ["pain", "photophobia"],
+      "hasAnySymptoms": ["redness_circumcorneal", "small_pupil_unilateral"]
+    },
+    "services": ["immune"],
+    "candidateDiseases": ["d-anterior-uveitis"],
+    "urgency": "urgent",
+    "actionGuidance": "Khám đèn khe (xác nhận cells and flare, KP, synechiae). Bắt đầu corticoid nhỏ mắt + thuốc giãn đồng tử (atropine/cyclopentolate) để ngừa dính. Đo nhãn áp. Hỏi tiền sử hệ thống (đau lưng cứng buổi sáng, viêm khớp, IBD, sarcoid); xét nghiệm hệ thống cho lần thứ 2 trở lên.",
+    "actionGuidanceEn": "Slit-lamp (confirm cells and flare, KPs, synechiae). Start topical steroid + cycloplegic (atropine/cyclopentolate) to prevent synechiae. Measure IOP. Take systemic history (morning back stiffness, arthritis, IBD, sarcoid); order systemic workup from the second episode onward."
+  },
+  {
+    "_id": "rf-horner-new",
+    "name": "New Horner syndrome",
+    "nameVi": "Hội chứng Horner mới khởi phát",
+    "description": "Small pupil + ptosis ± anhidrosis on one side. The sympathetic path is long (brain → chest → carotid → eye), so causes include Pancoast tumour, carotid artery dissection, brainstem stroke. New Horner + neck pain or headache is a vascular emergency.",
+    "trigger": {
+      "hasAllSymptoms": ["ptosis", "pupil_small_unilateral"],
+      "hasAnySymptoms": ["neck_pain", "headache"]
+    },
+    "services": ["autonomic"],
+    "candidateDiseases": ["d-horner-syndrome"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khẩn cấp. Chụp CT-angiography từ nền sọ đến đỉnh ngực để loại trừ bóc tách động mạch cảnh và u Pancoast. Tham vấn thần kinh và mạch máu.",
+    "actionGuidanceEn": "Urgent. CT-angiography from the skull base to the lung apex to rule out carotid dissection and Pancoast tumour. Neurology + vascular consult."
+  }
+]

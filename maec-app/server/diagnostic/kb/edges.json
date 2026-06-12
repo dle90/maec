@@ -1,0 +1,241 @@
+[
+  { "diseaseId": "d-myopia", "findingId": "vision_blur_gradual", "frequency": 0.9, "evokingStrength": 0.3 },
+  { "diseaseId": "d-myopia", "findingId": "pinhole_corrects_blur", "frequency": 0.9, "evokingStrength": 0.7 },
+
+  { "diseaseId": "d-hyperopia", "findingId": "vision_blur_gradual", "frequency": 0.6, "evokingStrength": 0.2 },
+  { "diseaseId": "d-hyperopia", "findingId": "pinhole_corrects_blur", "frequency": 0.85, "evokingStrength": 0.6 },
+
+  { "diseaseId": "d-astigmatism", "findingId": "pinhole_corrects_blur", "frequency": 0.85, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-presbyopia", "findingId": "vision_blur_gradual", "frequency": 0.6, "evokingStrength": 0.2 },
+  { "diseaseId": "d-presbyopia", "findingId": "pinhole_corrects_blur", "frequency": 0.85, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-cataract", "findingId": "vision_blur_gradual", "frequency": 0.9, "evokingStrength": 0.5 },
+  { "diseaseId": "d-cataract", "findingId": "halos", "frequency": 0.5, "evokingStrength": 0.3 },
+  { "diseaseId": "d-cataract", "findingId": "lens_opacity", "frequency": 0.95, "evokingStrength": 0.95 },
+  { "diseaseId": "d-cataract", "findingId": "diplopia_monocular", "frequency": 0.3, "evokingStrength": 0.5 },
+  { "diseaseId": "d-cataract", "findingId": "pinhole_no_improvement", "frequency": 0.5, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-dry-amd", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-dry-amd", "findingId": "central_scotoma", "frequency": 0.6, "evokingStrength": 0.7 },
+  { "diseaseId": "d-dry-amd", "findingId": "drusen", "frequency": 0.95, "evokingStrength": 0.9 },
+  { "diseaseId": "d-dry-amd", "findingId": "macular_atrophy_GA", "frequency": 0.4, "evokingStrength": 0.9 },
+  { "diseaseId": "d-dry-amd", "findingId": "metamorphopsia", "frequency": 0.3, "evokingStrength": 0.5 },
+  { "diseaseId": "d-dry-amd", "findingId": "pinhole_no_improvement", "frequency": 0.7, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-wet-amd", "findingId": "metamorphopsia", "frequency": 0.85, "evokingStrength": 0.7 },
+  { "diseaseId": "d-wet-amd", "findingId": "vision_loss_sudden", "frequency": 0.5, "evokingStrength": 0.3 },
+  { "diseaseId": "d-wet-amd", "findingId": "central_scotoma", "frequency": 0.7, "evokingStrength": 0.6 },
+  { "diseaseId": "d-wet-amd", "findingId": "subretinal_fluid", "frequency": 0.95, "evokingStrength": 0.9 },
+  { "diseaseId": "d-wet-amd", "findingId": "intraretinal_fluid", "frequency": 0.6, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-dme", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-dme", "findingId": "intraretinal_fluid", "frequency": 0.9, "evokingStrength": 0.8 },
+  { "diseaseId": "d-dme", "findingId": "retinal_hemorrhages", "frequency": 0.7, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-retinal-detachment", "findingId": "flashes", "frequency": 0.85, "evokingStrength": 0.5 },
+  { "diseaseId": "d-retinal-detachment", "findingId": "floaters_new", "frequency": 0.85, "evokingStrength": 0.5 },
+  { "diseaseId": "d-retinal-detachment", "findingId": "curtain", "frequency": 0.8, "evokingStrength": 0.9 },
+  { "diseaseId": "d-retinal-detachment", "findingId": "field_loss", "frequency": 0.9, "evokingStrength": 0.6 },
+  { "diseaseId": "d-retinal-detachment", "findingId": "vision_loss_sudden", "frequency": 0.7, "evokingStrength": 0.4 },
+  { "diseaseId": "d-retinal-detachment", "findingId": "monocular", "frequency": 0.95, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-pvd-with-tear", "findingId": "flashes", "frequency": 0.85, "evokingStrength": 0.4 },
+  { "diseaseId": "d-pvd-with-tear", "findingId": "floaters_new", "frequency": 0.95, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-pvd", "findingId": "flashes", "frequency": 0.6, "evokingStrength": 0.3 },
+  { "diseaseId": "d-pvd", "findingId": "floaters_new", "frequency": 0.9, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-macular-hole", "findingId": "central_scotoma", "frequency": 0.85, "evokingStrength": 0.7 },
+  { "diseaseId": "d-macular-hole", "findingId": "metamorphopsia", "frequency": 0.85, "evokingStrength": 0.6 },
+
+  { "diseaseId": "d-erm", "findingId": "metamorphopsia", "frequency": 0.7, "evokingStrength": 0.5 },
+  { "diseaseId": "d-erm", "findingId": "vision_blur_gradual", "frequency": 0.6, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-rp", "findingId": "night_blindness", "frequency": 0.95, "evokingStrength": 0.9 },
+  { "diseaseId": "d-rp", "findingId": "tunnel_vision", "frequency": 0.85, "evokingStrength": 0.8 },
+
+  { "diseaseId": "d-poag", "findingId": "glaucomatous_cupping", "frequency": 0.9, "evokingStrength": 0.85 },
+  { "diseaseId": "d-poag", "findingId": "rnfl_thinning", "frequency": 0.9, "evokingStrength": 0.85 },
+  { "diseaseId": "d-poag", "findingId": "vf_arcuate", "frequency": 0.8, "evokingStrength": 0.85 },
+  { "diseaseId": "d-poag", "findingId": "tunnel_vision", "frequency": 0.3, "evokingStrength": 0.5 },
+  { "diseaseId": "d-poag", "findingId": "elevated_IOP", "frequency": 0.7, "evokingStrength": 0.6 },
+
+  { "diseaseId": "d-acute-angle-closure", "findingId": "halos", "frequency": 0.85, "evokingStrength": 0.85 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "pain_severe", "frequency": 0.95, "evokingStrength": 0.5 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "nausea_vomiting", "frequency": 0.6, "evokingStrength": 0.6 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "elevated_IOP", "frequency": 0.98, "evokingStrength": 0.7 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "closed_angle_gonioscopy", "frequency": 0.98, "evokingStrength": 0.95 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "pupil_dilated_unilateral", "frequency": 0.7, "evokingStrength": 0.5 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "vision_drop", "frequency": 0.8, "evokingStrength": 0.2 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "monocular", "frequency": 0.9, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-normal-tension-glaucoma", "findingId": "glaucomatous_cupping", "frequency": 0.9, "evokingStrength": 0.6 },
+  { "diseaseId": "d-normal-tension-glaucoma", "findingId": "rnfl_thinning", "frequency": 0.9, "evokingStrength": 0.6 },
+  { "diseaseId": "d-normal-tension-glaucoma", "findingId": "vf_arcuate", "frequency": 0.8, "evokingStrength": 0.6 },
+
+  { "diseaseId": "d-ocular-hypertension", "findingId": "elevated_IOP", "frequency": 0.98, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-neovascular-glaucoma", "findingId": "elevated_IOP", "frequency": 0.9, "evokingStrength": 0.4 },
+  { "diseaseId": "d-neovascular-glaucoma", "findingId": "neovascularization", "frequency": 0.95, "evokingStrength": 0.8 },
+  { "diseaseId": "d-neovascular-glaucoma", "findingId": "pain_severe", "frequency": 0.7, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-optic-neuritis", "findingId": "vision_loss_subacute", "frequency": 0.95, "evokingStrength": 0.7 },
+  { "diseaseId": "d-optic-neuritis", "findingId": "pain_on_eye_movement", "frequency": 0.9, "evokingStrength": 0.95 },
+  { "diseaseId": "d-optic-neuritis", "findingId": "rapd", "frequency": 0.95, "evokingStrength": 0.85 },
+  { "diseaseId": "d-optic-neuritis", "findingId": "color_desaturation", "frequency": 0.9, "evokingStrength": 0.85 },
+  { "diseaseId": "d-optic-neuritis", "findingId": "monocular", "frequency": 0.85, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-naion", "findingId": "vision_loss_sudden", "frequency": 0.95, "evokingStrength": 0.4 },
+  { "diseaseId": "d-naion", "findingId": "field_loss_altitudinal", "frequency": 0.85, "evokingStrength": 0.8 },
+  { "diseaseId": "d-naion", "findingId": "vf_altitudinal", "frequency": 0.85, "evokingStrength": 0.85 },
+  { "diseaseId": "d-naion", "findingId": "rapd", "frequency": 0.9, "evokingStrength": 0.5 },
+  { "diseaseId": "d-naion", "findingId": "disc_swelling_unilateral", "frequency": 0.8, "evokingStrength": 0.6 },
+  { "diseaseId": "d-naion", "findingId": "monocular", "frequency": 0.95, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-gca", "findingId": "vision_loss_sudden", "frequency": 0.9, "evokingStrength": 0.3 },
+  { "diseaseId": "d-gca", "findingId": "jaw_claudication", "frequency": 0.5, "evokingStrength": 0.95 },
+  { "diseaseId": "d-gca", "findingId": "headache", "frequency": 0.8, "evokingStrength": 0.4 },
+  { "diseaseId": "d-gca", "findingId": "scalp_tenderness", "frequency": 0.6, "evokingStrength": 0.9 },
+  { "diseaseId": "d-gca", "findingId": "monocular", "frequency": 0.8, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-papilledema", "findingId": "disc_swelling_bilateral", "frequency": 0.98, "evokingStrength": 0.95 },
+  { "diseaseId": "d-papilledema", "findingId": "headache", "frequency": 0.85, "evokingStrength": 0.4 },
+  { "diseaseId": "d-papilledema", "findingId": "transient_visual_obscurations", "frequency": 0.6, "evokingStrength": 0.7 },
+  { "diseaseId": "d-papilledema", "findingId": "diplopia_binocular", "frequency": 0.3, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-iih", "findingId": "disc_swelling_bilateral", "frequency": 0.9, "evokingStrength": 0.5 },
+  { "diseaseId": "d-iih", "findingId": "headache", "frequency": 0.95, "evokingStrength": 0.5 },
+  { "diseaseId": "d-iih", "findingId": "transient_visual_obscurations", "frequency": 0.7, "evokingStrength": 0.6 },
+
+  { "diseaseId": "d-chiasmal-compression", "findingId": "field_loss_bitemporal", "frequency": 0.9, "evokingStrength": 0.95 },
+  { "diseaseId": "d-chiasmal-compression", "findingId": "vf_bitemporal", "frequency": 0.95, "evokingStrength": 0.95 },
+  { "diseaseId": "d-chiasmal-compression", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-occipital-stroke", "findingId": "field_loss_homonymous", "frequency": 0.95, "evokingStrength": 0.85 },
+  { "diseaseId": "d-occipital-stroke", "findingId": "vf_homonymous", "frequency": 0.95, "evokingStrength": 0.95 },
+  { "diseaseId": "d-occipital-stroke", "findingId": "vision_loss_sudden", "frequency": 0.85, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-strabismus-adult", "findingId": "diplopia_binocular", "frequency": 0.9, "evokingStrength": 0.6 },
+
+  { "diseaseId": "d-amblyopia", "findingId": "vision_drop", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-amblyopia", "findingId": "pinhole_no_improvement", "frequency": 0.5, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-cn3-palsy-compressive", "findingId": "diplopia_binocular", "frequency": 0.95, "evokingStrength": 0.5 },
+  { "diseaseId": "d-cn3-palsy-compressive", "findingId": "ptosis", "frequency": 0.9, "evokingStrength": 0.7 },
+  { "diseaseId": "d-cn3-palsy-compressive", "findingId": "pupil_dilated_unilateral", "frequency": 0.95, "evokingStrength": 0.9 },
+  { "diseaseId": "d-cn3-palsy-compressive", "findingId": "headache", "frequency": 0.7, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-cn3-palsy-ischemic", "findingId": "diplopia_binocular", "frequency": 0.95, "evokingStrength": 0.5 },
+  { "diseaseId": "d-cn3-palsy-ischemic", "findingId": "ptosis", "frequency": 0.9, "evokingStrength": 0.7 },
+
+  { "diseaseId": "d-cn4-palsy", "findingId": "diplopia_binocular", "frequency": 0.9, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-cn6-palsy", "findingId": "diplopia_binocular", "frequency": 0.95, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-dry-eye-mgd", "findingId": "gritty_burning", "frequency": 0.95, "evokingStrength": 0.7 },
+  { "diseaseId": "d-dry-eye-mgd", "findingId": "blur_that_clears_with_blink", "frequency": 0.7, "evokingStrength": 0.85 },
+  { "diseaseId": "d-dry-eye-mgd", "findingId": "tearing_paradoxical", "frequency": 0.6, "evokingStrength": 0.7 },
+  { "diseaseId": "d-dry-eye-mgd", "findingId": "low_TBUT", "frequency": 0.85, "evokingStrength": 0.8 },
+  { "diseaseId": "d-dry-eye-mgd", "findingId": "meibography_dropout", "frequency": 0.75, "evokingStrength": 0.85 },
+  { "diseaseId": "d-dry-eye-mgd", "findingId": "itching", "frequency": 0.3, "evokingStrength": 0.1 },
+
+  { "diseaseId": "d-dry-eye-aqueous", "findingId": "gritty_burning", "frequency": 0.9, "evokingStrength": 0.5 },
+  { "diseaseId": "d-dry-eye-aqueous", "findingId": "low_TBUT", "frequency": 0.8, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-blepharitis", "findingId": "itching", "frequency": 0.5, "evokingStrength": 0.3 },
+  { "diseaseId": "d-blepharitis", "findingId": "gritty_burning", "frequency": 0.7, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-viral-conjunctivitis", "findingId": "discharge_watery", "frequency": 0.85, "evokingStrength": 0.7 },
+  { "diseaseId": "d-viral-conjunctivitis", "findingId": "discharge", "frequency": 0.9, "evokingStrength": 0.3 },
+  { "diseaseId": "d-viral-conjunctivitis", "findingId": "gritty_burning", "frequency": 0.6, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-bacterial-conjunctivitis", "findingId": "discharge_purulent", "frequency": 0.9, "evokingStrength": 0.9 },
+  { "diseaseId": "d-bacterial-conjunctivitis", "findingId": "discharge", "frequency": 0.95, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-allergic-conjunctivitis", "findingId": "itching", "frequency": 0.95, "evokingStrength": 0.95 },
+  { "diseaseId": "d-allergic-conjunctivitis", "findingId": "discharge_watery", "frequency": 0.85, "evokingStrength": 0.4 },
+  { "diseaseId": "d-allergic-conjunctivitis", "findingId": "binocular", "frequency": 0.95, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-bacterial-keratitis", "findingId": "pain_severe", "frequency": 0.9, "evokingStrength": 0.5 },
+  { "diseaseId": "d-bacterial-keratitis", "findingId": "photophobia", "frequency": 0.9, "evokingStrength": 0.4 },
+  { "diseaseId": "d-bacterial-keratitis", "findingId": "corneal_white_spot", "frequency": 0.9, "evokingStrength": 0.85 },
+  { "diseaseId": "d-bacterial-keratitis", "findingId": "corneal_infiltrate", "frequency": 0.95, "evokingStrength": 0.85 },
+  { "diseaseId": "d-bacterial-keratitis", "findingId": "discharge_purulent", "frequency": 0.5, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-hsv-keratitis", "findingId": "dendritic_corneal_ulcer", "frequency": 0.85, "evokingStrength": 0.95 },
+  { "diseaseId": "d-hsv-keratitis", "findingId": "pain_severe", "frequency": 0.5, "evokingStrength": 0.3 },
+  { "diseaseId": "d-hsv-keratitis", "findingId": "photophobia", "frequency": 0.85, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "pain_severe", "frequency": 0.95, "evokingStrength": 0.4 },
+  { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "photophobia", "frequency": 0.9, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-corneal-abrasion", "findingId": "pain_severe", "frequency": 0.85, "evokingStrength": 0.4 },
+  { "diseaseId": "d-corneal-abrasion", "findingId": "trauma_recent", "frequency": 0.7, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-keratoconus", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.2 },
+  { "diseaseId": "d-keratoconus", "findingId": "corneal_steepening_topo", "frequency": 0.95, "evokingStrength": 0.95 },
+
+  { "diseaseId": "d-pterygium", "findingId": "gritty_burning", "frequency": 0.5, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-dr-npdr", "findingId": "retinal_hemorrhages", "frequency": 0.95, "evokingStrength": 0.7 },
+  { "diseaseId": "d-dr-npdr", "findingId": "cotton_wool_spots", "frequency": 0.4, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-dr-pdr", "findingId": "vision_loss_sudden", "frequency": 0.6, "evokingStrength": 0.3 },
+  { "diseaseId": "d-dr-pdr", "findingId": "neovascularization", "frequency": 0.98, "evokingStrength": 0.9 },
+  { "diseaseId": "d-dr-pdr", "findingId": "floaters_new", "frequency": 0.5, "evokingStrength": 0.3 },
+  { "diseaseId": "d-dr-pdr", "findingId": "retinal_hemorrhages", "frequency": 0.9, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-htn-retinopathy", "findingId": "retinal_hemorrhages", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-htn-retinopathy", "findingId": "cotton_wool_spots", "frequency": 0.5, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-rvo", "findingId": "vision_loss_sudden", "frequency": 0.7, "evokingStrength": 0.3 },
+  { "diseaseId": "d-rvo", "findingId": "retinal_hemorrhages", "frequency": 0.95, "evokingStrength": 0.8 },
+  { "diseaseId": "d-rvo", "findingId": "monocular", "frequency": 0.9, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-rao", "findingId": "vision_loss_sudden", "frequency": 0.98, "evokingStrength": 0.5 },
+  { "diseaseId": "d-rao", "findingId": "monocular", "frequency": 0.95, "evokingStrength": 0.2 },
+  { "diseaseId": "d-rao", "findingId": "cherry_red_spot", "frequency": 0.9, "evokingStrength": 0.98 },
+
+  { "diseaseId": "d-anterior-uveitis", "findingId": "pain_severe_or_moderate", "frequency": 0.85, "evokingStrength": 0.5 },
+  { "diseaseId": "d-anterior-uveitis", "findingId": "photophobia", "frequency": 0.95, "evokingStrength": 0.6 },
+  { "diseaseId": "d-anterior-uveitis", "findingId": "redness_circumcorneal", "frequency": 0.85, "evokingStrength": 0.85 },
+  { "diseaseId": "d-anterior-uveitis", "findingId": "small_pupil_unilateral", "frequency": 0.6, "evokingStrength": 0.7 },
+  { "diseaseId": "d-anterior-uveitis", "findingId": "cells_and_flare", "frequency": 0.98, "evokingStrength": 0.95 },
+  { "diseaseId": "d-anterior-uveitis", "findingId": "keratic_precipitates", "frequency": 0.7, "evokingStrength": 0.85 },
+
+  { "diseaseId": "d-posterior-uveitis", "findingId": "floaters_new", "frequency": 0.85, "evokingStrength": 0.5 },
+  { "diseaseId": "d-posterior-uveitis", "findingId": "vision_blur_gradual", "frequency": 0.6, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-scleritis", "findingId": "pain_deep_boring", "frequency": 0.95, "evokingStrength": 0.95 },
+  { "diseaseId": "d-scleritis", "findingId": "pain_severe", "frequency": 0.7, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-endophthalmitis", "findingId": "pain_severe", "frequency": 0.95, "evokingStrength": 0.5 },
+  { "diseaseId": "d-endophthalmitis", "findingId": "vision_drop", "frequency": 0.95, "evokingStrength": 0.5 },
+  { "diseaseId": "d-endophthalmitis", "findingId": "hypopyon", "frequency": 0.7, "evokingStrength": 0.95 },
+  { "diseaseId": "d-endophthalmitis", "findingId": "redness_circumcorneal", "frequency": 0.85, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-horner-syndrome", "findingId": "ptosis", "frequency": 0.95, "evokingStrength": 0.4 },
+  { "diseaseId": "d-horner-syndrome", "findingId": "pupil_small_unilateral", "frequency": 0.95, "evokingStrength": 0.85 },
+  { "diseaseId": "d-horner-syndrome", "findingId": "neck_pain", "frequency": 0.3, "evokingStrength": 0.6 },
+
+  { "diseaseId": "d-adie-tonic-pupil", "findingId": "pupil_dilated_unilateral", "frequency": 0.95, "evokingStrength": 0.5 },
+
+  { "diseaseId": "d-chemical-burn", "findingId": "chemical_exposure", "frequency": 0.99, "evokingStrength": 0.99 },
+  { "diseaseId": "d-chemical-burn", "findingId": "pain_severe", "frequency": 0.95, "evokingStrength": 0.2 },
+
+  { "diseaseId": "d-open-globe", "findingId": "trauma_recent", "frequency": 0.98, "evokingStrength": 0.3 },
+  { "diseaseId": "d-open-globe", "findingId": "misshapen_globe", "frequency": 0.9, "evokingStrength": 0.95 },
+  { "diseaseId": "d-open-globe", "findingId": "seidel_positive", "frequency": 0.7, "evokingStrength": 0.98 },
+  { "diseaseId": "d-open-globe", "findingId": "vision_loss_sudden", "frequency": 0.8, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-hyphema", "findingId": "trauma_recent", "frequency": 0.98, "evokingStrength": 0.5 },
+  { "diseaseId": "d-hyphema", "findingId": "vision_drop", "frequency": 0.6, "evokingStrength": 0.3 },
+
+  { "diseaseId": "d-retinoblastoma", "findingId": "white_pupillary_reflex", "frequency": 0.85, "evokingStrength": 0.95 },
+
+  { "diseaseId": "d-congenital-cataract", "findingId": "white_pupillary_reflex", "frequency": 0.6, "evokingStrength": 0.6 },
+  { "diseaseId": "d-congenital-cataract", "findingId": "lens_opacity", "frequency": 0.95, "evokingStrength": 0.95 },
+
+  { "diseaseId": "d-pcv-coats", "findingId": "white_pupillary_reflex", "frequency": 0.7, "evokingStrength": 0.5 }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "_id": "optical",
+    "name": "Optical stack",
+    "nameVi": "Quang học (giác mạc → thủy tinh thể)",
+    "plane": "data",
+    "color": "#2563eb",
+    "oneLineJob": "Get light to the back of the eye, in focus.",
+    "components": ["cornea", "aqueous", "pupil", "crystalline_lens", "vitreous"],
+    "cascadesTo": [
+      { "service": "sensor", "relation": "media_opacity_hides_sensor_disease", "mechanism": "cataract or vitreous haze can mask retinal pathology", "exampleDisease": "cataract masking AMD" }
+    ]
+  },
+  {
+    "_id": "sensor",
+    "name": "Sensor (retina)",
+    "nameVi": "Cảm thụ (võng mạc)",
+    "plane": "data",
+    "color": "#7c3aed",
+    "oneLineJob": "Convert focused light into a neural signal.",
+    "components": ["RPE", "photoreceptors", "bipolar", "ganglion", "macula", "fovea", "periphery"],
+    "cascadesTo": [
+      { "service": "transport", "relation": "ganglion_to_optic_nerve", "mechanism": "ganglion axons exit via the optic disc; severe sensor loss reduces what transport carries", "exampleDisease": "advanced retinitis pigmentosa" }
+    ]
+  },
+  {
+    "_id": "transport",
+    "name": "Transport (optic nerve & pathway)",
+    "nameVi": "Vận chuyển (thần kinh thị giác)",
+    "plane": "data",
+    "color": "#4338ca",
+    "oneLineJob": "Carry the signal from eye to visual cortex intact.",
+    "components": ["optic_nerve", "chiasm", "optic_tract", "LGN", "optic_radiations", "V1"],
+    "cascadesTo": []
+  },
+  {
+    "_id": "coordination",
+    "name": "Coordination (binocular)",
+    "nameVi": "Phối hợp hai mắt",
+    "plane": "cross",
+    "color": "#0d9488",
+    "oneLineJob": "Aim both eyes at the same target and fuse the two images.",
+    "components": ["EOM", "CN_III", "CN_IV", "CN_VI", "brainstem_gaze", "cortical_fusion"],
+    "cascadesTo": [
+      { "service": "autonomic", "relation": "shared_CN_III_pathway", "mechanism": "CN III carries both 4 EOMs and pupil constrictor; lesions affect both", "exampleDisease": "CN III palsy with blown pupil" }
+    ]
+  },
+  {
+    "_id": "surface",
+    "name": "Surface (tear film, lids, conjunctiva)",
+    "nameVi": "Bề mặt nhãn cầu",
+    "plane": "support",
+    "color": "#0891b2",
+    "oneLineJob": "Keep the front of the eye wet, smooth, and defended.",
+    "components": ["tear_film", "meibomian_glands", "lacrimal_gland", "lids", "conjunctiva", "corneal_epithelium"],
+    "cascadesTo": [
+      { "service": "optical", "relation": "tear_film_is_first_refracting_surface", "mechanism": "broken tear film blurs vision and corrupts topography / biometry", "exampleDisease": "MGD masking refractive measurement" }
+    ]
+  },
+  {
+    "_id": "pressure",
+    "name": "Pressure (aqueous dynamics)",
+    "nameVi": "Áp suất (nhãn áp)",
+    "plane": "support",
+    "color": "#ea580c",
+    "oneLineJob": "Keep the globe inflated at the right pressure (IOP 10–21 mmHg).",
+    "components": ["ciliary_body", "trabecular_meshwork", "schlemm_canal", "angle"],
+    "cascadesTo": [
+      { "service": "transport", "relation": "elevated_IOP_damages_optic_nerve", "mechanism": "lamina cribrosa deforms under high pressure, pinching axons", "exampleDisease": "primary open-angle glaucoma" }
+    ]
+  },
+  {
+    "_id": "vascular",
+    "name": "Vascular supply",
+    "nameVi": "Mạch máu",
+    "plane": "support",
+    "color": "#dc2626",
+    "oneLineJob": "Deliver oxygen and nutrients to retina and optic nerve; clear waste.",
+    "components": ["central_retinal_artery", "central_retinal_vein", "choroid", "short_posterior_ciliary_arteries", "vortex_veins"],
+    "cascadesTo": [
+      { "service": "sensor", "relation": "ischemia_or_leak_damages_retina", "mechanism": "barrier breakdown causes edema; ischemia causes infarct", "exampleDisease": "diabetic macular edema" },
+      { "service": "transport", "relation": "optic_nerve_head_ischemia", "mechanism": "posterior ciliary supply to disc fails", "exampleDisease": "NAION" },
+      { "service": "pressure", "relation": "neovascularization_blocks_drainage", "mechanism": "VEGF-driven new vessels grow in the angle", "exampleDisease": "neovascular glaucoma" }
+    ]
+  },
+  {
+    "_id": "immune",
+    "name": "Immune (defense and inflammation)",
+    "nameVi": "Miễn dịch / viêm",
+    "plane": "support",
+    "color": "#16a34a",
+    "oneLineJob": "Defend the eye against infection and debris without damaging clear tissue.",
+    "components": ["uvea", "sclera", "lacrimal_lymphoid", "conjunctival_lymphoid"],
+    "cascadesTo": [
+      { "service": "optical", "relation": "uveitis_clouds_aqueous_or_lens", "mechanism": "cells and flare in AC; inflammatory cataract", "exampleDisease": "chronic anterior uveitis" },
+      { "service": "pressure", "relation": "trabeculitis_or_steroid_response", "mechanism": "meshwork inflammation or steroid-induced IOP rise", "exampleDisease": "inflammatory glaucoma" },
+      { "service": "sensor", "relation": "macular_edema_from_inflammation", "mechanism": "uveitic CME", "exampleDisease": "Behcet uveitis with CME" }
+    ]
+  },
+  {
+    "_id": "autonomic",
+    "name": "Autonomic (pupil, accommodation, lid tone)",
+    "nameVi": "Tự động (đồng tử, điều tiết)",
+    "plane": "support",
+    "color": "#ca8a04",
+    "oneLineJob": "Auto-tune pupil size, focusing, and lid tone involuntarily.",
+    "components": ["sympathetic_chain", "parasympathetic_CN_III", "edinger_westphal_nucleus", "ciliary_ganglion"],
+    "cascadesTo": [
+      { "service": "pressure", "relation": "dilation_can_trigger_angle_closure", "mechanism": "mydriatic drops in a narrow angle precipitate acute closure", "exampleDisease": "iatrogenic acute angle-closure" }
+    ]
+  }
+]

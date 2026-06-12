@@ -30,6 +30,7 @@ const reportsRouter = require('./routes/reports')
 const enhancementsRouter = require('./routes/enhancements')
 const attachmentsRouter = require('./routes/attachments')
 const { router: equipmentRouter, attRouter: equipmentAttRouter } = require('./routes/equipment')
+const diagnosticRouter = require('./diagnostic/routes')
 const { requireAdmin } = require('./middleware/auth')
 const { auditMiddleware } = require('./middleware/audit')
 
@@ -97,6 +98,10 @@ app.use('/api', attachmentsRouter)
 // Equipment: CRUD + per-equipment contract/manual attachments
 app.use('/api/equipment', equipmentRouter)
 app.use('/api/equipment-attachments', equipmentAttRouter)
+
+// Diagnostic decision-support (v0): triage + ranked differential + next-best tests.
+// Auth handled inside the router. See diagnostic/README.md.
+app.use('/api/diagnostic', diagnosticRouter)
 
 // Serve React build in production
 const clientDist = path.join(__dirname, '../client/dist')
