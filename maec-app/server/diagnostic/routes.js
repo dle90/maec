@@ -9,6 +9,7 @@ const crypto = require('crypto')
 
 const { requireAuth } = require('../middleware/auth')
 const { runDiagnostic, DISCLAIMER } = require('./engine/orchestrator')
+const { parseComplaint } = require('./llm/parseComplaint')
 
 const DxSession = require('./models/DxSession')
 const DxService = require('./models/DxService')
@@ -26,6 +27,27 @@ function sessionId() {
 function nowIso() {
   return new Date().toISOString()
 }
+
+// ── LLM complaint parser ────────────────────────────────────
+
+// POST /api/diagnostic/parse-complaint
+// Body: { text: "Vietnamese prose from the doctor" }
+// Returns: { complaint: {...structured...}, confidence, explanationVi, droppedUnknownTags, usage, model }
+// The clinician then reviews / edits the structured complaint before calling
+// POST /sessions. The parser never opens a session itself.
+router.post('/parse-complaint', requireAuth, async (req, res) => {
+  const { text } = req.body || {}
+  try {
+    const result = await parseComplaint(text)
+    res.json(result)
+  } catch (err) {
+    const status = err.status || 500
+    res.status(status).json({
+      error: err.message,
+      code: err.code || 'PARSE_FAILED',
+    })
+  }
+})
 
 // ── Sessions ────────────────────────────────────────────────
 
