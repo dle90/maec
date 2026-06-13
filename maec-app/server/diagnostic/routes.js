@@ -184,11 +184,15 @@ router.post('/sessions/:id/redFlags/:redFlagId/exclude', requireAuth, async (req
 
 // POST /api/diagnostic/sessions/:id/outcome
 // Body: { confirmedDiseaseId?, confirmedDiseaseName?, accepted?, rejected?,
-//         referred?, referredReason?, selectedTreatments?, notes? }
+//         referred?, referredReason?, selectedTreatments?, notes?, close? }
+// Two-step: confirming a diagnosis (no `close`) records it but keeps the session
+// OPEN so the clinician can review treatment suggestions; `close: true` (the final
+// "save & close" action) is what actually closes the session.
 router.post('/sessions/:id/outcome', requireAuth, async (req, res) => {
   const body = req.body || {}
   const session = await DxSession.findById(req.params.id)
   if (!session) return res.status(404).json({ error: 'session not found' })
+  const prev = session.clinicianOutcome || {}
   session.clinicianOutcome = {
     confirmedDiseaseId: body.confirmedDiseaseId,
     confirmedDiseaseName: body.confirmedDiseaseName,
@@ -196,10 +200,10 @@ router.post('/sessions/:id/outcome', requireAuth, async (req, res) => {
     rejected: !!body.rejected,
     referred: !!body.referred,
     referredReason: body.referredReason,
-    selectedTreatments: Array.isArray(body.selectedTreatments) ? body.selectedTreatments : [],
-    notes: body.notes,
-    closedAt: nowIso(),
-    closedBy: req.user?.username || 'unknown',
+    selectedTreatments: Array.isArray(body.selectedTreatments) ? body.selectedTreatments : (prev.selectedTreatments || []),
+    notes: body.notes != null ? body.notes : prev.notes,
+    closedAt: body.close ? nowIso() : (prev.closedAt || null),
+    closedBy: body.close ? (req.user?.username || 'unknown') : (prev.closedBy || null),
   }
   session.updatedAt = nowIso()
   await session.save()

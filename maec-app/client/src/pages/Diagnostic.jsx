@@ -869,6 +869,7 @@ function OutcomePanel({ session, onConfirm, busy }) {
       referredReason: referred ? referredReason : '',
       selectedTreatments: [...chosenTreatments],
       notes,
+      close: true,   // the final save is what closes the session
     })
   }
 
