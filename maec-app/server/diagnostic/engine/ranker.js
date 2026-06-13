@@ -108,6 +108,7 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
       supportingFindings: supporting,
       refutingFindings: [],
       summary: d.summary,
+      treatments: d.treatments || [],   // surfaced for the post-confirmation treatment panel
     })
   }
 

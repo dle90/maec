@@ -18,6 +18,7 @@ const DxDisease = require('./models/DxDisease')
 const DxFinding = require('./models/DxFinding')
 const DxTest = require('./models/DxTest')
 const DxRedFlag = require('./models/DxRedFlag')
+const DxTreatment = require('./models/DxTreatment')
 
 const router = express.Router()
 
@@ -183,7 +184,7 @@ router.post('/sessions/:id/redFlags/:redFlagId/exclude', requireAuth, async (req
 
 // POST /api/diagnostic/sessions/:id/outcome
 // Body: { confirmedDiseaseId?, confirmedDiseaseName?, accepted?, rejected?,
-//         referred?, referredReason?, notes? }
+//         referred?, referredReason?, selectedTreatments?, notes? }
 router.post('/sessions/:id/outcome', requireAuth, async (req, res) => {
   const body = req.body || {}
   const session = await DxSession.findById(req.params.id)
@@ -195,6 +196,7 @@ router.post('/sessions/:id/outcome', requireAuth, async (req, res) => {
     rejected: !!body.rejected,
     referred: !!body.referred,
     referredReason: body.referredReason,
+    selectedTreatments: Array.isArray(body.selectedTreatments) ? body.selectedTreatments : [],
     notes: body.notes,
     closedAt: nowIso(),
     closedBy: req.user?.username || 'unknown',
@@ -231,6 +233,10 @@ router.get('/kb/tests', requireAuth, async (req, res) => {
 
 router.get('/kb/redFlags', requireAuth, async (_req, res) => {
   res.json(await DxRedFlag.find({}).lean())
+})
+
+router.get('/kb/treatments', requireAuth, async (_req, res) => {
+  res.json(await DxTreatment.find({}).lean())
 })
 
 router.get('/kb/disclaimer', requireAuth, async (_req, res) => {

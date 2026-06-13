@@ -19,6 +19,7 @@ const DxFinding = require('./models/DxFinding')
 const DxTest = require('./models/DxTest')
 const DxRedFlag = require('./models/DxRedFlag')
 const DxEdge = require('./models/DxEdge')
+const DxTreatment = require('./models/DxTreatment')
 
 const KB_DIR = path.join(__dirname, 'kb')
 
@@ -35,18 +36,23 @@ async function seed() {
   const tests = loadJson('tests.json')
   const redFlags = loadJson('redFlags.json')
   const edges = loadJson('edges.json')
+  const treatments = loadJson('treatments.json')
 
   // Sanity checks before touching Mongo — catch typos early.
   const serviceIds = new Set(services.map(s => s._id))
   const diseaseIds = new Set(diseases.map(d => d._id))
   const findingIds = new Set(findings.map(f => f._id))
   const testIds = new Set(tests.map(t => t._id))
+  const treatmentIds = new Set(treatments.map(t => t._id))
 
   const errors = []
 
   for (const d of diseases) {
     for (const s of d.services || []) {
       if (!serviceIds.has(s)) errors.push(`disease ${d._id}: unknown service ${s}`)
+    }
+    for (const tx of d.treatments || []) {
+      if (!treatmentIds.has(tx)) errors.push(`disease ${d._id}: treatment "${tx}" missing from treatments.json vocabulary`)
     }
   }
   for (const f of findings) {
@@ -103,7 +109,7 @@ async function seed() {
 
   console.log(`KB summary: ${services.length} services, ${diseases.length} diseases, ` +
               `${findings.length} findings, ${tests.length} tests, ` +
-              `${redFlags.length} red-flags, ${edges.length} edges`)
+              `${redFlags.length} red-flags, ${edges.length} edges, ${treatments.length} treatments`)
 
   await DxService.deleteMany({})
   await DxDisease.deleteMany({})
@@ -111,6 +117,7 @@ async function seed() {
   await DxTest.deleteMany({})
   await DxRedFlag.deleteMany({})
   await DxEdge.deleteMany({})
+  await DxTreatment.deleteMany({})
 
   await DxService.insertMany(services)
   await DxDisease.insertMany(diseases)
@@ -118,6 +125,7 @@ async function seed() {
   await DxTest.insertMany(tests)
   await DxRedFlag.insertMany(redFlags)
   await DxEdge.insertMany(edges)
+  await DxTreatment.insertMany(treatments)
 
   console.log('Seed complete.')
 }

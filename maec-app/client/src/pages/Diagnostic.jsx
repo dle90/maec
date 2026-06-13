@@ -22,7 +22,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api, {
   dxParseComplaint, dxCreateSession, dxGetSession,
-  dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome,
+  dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments,
 } from '../api'
 
 // ── Quick-pick chips: 12 most common patient complaints, VN-first ──
@@ -796,8 +796,49 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Outcome panel
+// Outcome panel + treatment suggestions
 // ─────────────────────────────────────────────────────────────────
+// Treatment categories — display label + ordering for the grouped suggestion list.
+const TREATMENT_CATEGORY = {
+  spectacles:    { label: 'Kính gọng',               icon: '👓', order: 1 },
+  contact_lens:  { label: 'Kính tiếp xúc',           icon: '👁️', order: 2 },
+  optical_other: { label: 'Quang học khác',          icon: '🔭', order: 3 },
+  medication:    { label: 'Thuốc',                   icon: '💊', order: 4 },
+  procedure:     { label: 'Thủ thuật',               icon: '🩹', order: 5 },
+  laser:         { label: 'Laser',                   icon: '⚡', order: 6 },
+  injection:     { label: 'Tiêm',                    icon: '💉', order: 7 },
+  surgery:       { label: 'Phẫu thuật',              icon: '🔪', order: 8 },
+  systemic:      { label: 'Toàn thân / bệnh nền',    icon: '🩺', order: 9 },
+  referral:      { label: 'Chuyển khám / hội chẩn',  icon: '➡️', order: 10 },
+  lifestyle:     { label: 'Chăm sóc & lối sống',     icon: '🌿', order: 11 },
+  monitoring:    { label: 'Theo dõi',                icon: '👀', order: 12 },
+  supportive:    { label: 'Hỗ trợ',                  icon: '🤝', order: 13 },
+}
+
+// Treatment vocabulary (token → {nameVi, category}) fetched once, process-cached.
+let _txVocabCache = null
+function useTreatmentVocab() {
+  const [vocab, setVocab] = useState(_txVocabCache || {})
+  useEffect(() => {
+    if (_txVocabCache) return
+    dxGetTreatments()
+      .then(list => { _txVocabCache = Object.fromEntries(list.map(t => [t._id, t])); setVocab(_txVocabCache) })
+      .catch(() => {})
+  }, [])
+  return vocab
+}
+
+// Group an array of treatment tokens by category, ordered, with Vietnamese labels.
+function groupTreatments(tokens, vocab) {
+  const g = {}
+  for (const tok of tokens) {
+    const meta = vocab[tok] || { nameVi: tok, category: 'supportive' }
+    const cat = meta.category || 'supportive'
+    ;(g[cat] = g[cat] || []).push({ tok, nameVi: meta.nameVi || tok })
+  }
+  return Object.entries(g).sort((a, b) => (TREATMENT_CATEGORY[a[0]]?.order || 99) - (TREATMENT_CATEGORY[b[0]]?.order || 99))
+}
+
 function OutcomePanel({ session, onConfirm, busy }) {
   const outcome = session.clinicianOutcome || {}
   const closed = !!outcome.closedAt
@@ -805,13 +846,13 @@ function OutcomePanel({ session, onConfirm, busy }) {
   const [referred, setReferred] = useState(outcome.referred || false)
   const [referredReason, setRefReason] = useState(outcome.referredReason || '')
   const [chosenTreatments, setRx] = useState(new Set())
+  const vocab = useTreatmentVocab()
 
-  // Look up confirmed disease's treatments to suggest classes
+  // Confirmed disease's suggested treatments (tokens surfaced on the differential entry).
   const confirmedDx = (session.differential || []).find(d => d.diseaseId === outcome.confirmedDiseaseId)
   const confirmedTreatments = confirmedDx?.treatments || []
-
-  // Fall back to fetching full disease record for treatments not present in
-  // the embedded differential entry — but for v0 we rely on what's there.
+  const grouped = useMemo(() => groupTreatments(confirmedTreatments, vocab), [confirmedTreatments, vocab])
+  const chosenGrouped = useMemo(() => groupTreatments([...(outcome.selectedTreatments || [])], vocab), [outcome.selectedTreatments, vocab])
 
   function toggleRx(id) {
     const n = new Set(chosenTreatments)
@@ -826,10 +867,8 @@ function OutcomePanel({ session, onConfirm, busy }) {
       accepted: !referred,
       referred,
       referredReason: referred ? referredReason : '',
-      notes: [
-        notes,
-        chosenTreatments.size > 0 ? `Điều trị (nhóm): ${[...chosenTreatments].join(', ')}` : '',
-      ].filter(Boolean).join('\n'),
+      selectedTreatments: [...chosenTreatments],
+      notes,
     })
   }
 
@@ -850,15 +889,26 @@ function OutcomePanel({ session, onConfirm, busy }) {
         </div>
       )}
 
-      {!closed && confirmedTreatments.length > 0 && (
-        <div className="mb-3">
-          <div className="text-sm font-medium text-gray-700 mb-1.5">Nhóm điều trị (bác sĩ kê đơn cụ thể):</div>
-          <div className="flex flex-wrap gap-1.5">
-            {confirmedTreatments.map(t => (
-              <button key={t} onClick={() => toggleRx(t)}
-                className={`text-xs px-2.5 py-1 rounded-full border ${chosenTreatments.has(t) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300'}`}>
-                {t}
-              </button>
+      {!closed && grouped.length > 0 && (
+        <div className="mb-4">
+          <div className="text-sm font-medium text-gray-700 mb-2">
+            Đề xuất điều trị <span className="text-xs font-normal text-gray-500">— chọn nhóm phù hợp; bác sĩ kê đơn cụ thể</span>
+          </div>
+          <div className="space-y-2">
+            {grouped.map(([cat, items]) => (
+              <div key={cat} className="flex items-start gap-2">
+                <span className="text-xs text-gray-500 w-40 shrink-0 pt-1.5">
+                  {TREATMENT_CATEGORY[cat]?.icon} {TREATMENT_CATEGORY[cat]?.label || cat}
+                </span>
+                <div className="flex flex-wrap gap-1.5 flex-1">
+                  {items.map(({ tok, nameVi }) => (
+                    <button key={tok} onClick={() => toggleRx(tok)} title={tok}
+                      className={`text-xs px-2.5 py-1 rounded-full border ${chosenTreatments.has(tok) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300'}`}>
+                      {nameVi}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -888,6 +938,20 @@ function OutcomePanel({ session, onConfirm, busy }) {
             {busy ? '⏳ Đang lưu...' : 'Lưu vào hồ sơ & đóng phiên'}
           </button>
         </>
+      )}
+
+      {closed && chosenGrouped.length > 0 && (
+        <div className="mt-3 mb-1">
+          <div className="text-sm font-medium text-gray-700 mb-1.5">Điều trị đã chọn:</div>
+          <div className="space-y-1">
+            {chosenGrouped.map(([cat, items]) => (
+              <div key={cat} className="flex items-start gap-2 text-sm">
+                <span className="text-xs text-gray-500 w-40 shrink-0 pt-0.5">{TREATMENT_CATEGORY[cat]?.icon} {TREATMENT_CATEGORY[cat]?.label || cat}</span>
+                <span className="flex-1 text-gray-800">{items.map(i => i.nameVi).join(' · ')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {closed && outcome.notes && (

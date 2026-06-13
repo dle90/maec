@@ -484,3 +484,11 @@ Added per-eye numeric/threshold measurement entry to the diagnostic decision-sup
 - [ ] **Re-seed prod Atlas** when this merges — KB content changed (`node diagnostic/seed.js`, run inside the Railway container via `railway ssh`, not `railway run`).
 - [ ] **Hybrid record-only fields** (OCT macula CMT, perimetry MD/PSD, biometry ACD/k_mean, anterior-OCT ACD) are captured but don't yet derive a finding — wire thresholds if/when those should move the differential.
 - Built on branch `feat/dx-measurements` (local only, not pushed) — review then merge to master (master auto-deploys to Railway).
+
+### Treatment suggestions after confirmation (2026-06-13)
+
+After a diagnosis is confirmed, the outcome panel now suggests treatments grouped by category in Vietnamese (e.g. Cận thị → Kính gọng / Kính tiếp xúc / Phẫu thuật khúc xạ / Ortho-K). New `kb/treatments.json` vocabulary (171 tokens → nameVi + category, the full set used by all 71 diseases) + `DxTreatment` model + `/kb/treatments` endpoint. Wired `treatments` through the ranker into the differential entry + `DxSession` schema (was dead code before — `OutcomePanel` referenced `treatments` but the engine never surfaced them and the schema would have stripped them). Clinician's picks save to `clinicianOutcome.selectedTreatments` (structured). seed + validate-kb enforce every disease treatment token resolves to the vocabulary.
+
+**Deferred / needs action:**
+- [ ] **Review the 171 Vietnamese treatment labels** in `kb/treatments.json` — author-generated, clinically reasonable but not clinic-reviewed. Adjust wording/category as needed.
+- [ ] **Deep-link to ordering (declined for now)** — option to jump from a suggested refractive treatment straight into the clinic's Kính catalog / CL package order. Bigger integration with the catalog/ordering system; revisit if the suggestion-only flow proves too manual.

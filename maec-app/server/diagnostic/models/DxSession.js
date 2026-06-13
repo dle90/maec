@@ -76,6 +76,7 @@ const dxSessionSchema = new mongoose.Schema({
     supportingFindings: [String],
     refutingFindings: [String],
     summary: String,
+    treatments: [String],   // treatment tokens (→ treatments.json vocab) for the outcome panel
   }],
   recommendedNextTests: [{
     testId: String,
@@ -97,6 +98,7 @@ const dxSessionSchema = new mongoose.Schema({
     rejected: Boolean,
     referred: Boolean,
     referredReason: String,
+    selectedTreatments: [String],   // treatment tokens the clinician chose (→ treatments.json)
     notes: String,
     closedAt: String,
     closedBy: String,

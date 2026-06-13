@@ -127,5 +127,6 @@ export const dxGetServices      = () => api.get('/diagnostic/kb/services').then(
 export const dxGetDiseases      = (params) => api.get('/diagnostic/kb/diseases', { params }).then(r => r.data)
 export const dxGetTests         = (params) => api.get('/diagnostic/kb/tests', { params }).then(r => r.data)
 export const dxGetFindings      = (params) => api.get('/diagnostic/kb/findings', { params }).then(r => r.data)
+export const dxGetTreatments    = () => api.get('/diagnostic/kb/treatments').then(r => r.data)
 
 export default api

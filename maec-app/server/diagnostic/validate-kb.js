@@ -23,11 +23,13 @@ const findings  = load('findings.json')
 const tests     = load('tests.json')
 const redFlags  = load('redFlags.json')
 const edges     = load('edges.json')
+const treatments = load('treatments.json')
 
 const sIds = new Set(services.map(s => s._id))
 const dIds = new Set(diseases.map(d => d._id))
 const fIds = new Set(findings.map(f => f._id))
 const tIds = new Set(tests.map(t => t._id))
+const txIds = new Set(treatments.map(t => t._id))
 
 const errors = []
 
@@ -46,9 +48,13 @@ checkUnique('tests',    tests)
 checkUnique('redFlags', redFlags)
 
 // 2. Disease cross-refs
+checkUnique('treatments', treatments)
 for (const d of diseases) {
   for (const s of d.services || []) {
     if (!sIds.has(s)) errors.push(`disease ${d._id}: unknown service "${s}"`)
+  }
+  for (const tx of d.treatments || []) {
+    if (!txIds.has(tx)) errors.push(`disease ${d._id}: treatment "${tx}" not in treatments.json`)
   }
   if (typeof d.ageMin === 'number' && typeof d.ageMax === 'number' && d.ageMin > d.ageMax) {
     errors.push(`disease ${d._id}: ageMin > ageMax`)
@@ -172,4 +178,4 @@ if (errors.length) {
 }
 
 console.log('✓ KB cross-refs OK')
-console.log(`  ${services.length} services / ${diseases.length} diseases / ${findings.length} findings / ${tests.length} tests / ${redFlags.length} red-flags / ${edges.length} edges`)
+console.log(`  ${services.length} services / ${diseases.length} diseases / ${findings.length} findings / ${tests.length} tests / ${redFlags.length} red-flags / ${edges.length} edges / ${treatments.length} treatments`)
