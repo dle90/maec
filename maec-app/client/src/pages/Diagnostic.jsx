@@ -25,30 +25,69 @@ import api, {
   dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments,
 } from '../api'
 
-// ── Quick-pick chips: 12 most common patient complaints, VN-first ──
-// Each chip → finding tag. The order roughly follows clinic volume.
-const SYMPTOM_CHIPS = [
-  { id: 'pain',                  label: 'Đau' },
-  { id: 'vision_blur_gradual',   label: 'Mờ tăng dần' },
-  { id: 'vision_loss_sudden',    label: 'Mất TL đột ngột' },
-  { id: 'halos',                 label: 'Quầng sáng' },
-  { id: 'flashes',               label: 'Chớp sáng' },
-  { id: 'floaters_new',          label: 'Ruồi bay mới' },
-  { id: 'curtain',               label: 'Màn che' },
-  { id: 'diplopia_binocular',    label: 'Nhìn đôi' },
-  { id: 'gritty_burning',        label: 'Cộm rát' },
-  { id: 'itching',               label: 'Ngứa' },
-  { id: 'discharge',             label: 'Tiết dịch' },
-  { id: 'photophobia',           label: 'Sợ ánh sáng' },
-  { id: 'headache',              label: 'Đau đầu' },
-  { id: 'nausea_vomiting',       label: 'Buồn nôn' },
+// ── Symptom catalog ──
+// Each symptom is added as a ROW that carries its own eye (OD/OS/OU) and, if
+// `graded`, a severity. This folds the old "presence chip + severity dropdown"
+// into one control and lets different symptoms sit in different eyes.
+// `graded` maps the severity to engine inputs when the complaint is assembled:
+//   pain    → pain qualifier + symptom tag (mild=pain, moderate=pain_severe_or_moderate, severe=pain_severe)
+//   redness → redness qualifier only (the KB has no generic redness *finding*)
+// `impliesOnset` / `impliesVision` auto-set those qualifiers from the symptom itself.
+const SYMPTOMS = [
+  { id: 'pain',                graded: 'pain',    label: 'Đau' },
+  { id: 'redness',             graded: 'redness', label: 'Đỏ' },
+  { id: 'vision_blur_gradual', impliesOnset: 'gradual',                       label: 'Mờ tăng dần' },
+  { id: 'vision_loss_sudden',  impliesOnset: 'sudden', impliesVision: 'lost', label: 'Mất TL đột ngột' },
+  { id: 'photophobia',         label: 'Sợ ánh sáng' },
+  { id: 'halos',               label: 'Quầng sáng' },
+  { id: 'flashes',             label: 'Chớp sáng' },
+  { id: 'floaters_new',        label: 'Ruồi bay mới' },
+  { id: 'curtain',             label: 'Màn che' },
+  { id: 'diplopia_binocular',  label: 'Nhìn đôi' },
+  { id: 'gritty_burning',      label: 'Cộm rát' },
+  { id: 'itching',             label: 'Ngứa' },
+  { id: 'discharge',           label: 'Tiết dịch' },
+  { id: 'headache',            label: 'Đau đầu' },
+  { id: 'nausea_vomiting',     label: 'Buồn nôn' },
 ]
+const SYMPTOM_BY_ID = Object.fromEntries(SYMPTOMS.map(s => [s.id, s]))
 
-const ONSET_OPTS    = [['unknown', '— Khởi phát —'], ['sudden', 'Đột ngột'], ['subacute', 'Bán cấp'], ['gradual', 'Từ từ']]
-const PAIN_OPTS     = [['unknown', '— Đau —'], ['none', 'Không'], ['mild', 'Nhẹ'], ['moderate', 'Vừa'], ['severe', 'Dữ dội']]
-const REDNESS_OPTS  = [['unknown', '— Đỏ —'], ['none', 'Không'], ['mild', 'Nhẹ'], ['moderate', 'Vừa'], ['severe', 'Nặng']]
-const VISION_OPTS   = [['unknown', '— Thị lực —'], ['none', 'Không đổi'], ['mild', 'Mờ nhẹ'], ['severe', 'Mờ nhiều'], ['lost', 'Mất TL']]
-const EYE_OPTS      = [['unknown', '—'], ['OD', 'OD (P)'], ['OS', 'OS (T)'], ['OU', 'OU (2 mắt)']]
+// Severity ladders per graded axis (value → label).
+const SEVERITY = {
+  pain:    [['mild', 'Nhẹ'], ['moderate', 'Vừa'], ['severe', 'Dữ dội']],
+  redness: [['mild', 'Nhẹ'], ['moderate', 'Vừa'], ['severe', 'Nặng']],
+}
+const ONSET_OPTS = [['unknown', '— Khởi phát —'], ['sudden', 'Đột ngột'], ['subacute', 'Bán cấp'], ['gradual', 'Từ từ']]
+const ONSET_RANK = { unknown: 0, gradual: 1, subacute: 2, sudden: 3 }
+const EYE_TOGGLE = ['OD', 'OS', 'OU']
+
+// Assemble the engine-facing complaint from the symptom rows. Keeps the flat
+// `symptoms[]` + qualifiers the engine reads, AND a structured per-eye
+// `symptomDetails[]` for display / record / future per-eye reasoning.
+function buildComplaintFromRows(rows, onsetGlobal, text, patientContext) {
+  const symptoms = []
+  let pain = 'unknown', redness = 'unknown', visionChange = 'unknown'
+  let onset = onsetGlobal || 'unknown'
+  const eyes = new Set()
+  const symptomDetails = []
+  for (const r of rows) {
+    eyes.add(r.eye)
+    symptomDetails.push({ findingId: r.id, eye: r.eye, severity: r.severity || null })
+    const cfg = SYMPTOM_BY_ID[r.id]
+    if (cfg?.graded === 'pain') {
+      pain = r.severity || 'unknown'
+      symptoms.push(r.severity === 'severe' ? 'pain_severe' : r.severity === 'moderate' ? 'pain_severe_or_moderate' : 'pain')
+    } else if (cfg?.graded === 'redness') {
+      redness = r.severity || 'unknown'   // qualifier only — no redness finding in the KB
+    } else {
+      symptoms.push(r.id)
+      if (cfg?.impliesOnset && ONSET_RANK[cfg.impliesOnset] > ONSET_RANK[onset]) onset = cfg.impliesOnset
+      if (cfg?.impliesVision) visionChange = cfg.impliesVision
+    }
+  }
+  const eyeAffected = eyes.size === 1 ? [...eyes][0] : eyes.size > 1 ? 'OU' : 'unknown'
+  return { text, symptoms, onset, pain, redness, visionChange, eyeAffected, symptomDetails, patientContext }
+}
 
 const URGENCY_LABEL = {
   emergency:        { label: 'CẤP CỨU',       cls: 'bg-red-100 text-red-800 border-red-300' },
@@ -285,30 +324,31 @@ function InlinePatientPicker({ onPick }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Complaint form — free text + chips + qualifier dropdowns + LLM
+// Complaint form — free text + per-symptom rows (eye + severity) + LLM
 // ─────────────────────────────────────────────────────────────────
 function ComplaintForm({ onSubmit, busy }) {
-  const [text, setText]       = useState('')
-  const [symptoms, setSym]    = useState(new Set())
-  const [onset, setOnset]     = useState('unknown')
-  const [pain, setPain]       = useState('unknown')
-  const [redness, setRedness] = useState('unknown')
-  const [vision, setVision]   = useState('unknown')
-  const [eye, setEye]         = useState('unknown')
-  const [age, setAge]         = useState('')
-  const [sex, setSex]         = useState('unknown')
-  const [cl, setCL]           = useState(null)        // null | true | false
-  const [trauma, setTrauma]   = useState(null)
-  const [postOp, setPostOp]   = useState(null)
+  const [text, setText]   = useState('')
+  const [rows, setRows]   = useState([])        // [{ id, label, graded, eye, severity }]
+  const [onset, setOnset] = useState('unknown')
+  const [age, setAge]     = useState('')
+  const [sex, setSex]     = useState('unknown')
+  const [cl, setCL]       = useState(null)       // null | true | false
+  const [trauma, setTrauma] = useState(null)
+  const [postOp, setPostOp] = useState(null)
   const [parsing, setParsing] = useState(false)
-  const [parseInfo, setParseInfo] = useState(null)  // confidence + explanation + dropped
+  const [parseInfo, setParseInfo] = useState(null)
   const [parseErr, setParseErr]   = useState('')
 
-  function toggleSym(id) {
-    const next = new Set(symptoms)
-    if (next.has(id)) next.delete(id); else next.add(id)
-    setSym(next)
+  const activeIds = new Set(rows.map(r => r.id))
+
+  function toggleSymptom(id) {
+    setRows(rs => {
+      if (rs.some(r => r.id === id)) return rs.filter(r => r.id !== id)
+      const cfg = SYMPTOM_BY_ID[id] || { id, label: id }
+      return [...rs, { id, label: cfg.label, graded: cfg.graded || null, eye: 'OU', severity: cfg.graded ? 'moderate' : null }]
+    })
   }
+  const updateRow = (id, patch) => setRows(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r))
 
   async function runParser() {
     if (!text.trim()) return
@@ -316,49 +356,47 @@ function ComplaintForm({ onSubmit, busy }) {
     try {
       const result = await dxParseComplaint(text.trim())
       const c = result.complaint
-      // Merge LLM extraction with whatever the doctor already entered (LLM wins on unknowns)
-      const llmSet = new Set([...(symptoms || []), ...(c.symptoms || [])])
-      setSym(llmSet)
-      if (c.onset && c.onset !== 'unknown')           setOnset(c.onset)
-      if (c.pain && c.pain !== 'unknown')             setPain(c.pain)
-      if (c.redness && c.redness !== 'unknown')       setRedness(c.redness)
-      if (c.visionChange && c.visionChange !== 'unknown') setVision(c.visionChange)
-      if (c.eyeAffected && c.eyeAffected !== 'unknown')   setEye(c.eyeAffected)
+      const eye = c.eyeAffected && c.eyeAffected !== 'unknown' ? c.eyeAffected : 'OU'
+      const byId = Object.fromEntries(rows.map(r => [r.id, r]))   // preserve what the doctor already entered
+      const addRow = (id, severity) => {
+        if (byId[id]) return
+        const cfg = SYMPTOM_BY_ID[id] || { id, label: id }
+        byId[id] = { id, label: cfg.label, graded: cfg.graded || null, eye, severity: cfg.graded ? (severity || 'moderate') : null }
+      }
+      for (const tag of c.symptoms || []) {
+        if (tag === 'pain_severe') addRow('pain', 'severe')
+        else if (tag === 'pain_severe_or_moderate') addRow('pain', 'moderate')
+        else if (tag === 'pain') addRow('pain', c.pain !== 'unknown' ? c.pain : 'mild')
+        else addRow(tag)
+      }
+      if (c.pain && !['unknown', 'none'].includes(c.pain)) addRow('pain', c.pain)
+      if (c.redness && !['unknown', 'none'].includes(c.redness)) addRow('redness', c.redness)
+      setRows(Object.values(byId))
+      if (c.onset && c.onset !== 'unknown') setOnset(c.onset)
       if (c.patientContext?.ageYears) setAge(String(c.patientContext.ageYears))
       if (c.patientContext?.sex && c.patientContext.sex !== 'unknown') setSex(c.patientContext.sex)
       if (typeof c.patientContext?.isContactLensWearer === 'boolean')  setCL(c.patientContext.isContactLensWearer)
       if (typeof c.patientContext?.recentTrauma === 'boolean')         setTrauma(c.patientContext.recentTrauma)
-      if (typeof c.patientContext?.recentIntraocularSurgeryOrInjection === 'boolean')
-        setPostOp(c.patientContext.recentIntraocularSurgeryOrInjection)
+      if (typeof c.patientContext?.recentIntraocularSurgeryOrInjection === 'boolean') setPostOp(c.patientContext.recentIntraocularSurgeryOrInjection)
       setParseInfo({ confidence: result.confidence, explanationVi: result.explanationVi, dropped: result.droppedUnknownTags })
     } catch (err) {
       const code = err.response?.data?.code
-      if (code === 'LLM_NOT_CONFIGURED') {
-        setParseErr('Trình phân tích LLM chưa được cấu hình. Vui lòng nhập thủ công bằng các chip bên dưới.')
-      } else {
-        setParseErr(err.response?.data?.error || err.message)
-      }
+      if (code === 'LLM_NOT_CONFIGURED') setParseErr('Trình phân tích AI chưa được cấu hình. Vui lòng chọn triệu chứng thủ công bên dưới.')
+      else setParseErr(err.response?.data?.error || err.message)
     } finally { setParsing(false) }
   }
 
   function submit() {
-    const complaint = {
-      text: text.trim(),
-      symptoms: [...symptoms],
-      onset, pain, redness, visionChange: vision, eyeAffected: eye,
-      patientContext: {
-        ageYears: age ? Number(age) : null,
-        sex,
-        isContactLensWearer: cl,
-        recentTrauma: trauma,
-        recentIntraocularSurgeryOrInjection: postOp,
-      },
-    }
-    onSubmit(complaint)
+    onSubmit(buildComplaintFromRows(rows, onset, text.trim(), {
+      ageYears: age ? Number(age) : null,
+      sex,
+      isContactLensWearer: cl,
+      recentTrauma: trauma,
+      recentIntraocularSurgeryOrInjection: postOp,
+    }))
   }
 
-  const canRun = symptoms.size > 0 || text.trim().length > 5
-  const symptomsArr = useMemo(() => SYMPTOM_CHIPS, [])
+  const canRun = rows.length > 0 || text.trim().length > 5
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
@@ -378,7 +416,7 @@ function ComplaintForm({ onSubmit, busy }) {
           >
             {parsing ? '⏳ Đang phân tích...' : '✨ Phân tích bằng AI'}
           </button>
-          <span className="text-xs text-gray-500">Tự điền các chip & dropdown bên dưới. Bác sĩ kiểm tra trước khi chạy.</span>
+          <span className="text-xs text-gray-500">Tự thêm triệu chứng bên dưới. Bác sĩ kiểm tra mắt & mức độ trước khi chạy.</span>
         </div>
         {parseErr && <div className="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">{parseErr}</div>}
         {parseInfo && (
@@ -390,34 +428,54 @@ function ComplaintForm({ onSubmit, busy }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">2. Triệu chứng (chọn nhanh)</label>
-        <div className="flex flex-wrap gap-2">
-          {symptomsArr.map(c => (
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          2. Triệu chứng <span className="text-xs font-normal text-gray-500">— bấm để thêm; ghi rõ mắt & mức độ cho từng triệu chứng</span>
+        </label>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {SYMPTOMS.map(s => (
             <button
-              key={c.id}
-              onClick={() => toggleSym(c.id)}
+              key={s.id}
+              onClick={() => toggleSymptom(s.id)}
               className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                symptoms.has(c.id)
+                activeIds.has(s.id)
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
               }`}
-            >{c.label}</button>
+            >{activeIds.has(s.id) ? '✓ ' : '+ '}{s.label}</button>
           ))}
         </div>
-        {symptoms.size > 0 && (
-          <div className="text-xs text-gray-500 mt-2 font-mono">Đã chọn: {[...symptoms].join(' · ')}</div>
+        {rows.length === 0 ? (
+          <div className="text-xs text-gray-400 italic">Chưa chọn triệu chứng nào.</div>
+        ) : (
+          <div className="space-y-1.5">
+            {rows.map(r => (
+              <div key={r.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5 flex-wrap">
+                <span className="text-sm font-medium text-gray-800 w-36 shrink-0">{r.label}</span>
+                <span className="text-xs text-gray-500">Mắt:</span>
+                {EYE_TOGGLE.map(e => (
+                  <button key={e} onClick={() => updateRow(r.id, { eye: e })}
+                    className={`text-xs px-2 py-0.5 rounded ${r.eye === e ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{e}</button>
+                ))}
+                {r.graded && (
+                  <>
+                    <span className="text-xs text-gray-500 ml-2">Mức độ:</span>
+                    {SEVERITY[r.graded].map(([v, l]) => (
+                      <button key={v} onClick={() => updateRow(r.id, { severity: v })}
+                        className={`text-xs px-2 py-0.5 rounded ${r.severity === v ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{l}</button>
+                    ))}
+                  </>
+                )}
+                <button onClick={() => toggleSymptom(r.id)} className="ml-auto text-gray-400 hover:text-red-500" title="Bỏ">✕</button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">3. Đặc điểm</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          <SelectField value={onset}   onChange={setOnset}   opts={ONSET_OPTS} />
-          <SelectField value={pain}    onChange={setPain}    opts={PAIN_OPTS} />
-          <SelectField value={redness} onChange={setRedness} opts={REDNESS_OPTS} />
-          <SelectField value={vision}  onChange={setVision}  opts={VISION_OPTS} />
-          <SelectField value={eye}     onChange={setEye}     opts={EYE_OPTS} />
-        </div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">3. Diễn tiến chung</label>
+        <SelectField value={onset} onChange={setOnset} opts={ONSET_OPTS} />
+        <span className="text-xs text-gray-400 ml-2">Mặc định lấy theo triệu chứng (vd. mất TL đột ngột → đột ngột).</span>
       </div>
 
       <div>

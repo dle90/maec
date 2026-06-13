@@ -20,6 +20,14 @@ const dxSessionSchema = new mongoose.Schema({
     redness: { type: String, enum: ['none', 'mild', 'moderate', 'severe', 'unknown'], default: 'unknown' },
     visionChange: { type: String, enum: ['none', 'mild', 'severe', 'lost', 'unknown'], default: 'unknown' },
     symptoms: [String],
+    // Per-symptom structured capture (eye + severity). The engine still reasons
+    // on the flat `symptoms[]` + qualifiers above; this preserves laterality
+    // (e.g. pain OS + blur OD) for the record, display, and future per-eye logic.
+    symptomDetails: [{
+      findingId: String,
+      eye: { type: String, enum: ['OD', 'OS', 'OU', null], default: null },
+      severity: String,
+    }],
     patientContext: {
       ageYears: Number,
       sex: { type: String, enum: ['M', 'F', 'unknown'], default: 'unknown' },
