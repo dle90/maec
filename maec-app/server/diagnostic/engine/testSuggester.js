@@ -49,6 +49,7 @@ async function suggestNextTests(differential, activeFindings, limit = 5) {
         svcCode: test.svcCode,
         expectedUtility: Number(utility.toFixed(3)),
         availableInClinic: test.availableInClinic,
+        producesFindings: test.producesFindings || [],
         rationale: `Targets finding "${e.findingId}" — disambiguates ${diseaseObj?.name || e.diseaseId}.`,
       })
     }
