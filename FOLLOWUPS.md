@@ -474,3 +474,13 @@ Real clinical scans + vendor commercial contracts must never be committed. Drops
 - `equipments/` — vendor contracts + price quotes. Used by [attach-equipment-contracts.js](maec-app/server/scripts/attach-equipment-contracts.js).
 
 When `git status` shows new files inside either, that's a bug in `.gitignore`, not a thing to commit.
+
+## Diagnostic engine — numeric measurement entry (2026-06-13)
+
+Added per-eye numeric/threshold measurement entry to the diagnostic decision-support module (`maec-app/server/diagnostic/`). Tests now declare `measurements[]` (key/unit/perEye/derives); the clinician types a value per eye (OD/OS/OU), the engine derives the categorical finding via a threshold, and the differential re-ranks. Closes the previously-impossible common case: **blur → auto-refraction → SE-based myopia → glasses** (d-myopia ranks #1). New `engine/deriveFindings.js`; ~17 quantitative tests wired; 12 new derived findings + edges; refraction classified on **spherical equivalent** (Sph+Cyl/2, minus-cyl); VA in **decimal**. Re-entering a measurement supersedes the prior rows (audit kept); the engine runs only on live observations. Verified locally (Docker Mongo): validate-kb, smoke 60/60 (incl. glaucoma/tonometry regression), HTTP E2E incl. supersession, client build all green.
+
+**Deferred / needs action:**
+- [ ] **Clinical sign-off on every threshold** — all derive cutoffs (IOP ≥22, Schirmer ≤10/≤5, RNFL <80, CCT <500/>600, axial length ≥26/≤22, ESR ≥50 / CRP ≥10, Ishihara ≤11/14, VA <0.5/≤0.1, K ≥47, etc.) are standard-reference placeholders tagged `[CHECK]` in each finding's `notes`. Review against clinic protocol and adjust the `derives` values in `kb/tests.json`.
+- [ ] **Re-seed prod Atlas** when this merges — KB content changed (`node diagnostic/seed.js`, run inside the Railway container via `railway ssh`, not `railway run`).
+- [ ] **Hybrid record-only fields** (OCT macula CMT, perimetry MD/PSD, biometry ACD/k_mean, anterior-OCT ACD) are captured but don't yet derive a finding — wire thresholds if/when those should move the differential.
+- Built on branch `feat/dx-measurements` (local only, not pushed) — review then merge to master (master auto-deploys to Railway).

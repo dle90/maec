@@ -90,12 +90,38 @@ function detectCycle() {
 detectCycle()
 
 // 4. Test cross-refs
+const OPS = new Set(['<', '<=', '>', '>=', '==', 'between', 'abs>=', 'abs<='])
+const VALUE_TYPES = new Set(['number', 'enum', 'boolean', 'computed'])
 for (const t of tests) {
   for (const fid of t.producesFindings || []) {
     if (!fIds.has(fid)) errors.push(`test ${t._id}: unknown finding "${fid}"`)
   }
   for (const s of t.services || []) {
     if (!sIds.has(s)) errors.push(`test ${t._id}: unknown service "${s}"`)
+  }
+  // 4b. Measurement specs
+  const keys = new Set((t.measurements || []).map(m => m.key))
+  for (const m of t.measurements || []) {
+    if (!m.key) errors.push(`test ${t._id}: measurement missing key`)
+    if (m.valueType && !VALUE_TYPES.has(m.valueType)) errors.push(`test ${t._id}:${m.key}: bad valueType "${m.valueType}"`)
+    if (m.valueType === 'enum' && !(m.enumOptions || []).length) errors.push(`test ${t._id}:${m.key}: enum needs enumOptions`)
+    if (m.valueType === 'computed') {
+      for (const k of m.computeFrom || []) {
+        if (!keys.has(k)) errors.push(`test ${t._id}:${m.key}: computeFrom unknown key "${k}"`)
+      }
+    }
+    for (const r of m.derives || []) {
+      if (!OPS.has(r.op)) errors.push(`test ${t._id}:${m.key}: bad derive op "${r.op}"`)
+      if (r.op === 'between' && (typeof r.lo !== 'number' || typeof r.hi !== 'number' || r.lo > r.hi)) {
+        errors.push(`test ${t._id}:${m.key}: 'between' needs lo<=hi`)
+      }
+      if (!fIds.has(r.finding)) errors.push(`test ${t._id}:${m.key}: derives unknown finding "${r.finding}"`)
+      // A derived finding MUST be in producesFindings, else testSuggester can never
+      // recommend the test that yields it.
+      if (!(t.producesFindings || []).includes(r.finding)) {
+        errors.push(`test ${t._id}:${m.key}: derives "${r.finding}" not in producesFindings`)
+      }
+    }
   }
 }
 

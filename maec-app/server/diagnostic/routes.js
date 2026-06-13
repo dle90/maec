@@ -9,6 +9,7 @@ const crypto = require('crypto')
 
 const { requireAuth } = require('../middleware/auth')
 const { runDiagnostic, DISCLAIMER } = require('./engine/orchestrator')
+const { deriveFromMeasurement } = require('./engine/deriveFindings')
 const { parseComplaint } = require('./llm/parseComplaint')
 
 const DxSession = require('./models/DxSession')
@@ -84,30 +85,61 @@ router.get('/sessions/:id', requireAuth, async (req, res) => {
 })
 
 // POST /api/diagnostic/sessions/:id/observations
-// Body: { findingId, eye?, value?, unit?, flag? }
-// Adds an observation, re-runs the engine, returns updated session.
+// Two body shapes, both re-run the engine and return the updated session:
+//   A) legacy direct finding:  { findingId, eye?, value?, unit?, flag?, source? }
+//   B) measurement entry:      { testId, measurements: { OD:{...}, OS:{...}, OU:{...} } }
+//      — numeric/enum values per eye; the engine derives the categorical findings
+//        via the test's threshold rules (see engine/deriveFindings.js). Re-entering
+//        a test's measurement supersedes that test's prior rows for the same eyes.
 router.post('/sessions/:id/observations', requireAuth, async (req, res) => {
-  const { findingId, eye, value, unit, flag, source } = req.body || {}
-  if (!findingId) return res.status(400).json({ error: 'findingId is required' })
-
+  const body = req.body || {}
   const session = await DxSession.findById(req.params.id)
   if (!session) return res.status(404).json({ error: 'session not found' })
   if (session.clinicianOutcome?.closedAt) {
     return res.status(409).json({ error: 'session already closed' })
   }
+  const enteredBy = req.user?.username || 'unknown'
+  const at = nowIso()
 
-  session.observations.push({
-    at: nowIso(),
-    findingId,
-    eye: eye || null,
-    value,
-    unit,
-    flag,
-    source: source || 'manual',
-    enteredBy: req.user?.username || 'unknown',
-  })
+  if (body.measurements && typeof body.measurements === 'object') {
+    // Shape B — structured measurement entry.
+    const { testId } = body
+    if (!testId) return res.status(400).json({ error: 'testId is required for measurement entry' })
+    const test = await DxTest.findById(testId).lean()
+    if (!test) return res.status(404).json({ error: `test ${testId} not found` })
 
-  const result = await runDiagnostic(session.complaint, session.observations)
+    const { rawObservations, derivedObservations, errors } = deriveFromMeasurement({
+      test, measurementsByEye: body.measurements, enteredBy, source: body.source, at,
+    })
+    const rows = [...rawObservations, ...derivedObservations]
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'no valid measurement values', details: errors })
+    }
+
+    // Supersede prior live rows from the SAME test for the eyes being re-entered,
+    // so a corrected value drops its stale derived finding (never silently double-counts).
+    const eyesEntered = new Set(rows.map(r => r.eye))
+    for (const o of session.observations) {
+      if (o.amended || o.supersededBy || !o.derivedFrom) continue
+      if (o.derivedFrom.split(':')[0] === testId && eyesEntered.has(o.eye)) {
+        o.amended = true
+        o.supersededBy = at
+      }
+    }
+    session.observations.push(...rows)
+  } else {
+    // Shape A — legacy direct finding.
+    const { findingId, eye, value, unit, flag, source } = body
+    if (!findingId) return res.status(400).json({ error: 'either findingId or { testId, measurements } is required' })
+    session.observations.push({
+      at, findingId, eye: eye || null, value, unit, flag,
+      source: source || 'manual', enteredBy,
+    })
+  }
+
+  // The engine reasons only over live (non-superseded) observations.
+  const live = session.observations.filter(o => !o.amended && !o.supersededBy)
+  const result = await runDiagnostic(session.complaint, live)
   // Preserve any clinician-excluded red-flags rather than dropping them.
   const excludedById = Object.fromEntries(
     (session.redFlags || [])

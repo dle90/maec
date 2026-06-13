@@ -15,6 +15,8 @@ require('../db')
 
 const mongoose = require('mongoose')
 const { runDiagnostic } = require('./engine/orchestrator')
+const { deriveFromMeasurement } = require('./engine/deriveFindings')
+const DxTest = require('./models/DxTest')
 
 let passes = 0
 let failures = 0
@@ -271,17 +273,53 @@ const cases = [
     expectInTop: ['d-horner-syndrome'],
     expectRedFlag: ['rf-horner-new'],
   },
+  {
+    name: '#20 Blur → auto-refraction OD -2.00 / OS -3.00 → myopia (numeric measurement)',
+    complaint: {
+      text: 'Mắt nhìn mờ',
+      eyeAffected: 'OU',
+      onset: 'gradual',
+      symptoms: ['vision_blur_gradual'],
+      patientContext: { ageYears: 20 },
+    },
+    expectRecommends: 't-autorefraction',   // before measurement, suggester offers refraction
+    measurementEntry: { testId: 't-autorefraction', measurements: { OD: { sphere: -2.00 }, OS: { sphere: -3.00 } } },
+    expectInTop: ['d-myopia'],
+    expectTopIs: 'd-myopia',                 // d-myopia must be RANK #1 after refraction
+    expectNoRedFlag: ['rf-acute-angle-closure'],
+  },
 ]
 
 async function runCase(c) {
   console.log(`\n▸ ${c.name}`)
-  const result = await runDiagnostic(c.complaint, c.observations || [])
+
+  // If the case enters a measurement, first assert the suggester offers the test
+  // for the bare complaint, then derive the per-eye findings it produces.
+  let observations = c.observations || []
+  if (c.measurementEntry) {
+    const pre = await runDiagnostic(c.complaint, observations)
+    if (c.expectRecommends) {
+      const recs = (pre.recommendedNextTests || []).map(t => t.testId)
+      assert(recs.includes(c.expectRecommends), `expected ${c.expectRecommends} recommended pre-measurement, got [${recs.join(', ')}]`, c.name)
+    }
+    const test = await DxTest.findById(c.measurementEntry.testId).lean()
+    const at = new Date().toISOString()
+    const d = deriveFromMeasurement({ test, measurementsByEye: c.measurementEntry.measurements, enteredBy: 'smoke', at })
+    if (d.errors.length) assert(false, `measurement derive errors: ${d.errors.join('; ')}`, c.name)
+    observations = [...observations, ...d.rawObservations, ...d.derivedObservations]
+    console.log(`  derived:      ${d.derivedObservations.map(o => `${o.eye}:${o.findingId}`).join(', ') || '(none)'}`)
+  }
+
+  const result = await runDiagnostic(c.complaint, observations)
   const top = topDiseaseIds(result, 6)
   const rfs = redFlagIds(result)
   console.log(`  differential: ${top.join(', ') || '(empty)'}`)
   console.log(`  redFlags:     ${rfs.join(', ') || '(none)'}`)
 
   // Expectations
+  if (c.expectTopIs) {
+    assert(top[0] === c.expectTopIs, `expected ${c.expectTopIs} at RANK #1, got [${top.join(', ')}]`, c.name)
+  }
   if (c.expectInTopAny && c.expectInTop) {
     const matched = c.expectInTop.some(id => top.includes(id))
     assert(matched, `expected ANY of [${c.expectInTop.join(', ')}] in top 6, got [${top.join(', ')}]`, c.name)

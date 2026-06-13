@@ -41,8 +41,10 @@ const dxSessionSchema = new mongoose.Schema({
     value: mongoose.Schema.Types.Mixed,
     unit: String,
     flag: String,
+    measurementKey: String,   // set on a raw measurement row (e.g. 'sphere')
+    derivedFrom: String,      // set on a derived finding row: "<testId>:<key>"
     enteredBy: String,
-    source: { type: String, enum: ['manual', 'device', 'patient', 'import'], default: 'manual' },
+    source: { type: String, enum: ['manual', 'device', 'patient', 'import', 'derived'], default: 'manual' },
     amended: { type: Boolean, default: false },
     supersededBy: String,
   }],
@@ -83,6 +85,8 @@ const dxSessionSchema = new mongoose.Schema({
     availableInClinic: Boolean,
     rationale: String,
     svcCode: String,
+    producesFindings: [String],                 // findings the test can record (categorical chips)
+    measurements: mongoose.Schema.Types.Mixed,  // structured numeric/enum fields → per-eye entry (see DxTest.measurements)
   }],
 
   // Clinician outcome — closes the session, feeds v1 training.

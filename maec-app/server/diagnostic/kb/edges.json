@@ -299,5 +299,23 @@
   { "diseaseId": "d-hyphema", "findingId": "elevated_IOP", "frequency": 0.3, "evokingStrength": 0.4 },
 
   { "diseaseId": "d-scleritis", "findingId": "tender_globe", "frequency": 0.85, "evokingStrength": 0.85 },
-  { "diseaseId": "d-scleritis", "findingId": "violet_hue_sclera", "frequency": 0.5, "evokingStrength": 0.95 }
+  { "diseaseId": "d-scleritis", "findingId": "violet_hue_sclera", "frequency": 0.5, "evokingStrength": 0.95 },
+
+  { "diseaseId": "d-myopia", "findingId": "refractive_myopia", "frequency": 0.97, "evokingStrength": 0.95 },
+  { "diseaseId": "d-myopia", "findingId": "high_myopia", "frequency": 0.3, "evokingStrength": 0.97 },
+  { "diseaseId": "d-hyperopia", "findingId": "refractive_hyperopia", "frequency": 0.97, "evokingStrength": 0.95 },
+  { "diseaseId": "d-astigmatism", "findingId": "refractive_astigmatism", "frequency": 0.97, "evokingStrength": 0.92 },
+  { "diseaseId": "d-amblyopia", "findingId": "high_myopia", "frequency": 0.25, "evokingStrength": 0.3 },
+  { "diseaseId": "d-amblyopia", "findingId": "va_reduced", "frequency": 0.8, "evokingStrength": 0.3 },
+  { "diseaseId": "d-cataract", "findingId": "va_reduced", "frequency": 0.85, "evokingStrength": 0.15 },
+  { "diseaseId": "d-myopia", "findingId": "va_reduced", "frequency": 0.7, "evokingStrength": 0.15 },
+  { "diseaseId": "d-hyperopia", "findingId": "va_reduced", "frequency": 0.55, "evokingStrength": 0.15 },
+  { "diseaseId": "d-dry-eye-aqueous", "findingId": "aqueous_deficiency", "frequency": 0.9, "evokingStrength": 0.8 },
+  { "diseaseId": "d-dry-eye-aqueous", "findingId": "aqueous_deficiency_severe", "frequency": 0.5, "evokingStrength": 0.9 },
+  { "diseaseId": "d-gca", "findingId": "inflammatory_markers_elevated", "frequency": 0.95, "evokingStrength": 0.85 },
+  { "diseaseId": "d-strabismus-adult", "findingId": "reduced_stereopsis", "frequency": 0.8, "evokingStrength": 0.5 },
+  { "diseaseId": "d-amblyopia", "findingId": "reduced_stereopsis", "frequency": 0.7, "evokingStrength": 0.5 },
+  { "diseaseId": "d-myopia", "findingId": "long_eye", "frequency": 0.6, "evokingStrength": 0.4 },
+  { "diseaseId": "d-retinal-detachment", "findingId": "long_eye", "frequency": 0.3, "evokingStrength": 0.3 },
+  { "diseaseId": "d-acute-angle-closure", "findingId": "short_eye", "frequency": 0.5, "evokingStrength": 0.4 }
 ]

@@ -64,6 +64,22 @@ async function seed() {
     for (const s of t.services || []) {
       if (!serviceIds.has(s)) errors.push(`test ${t._id}: unknown service ${s}`)
     }
+    // Measurement derive targets must exist AND be listed in producesFindings
+    // (else the test-suggester can never recommend the test that yields them).
+    const mKeys = new Set((t.measurements || []).map(m => m.key))
+    for (const m of t.measurements || []) {
+      if (m.valueType === 'computed') {
+        for (const k of m.computeFrom || []) {
+          if (!mKeys.has(k)) errors.push(`test ${t._id}: measurement ${m.key} computeFrom unknown key ${k}`)
+        }
+      }
+      for (const r of m.derives || []) {
+        if (!findingIds.has(r.finding)) errors.push(`test ${t._id}: measurement ${m.key} derives unknown finding ${r.finding}`)
+        if (!(t.producesFindings || []).includes(r.finding)) {
+          errors.push(`test ${t._id}: measurement ${m.key} derives ${r.finding} not in producesFindings`)
+        }
+      }
+    }
   }
   for (const r of redFlags) {
     for (const did of r.candidateDiseases || []) {

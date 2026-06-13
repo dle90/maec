@@ -596,7 +596,9 @@ function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
 // Next tests panel — per-eye observation entry
 // ─────────────────────────────────────────────────────────────────
 function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
-  const observedFindings = useMemo(() => new Set(observations.map(o => o.findingId)), [observations])
+  // Superseded rows (a re-entered measurement) are kept for audit but excluded here.
+  const liveObs = useMemo(() => observations.filter(o => !o.amended && !o.supersededBy), [observations])
+  const observedFindings = useMemo(() => new Set(liveObs.map(o => o.findingId).filter(Boolean)), [liveObs])
   const hero = tests[0]
   const rest = tests.slice(1)
 
@@ -637,14 +639,17 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
         </>
       )}
 
-      {observations.length > 0 && (
+      {liveObs.length > 0 && (
         <div className="mt-4 pt-3 border-t border-gray-100">
-          <div className="text-xs font-medium text-gray-600 mb-1">Đã ghi nhận ({observations.length}):</div>
+          <div className="text-xs font-medium text-gray-600 mb-1">Đã ghi nhận ({liveObs.length}):</div>
           <div className="space-y-0.5">
-            {observations.map((o, i) => (
+            {liveObs.map((o, i) => (
               <div key={i} className="text-xs flex items-center gap-2">
                 <span className="font-mono w-12 text-gray-600">{o.eye || '—'}</span>
-                <span className="flex-1 font-mono">{o.findingId}</span>
+                <span className="flex-1 font-mono">
+                  {o.findingId || o.measurementKey}
+                  {o.source === 'derived' && <span className="ml-1 text-blue-500 not-italic">↳ tự suy ra</span>}
+                </span>
                 {o.value !== undefined && o.value !== null && o.value !== '' && (
                   <span className="text-gray-700">{o.value} {o.unit}</span>
                 )}
@@ -657,26 +662,56 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
   )
 }
 
-// One card per recommended test. Each card holds its OWN eye/value/unit state
-// so opening multiple cards doesn't share a single OD/OS toggle.
+// One card per recommended test. Measurement-aware: tests with a `measurements`
+// spec render per-eye numeric/enum inputs (the engine derives findings from the
+// values via thresholds); tests with qualitative signs render finding chips. A
+// test can have BOTH (e.g. OCT macula: CMT value + fluid signs).
 function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
   const [open, setOpen] = useState(isHero)  // hero auto-expands
-  const [eye, setEye]   = useState('OD')
-  const [value, setVal] = useState('')
-  const [unit, setUnit] = useState('')
-  const candidates = t.producesFindings || []
-  const [picked, setPicked] = useState(candidates[0] || '')
-  useEffect(() => { setPicked(candidates[0] || '') }, [t.testId])
 
-  async function submit() {
+  // Typed measurement fields (skip computed/derived-only like SE).
+  const measurements = (t.measurements || []).filter(m => m.input !== false)
+  // Findings produced by a measurement threshold — entered as numbers, not chips.
+  const derivedIds = useMemo(
+    () => new Set((t.measurements || []).flatMap(m => (m.derives || []).map(d => d.finding))),
+    [t.testId])
+  // Qualitative signs the clinician records directly.
+  const manualFindings = (t.producesFindings || []).filter(f => !derivedIds.has(f))
+
+  // Per-eye measurement values, keyed "OD:sphere" → string.
+  const [mvals, setMvals] = useState({})
+  const setMv = (eye, key, v) => setMvals(s => ({ ...s, [`${eye}:${key}`]: v }))
+  useEffect(() => { setMvals({}) }, [t.testId])
+
+  async function submitMeasurements() {
+    const byEye = {}
+    for (const m of measurements) {
+      const eyes = m.perEye === false ? ['OU'] : ['OD', 'OS', 'OU']
+      for (const eye of eyes) {
+        const raw = mvals[`${eye}:${m.key}`]
+        if (raw === undefined || raw === '') continue
+        byEye[eye] = byEye[eye] || {}
+        byEye[eye][m.key] = m.valueType === 'number' ? Number(raw) : raw
+      }
+    }
+    if (Object.keys(byEye).length === 0) return
+    await onAddObservation({ testId: t.testId, measurements: byEye })
+    setMvals({})
+  }
+
+  // Categorical-sign entry.
+  const [eye, setEye] = useState('OD')
+  const [picked, setPicked] = useState(manualFindings[0] || '')
+  useEffect(() => { setPicked(manualFindings[0] || '') }, [t.testId])
+  async function submitFinding() {
     if (!picked) return
-    await onAddObservation({ findingId: picked, eye, value: value || undefined, unit: unit || undefined, source: 'manual' })
-    setVal(''); setUnit('')
+    await onAddObservation({ findingId: picked, eye, source: 'manual' })
   }
 
   const wrap = isHero
     ? 'rounded-xl border-2 border-blue-400 bg-blue-50/40 p-3 shadow-sm'
     : 'rounded-lg border border-gray-200 bg-white p-2.5'
+  const hasPerEye = measurements.some(m => m.perEye !== false)
 
   return (
     <div className={wrap}>
@@ -692,35 +727,68 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
       </div>
       <div className="pl-1 mt-1 text-xs text-gray-500">{t.rationale}</div>
       {open && (
-        <div className="mt-2 pt-2 border-t border-gray-200 space-y-2">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-600">Mắt:</span>
-            {['OD', 'OS', 'OU'].map(e => (
-              <button key={e} onClick={() => setEye(e)}
-                className={`px-2 py-0.5 rounded ${eye === e ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>{e}</button>
-            ))}
-          </div>
-          {candidates.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {candidates.map(f => (
-                <button key={f} onClick={() => setPicked(f)}
-                  className={`text-xs px-2 py-1 rounded border ${picked === f ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-white border-gray-200 hover:border-blue-300'} ${observedFindings.has(f) ? 'opacity-60' : ''}`}>
-                  {f} {observedFindings.has(f) && '✓'}
-                </button>
+        <div className="mt-2 pt-2 border-t border-gray-200 space-y-3">
+          {/* ── Numeric / structured measurements (per-eye) ── */}
+          {measurements.length > 0 && (
+            <div className="space-y-1">
+              {hasPerEye && (
+                <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                  <span className="flex-1" />
+                  <span className="w-16 text-center">OD (P)</span>
+                  <span className="w-16 text-center">OS (T)</span>
+                  <span className="w-16 text-center">OU</span>
+                </div>
+              )}
+              {measurements.map(m => (
+                <div key={m.key} className="flex items-center gap-2 text-xs">
+                  <span className="flex-1 text-gray-700">
+                    {m.labelVi || m.label}{m.unit && <span className="text-gray-400"> ({m.unit})</span>}
+                  </span>
+                  {(m.perEye === false ? ['OU'] : ['OD', 'OS', 'OU']).map(e => (
+                    <input
+                      key={e}
+                      type={m.valueType === 'number' ? 'number' : 'text'}
+                      step={m.step} min={m.min} max={m.max}
+                      placeholder={m.perEye === false ? '' : e}
+                      value={mvals[`${e}:${m.key}`] ?? ''}
+                      onChange={ev => setMv(e, m.key, ev.target.value)}
+                      className={`border border-gray-200 rounded px-2 py-1 text-xs text-right ${m.perEye === false ? 'w-24' : 'w-16'} focus:border-blue-400 focus:outline-none`}
+                    />
+                  ))}
+                </div>
               ))}
+              <div className="pt-1">
+                <button onClick={submitMeasurements} disabled={busy}
+                  className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">
+                  💾 Lưu kết quả
+                </button>
+              </div>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <input value={value} onChange={e => setVal(e.target.value)}
-              placeholder="Giá trị (tuỳ chọn)"
-              className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-32" />
-            <input value={unit} onChange={e => setUnit(e.target.value)}
-              placeholder="Đơn vị"
-              className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-16" />
-            <button onClick={submit}
-              disabled={busy || !picked}
-              className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">Lưu</button>
-          </div>
+
+          {/* ── Qualitative signs (chips) ── */}
+          {manualFindings.length > 0 && (
+            <div className="space-y-2">
+              {measurements.length > 0 && <div className="text-xs text-gray-500 font-medium">Dấu hiệu quan sát:</div>}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-gray-600">Mắt:</span>
+                {['OD', 'OS', 'OU'].map(e => (
+                  <button key={e} onClick={() => setEye(e)}
+                    className={`px-2 py-0.5 rounded ${eye === e ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>{e}</button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {manualFindings.map(f => (
+                  <button key={f} onClick={() => setPicked(f)}
+                    className={`text-xs px-2 py-1 rounded border ${picked === f ? 'bg-blue-50 border-blue-400 text-blue-700' : 'bg-white border-gray-200 hover:border-blue-300'} ${observedFindings.has(f) ? 'opacity-60' : ''}`}>
+                    {f} {observedFindings.has(f) && '✓'}
+                  </button>
+                ))}
+              </div>
+              <button onClick={submitFinding} disabled={busy || !picked}
+                className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">Lưu dấu hiệu</button>
+            </div>
+          )}
         </div>
       )}
     </div>

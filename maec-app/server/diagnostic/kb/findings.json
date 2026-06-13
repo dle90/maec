@@ -911,5 +911,116 @@
     "serviceHints": ["optical"],
     "implies": ["vision_blur_gradual"],
     "aliases": ["myopia_pattern", "distance_blur_near_clear", "mờ_xa"]
+  },
+  {
+    "_id": "refractive_myopia",
+    "name": "Myopia on refraction",
+    "nameVi": "Cận thị trên đo khúc xạ",
+    "kind": "test_result",
+    "producedByTest": "t-autorefraction",
+    "serviceHints": ["optical"],
+    "notes": "[CHECK] Derived when spherical equivalent SE = Sph + Cyl/2 ≤ −0.50 D."
+  },
+  {
+    "_id": "high_myopia",
+    "name": "High myopia",
+    "nameVi": "Cận thị nặng",
+    "kind": "test_result",
+    "producedByTest": "t-autorefraction",
+    "serviceHints": ["optical"],
+    "implies": ["refractive_myopia"],
+    "notes": "[CHECK] SE ≤ −6.00 D. Risk factor for retinal detachment / myopic maculopathy."
+  },
+  {
+    "_id": "refractive_hyperopia",
+    "name": "Hyperopia on refraction",
+    "nameVi": "Viễn thị trên đo khúc xạ",
+    "kind": "test_result",
+    "producedByTest": "t-autorefraction",
+    "serviceHints": ["optical"],
+    "notes": "[CHECK] SE ≥ +0.50 D."
+  },
+  {
+    "_id": "refractive_astigmatism",
+    "name": "Astigmatism on refraction",
+    "nameVi": "Loạn thị trên đo khúc xạ",
+    "kind": "test_result",
+    "producedByTest": "t-autorefraction",
+    "serviceHints": ["optical"],
+    "notes": "[CHECK] |Cyl| ≥ 0.75 D."
+  },
+  {
+    "_id": "va_reduced",
+    "name": "Reduced visual acuity",
+    "nameVi": "Giảm thị lực",
+    "kind": "test_result",
+    "producedByTest": "t-va",
+    "serviceHints": ["optical", "sensor"],
+    "notes": "[CHECK] Decimal VA < 0.5 (≈ worse than 20/40). Non-specific."
+  },
+  {
+    "_id": "va_severe_loss",
+    "name": "Severe vision loss",
+    "nameVi": "Giảm thị lực nặng",
+    "kind": "test_result",
+    "producedByTest": "t-va",
+    "serviceHints": ["sensor"],
+    "implies": ["va_reduced", "vision_drop"],
+    "notes": "[CHECK] Decimal VA ≤ 0.1 (≈ 20/200 or worse)."
+  },
+  {
+    "_id": "aqueous_deficiency",
+    "name": "Aqueous tear deficiency",
+    "nameVi": "Thiếu nước mắt (Schirmer thấp)",
+    "kind": "test_result",
+    "producedByTest": "t-schirmer",
+    "serviceHints": ["surface"],
+    "notes": "[CHECK] Schirmer ≤ 10 mm/5min."
+  },
+  {
+    "_id": "aqueous_deficiency_severe",
+    "name": "Severe aqueous deficiency",
+    "nameVi": "Thiếu nước mắt nặng",
+    "kind": "test_result",
+    "producedByTest": "t-schirmer",
+    "serviceHints": ["surface"],
+    "implies": ["aqueous_deficiency"],
+    "notes": "[CHECK] Schirmer ≤ 5 mm/5min."
+  },
+  {
+    "_id": "long_eye",
+    "name": "Long axial length",
+    "nameVi": "Trục nhãn cầu dài",
+    "kind": "test_result",
+    "producedByTest": "t-biometry",
+    "serviceHints": ["optical"],
+    "notes": "[CHECK] Axial length ≥ 26.0 mm. Associated with high myopia / RD risk."
+  },
+  {
+    "_id": "short_eye",
+    "name": "Short axial length",
+    "nameVi": "Trục nhãn cầu ngắn",
+    "kind": "test_result",
+    "producedByTest": "t-biometry",
+    "serviceHints": ["optical", "pressure"],
+    "notes": "[CHECK] Axial length ≤ 22.0 mm. Shallow chamber → angle-closure risk."
+  },
+  {
+    "_id": "inflammatory_markers_elevated",
+    "name": "Elevated ESR / CRP",
+    "nameVi": "Tăng máu lắng / CRP",
+    "kind": "test_result",
+    "producedByTest": "t-esr-crp",
+    "serviceHints": ["vascular", "immune"],
+    "notes": "[CHECK] ESR ≥ 50 mm/hr OR CRP ≥ 10 mg/L. Supports giant cell arteritis."
+  },
+  {
+    "_id": "reduced_stereopsis",
+    "name": "Reduced stereoacuity",
+    "nameVi": "Giảm thị giác lập thể",
+    "kind": "test_result",
+    "producedByTest": "t-stereopsis",
+    "serviceHints": ["coordination"],
+    "notes": "[CHECK] Stereoacuity > 60 arcsec."
   }
 ]

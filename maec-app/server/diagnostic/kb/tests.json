@@ -8,8 +8,33 @@
     "invasiveness": "none",
     "availableInClinic": true,
     "svcCode": "SVC-REFRACT",
-    "producesFindings": [],
-    "harmIfSkipped": 5
+    "producesFindings": ["va_reduced", "va_severe_loss"],
+    "harmIfSkipped": 5,
+    "measurements": [
+      {
+        "key": "va_decimal",
+        "label": "VA (decimal)",
+        "labelVi": "Thị lực (thập phân)",
+        "unit": "decimal",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 2,
+        "step": 0.05,
+        "derives": [
+          {
+            "op": "<",
+            "value": 0.5,
+            "finding": "va_reduced"
+          },
+          {
+            "op": "<=",
+            "value": 0.1,
+            "finding": "va_severe_loss"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-pinhole",
@@ -32,8 +57,116 @@
     "invasiveness": "none",
     "availableInClinic": true,
     "svcCode": "SVC-AUTOREF",
-    "producesFindings": [],
-    "harmIfSkipped": 2
+    "producesFindings": ["refractive_myopia", "high_myopia", "refractive_hyperopia", "refractive_astigmatism", "corneal_steepening_topo"],
+    "harmIfSkipped": 3,
+    "measurements": [
+      {
+        "key": "sphere",
+        "label": "Sphere",
+        "labelVi": "Cầu (SPH) — dấu − = cận",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": -30,
+        "max": 30,
+        "step": 0.25,
+        "derives": []
+      },
+      {
+        "key": "cyl",
+        "label": "Cylinder",
+        "labelVi": "Trụ (CYL) — trụ âm",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": -10,
+        "max": 10,
+        "step": 0.25,
+        "derives": [
+          {
+            "op": "abs>=",
+            "value": 0.75,
+            "finding": "refractive_astigmatism"
+          }
+        ]
+      },
+      {
+        "key": "axis",
+        "label": "Axis",
+        "labelVi": "Trục",
+        "unit": "deg",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 180,
+        "step": 1,
+        "derives": []
+      },
+      {
+        "key": "se",
+        "label": "Spherical equivalent",
+        "labelVi": "Cầu tương đương (SE)",
+        "unit": "D",
+        "valueType": "computed",
+        "compute": "spherical_equivalent",
+        "computeFrom": ["sphere", "cyl"],
+        "perEye": true,
+        "input": false,
+        "derives": [
+          {
+            "op": "<=",
+            "value": -0.5,
+            "finding": "refractive_myopia"
+          },
+          {
+            "op": "<=",
+            "value": -6,
+            "finding": "high_myopia"
+          },
+          {
+            "op": ">=",
+            "value": 0.5,
+            "finding": "refractive_hyperopia"
+          }
+        ]
+      },
+      {
+        "key": "k1",
+        "label": "K1",
+        "labelVi": "K1",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": 30,
+        "max": 60,
+        "step": 0.25,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 47,
+            "finding": "corneal_steepening_topo"
+          }
+        ]
+      },
+      {
+        "key": "k2",
+        "label": "K2",
+        "labelVi": "K2",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": 30,
+        "max": 60,
+        "step": 0.25,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 47,
+            "finding": "corneal_steepening_topo"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-cyclo-refraction",
@@ -44,8 +177,80 @@
     "invasiveness": "topical",
     "availableInClinic": true,
     "svcCode": "SVC-CYCLO",
-    "producesFindings": [],
-    "harmIfSkipped": 3
+    "producesFindings": ["refractive_myopia", "high_myopia", "refractive_hyperopia", "refractive_astigmatism"],
+    "harmIfSkipped": 3,
+    "measurements": [
+      {
+        "key": "sphere",
+        "label": "Sphere",
+        "labelVi": "Cầu (SPH) — dấu − = cận",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": -30,
+        "max": 30,
+        "step": 0.25,
+        "derives": []
+      },
+      {
+        "key": "cyl",
+        "label": "Cylinder",
+        "labelVi": "Trụ (CYL) — trụ âm",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": -10,
+        "max": 10,
+        "step": 0.25,
+        "derives": [
+          {
+            "op": "abs>=",
+            "value": 0.75,
+            "finding": "refractive_astigmatism"
+          }
+        ]
+      },
+      {
+        "key": "axis",
+        "label": "Axis",
+        "labelVi": "Trục",
+        "unit": "deg",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 180,
+        "step": 1,
+        "derives": []
+      },
+      {
+        "key": "se",
+        "label": "Spherical equivalent",
+        "labelVi": "Cầu tương đương (SE)",
+        "unit": "D",
+        "valueType": "computed",
+        "compute": "spherical_equivalent",
+        "computeFrom": ["sphere", "cyl"],
+        "perEye": true,
+        "input": false,
+        "derives": [
+          {
+            "op": "<=",
+            "value": -0.5,
+            "finding": "refractive_myopia"
+          },
+          {
+            "op": "<=",
+            "value": -6,
+            "finding": "high_myopia"
+          },
+          {
+            "op": ">=",
+            "value": 0.5,
+            "finding": "refractive_hyperopia"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-slit-lamp",
@@ -69,7 +274,32 @@
     "availableInClinic": true,
     "svcCode": "SVC-IOP",
     "producesFindings": ["elevated_IOP", "low_IOP"],
-    "harmIfSkipped": 5
+    "harmIfSkipped": 5,
+    "measurements": [
+      {
+        "key": "iop",
+        "label": "IOP",
+        "labelVi": "Nhãn áp",
+        "unit": "mmHg",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 80,
+        "step": 1,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 22,
+            "finding": "elevated_IOP"
+          },
+          {
+            "op": "<=",
+            "value": 5,
+            "finding": "low_IOP"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-pupil-exam",
@@ -93,7 +323,27 @@
     "availableInClinic": true,
     "svcCode": "SVC-ISHIHARA",
     "producesFindings": ["color_desaturation"],
-    "harmIfSkipped": 2
+    "harmIfSkipped": 2,
+    "measurements": [
+      {
+        "key": "ishihara_correct",
+        "label": "Ishihara plates correct (/14)",
+        "labelVi": "Số bảng Ishihara đúng (/14)",
+        "unit": "plates",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 14,
+        "step": 1,
+        "derives": [
+          {
+            "op": "<=",
+            "value": 11,
+            "finding": "color_desaturation"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-cover-test",
@@ -165,7 +415,21 @@
     "availableInClinic": true,
     "svcCode": "SVC-OCT-POST",
     "producesFindings": ["subretinal_fluid", "intraretinal_fluid", "macular_atrophy_GA"],
-    "harmIfSkipped": 4
+    "harmIfSkipped": 4,
+    "measurements": [
+      {
+        "key": "cmt",
+        "label": "Central macular thickness",
+        "labelVi": "Độ dày hoàng điểm trung tâm",
+        "unit": "µm",
+        "valueType": "number",
+        "perEye": true,
+        "min": 100,
+        "max": 1000,
+        "step": 1,
+        "derives": []
+      }
+    ]
   },
   {
     "_id": "t-oct-rnfl",
@@ -177,7 +441,27 @@
     "availableInClinic": true,
     "svcCode": "SVC-OCT-POST",
     "producesFindings": ["rnfl_thinning"],
-    "harmIfSkipped": 3
+    "harmIfSkipped": 3,
+    "measurements": [
+      {
+        "key": "rnfl_avg",
+        "label": "Average RNFL",
+        "labelVi": "RNFL trung bình",
+        "unit": "µm",
+        "valueType": "number",
+        "perEye": true,
+        "min": 30,
+        "max": 200,
+        "step": 1,
+        "derives": [
+          {
+            "op": "<",
+            "value": 80,
+            "finding": "rnfl_thinning"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-perimetry",
@@ -190,7 +474,33 @@
     "svcCode": "SVC-VF",
     "producesFindings": ["vf_arcuate", "vf_altitudinal", "vf_bitemporal", "vf_homonymous"],
     "harmIfSkipped": 4,
-    "notes": "MAEC does not have a Humphrey/Octopus perimeter yet — set to false until equipment is acquired. Glaucoma + neuro patients are referred for VF testing externally. Confrontation fields (t-confrontation-vf) is the in-clinic substitute."
+    "notes": "MAEC does not have a Humphrey/Octopus perimeter yet — set to false until equipment is acquired. Glaucoma + neuro patients are referred for VF testing externally. Confrontation fields (t-confrontation-vf) is the in-clinic substitute.",
+    "measurements": [
+      {
+        "key": "md",
+        "label": "Mean deviation (MD)",
+        "labelVi": "Độ lệch trung bình (MD)",
+        "unit": "dB",
+        "valueType": "number",
+        "perEye": true,
+        "min": -35,
+        "max": 5,
+        "step": 0.1,
+        "derives": []
+      },
+      {
+        "key": "psd",
+        "label": "Pattern SD (PSD)",
+        "labelVi": "PSD",
+        "unit": "dB",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 20,
+        "step": 0.1,
+        "derives": []
+      }
+    ]
   },
   {
     "_id": "t-gonioscopy",
@@ -214,7 +524,27 @@
     "availableInClinic": true,
     "svcCode": "SVC-DRYEYE",
     "producesFindings": ["low_TBUT"],
-    "harmIfSkipped": 2
+    "harmIfSkipped": 2,
+    "measurements": [
+      {
+        "key": "tbut_sec",
+        "label": "TBUT",
+        "labelVi": "TBUT",
+        "unit": "s",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 60,
+        "step": 0.5,
+        "derives": [
+          {
+            "op": "<",
+            "value": 10,
+            "finding": "low_TBUT"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-schirmer",
@@ -225,8 +555,33 @@
     "invasiveness": "topical",
     "availableInClinic": true,
     "svcCode": "SVC-SCHIRMER",
-    "producesFindings": [],
-    "harmIfSkipped": 2
+    "producesFindings": ["aqueous_deficiency", "aqueous_deficiency_severe"],
+    "harmIfSkipped": 2,
+    "measurements": [
+      {
+        "key": "schirmer_mm",
+        "label": "Schirmer",
+        "labelVi": "Schirmer",
+        "unit": "mm/5min",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 35,
+        "step": 1,
+        "derives": [
+          {
+            "op": "<=",
+            "value": 10,
+            "finding": "aqueous_deficiency"
+          },
+          {
+            "op": "<=",
+            "value": 5,
+            "finding": "aqueous_deficiency_severe"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-meibography",
@@ -238,7 +593,27 @@
     "availableInClinic": true,
     "svcCode": "SVC-DRYEYE",
     "producesFindings": ["meibography_dropout"],
-    "harmIfSkipped": 2
+    "harmIfSkipped": 2,
+    "measurements": [
+      {
+        "key": "gland_dropout_pct",
+        "label": "Meibomian gland dropout",
+        "labelVi": "Mất tuyến Meibomian",
+        "unit": "%",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "derives": [
+          {
+            "op": ">",
+            "value": 33,
+            "finding": "meibography_dropout"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-topography",
@@ -250,7 +625,27 @@
     "availableInClinic": true,
     "svcCode": "SVC-TOPO",
     "producesFindings": ["corneal_steepening_topo"],
-    "harmIfSkipped": 3
+    "harmIfSkipped": 3,
+    "measurements": [
+      {
+        "key": "k_max",
+        "label": "Kmax",
+        "labelVi": "K tối đa",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": 30,
+        "max": 70,
+        "step": 0.1,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 47,
+            "finding": "corneal_steepening_topo"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-fluorescein-stain",
@@ -285,8 +680,57 @@
     "invasiveness": "none",
     "availableInClinic": true,
     "svcCode": "SVC-BIOMETRY",
-    "producesFindings": [],
-    "harmIfSkipped": 2
+    "producesFindings": ["long_eye", "short_eye"],
+    "harmIfSkipped": 2,
+    "measurements": [
+      {
+        "key": "axial_length",
+        "label": "Axial length",
+        "labelVi": "Chiều dài trục nhãn cầu",
+        "unit": "mm",
+        "valueType": "number",
+        "perEye": true,
+        "min": 18,
+        "max": 35,
+        "step": 0.01,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 26,
+            "finding": "long_eye"
+          },
+          {
+            "op": "<=",
+            "value": 22,
+            "finding": "short_eye"
+          }
+        ]
+      },
+      {
+        "key": "acd",
+        "label": "Anterior chamber depth",
+        "labelVi": "Độ sâu tiền phòng",
+        "unit": "mm",
+        "valueType": "number",
+        "perEye": true,
+        "min": 1,
+        "max": 5,
+        "step": 0.01,
+        "derives": []
+      },
+      {
+        "key": "k_mean",
+        "label": "Mean K",
+        "labelVi": "K trung bình",
+        "unit": "D",
+        "valueType": "number",
+        "perEye": true,
+        "min": 30,
+        "max": 60,
+        "step": 0.25,
+        "derives": []
+      }
+    ]
   },
   {
     "_id": "t-fa",
@@ -333,8 +777,46 @@
     "invasiveness": "invasive",
     "availableInClinic": false,
     "svcCode": null,
-    "producesFindings": [],
-    "harmIfSkipped": 5
+    "producesFindings": ["inflammatory_markers_elevated"],
+    "harmIfSkipped": 5,
+    "measurements": [
+      {
+        "key": "esr",
+        "label": "ESR",
+        "labelVi": "Máu lắng (ESR)",
+        "unit": "mm/hr",
+        "valueType": "number",
+        "perEye": false,
+        "min": 0,
+        "max": 150,
+        "step": 1,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 50,
+            "finding": "inflammatory_markers_elevated"
+          }
+        ]
+      },
+      {
+        "key": "crp",
+        "label": "CRP",
+        "labelVi": "CRP",
+        "unit": "mg/L",
+        "valueType": "number",
+        "perEye": false,
+        "min": 0,
+        "max": 300,
+        "step": 0.1,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 10,
+            "finding": "inflammatory_markers_elevated"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-anterior-oct",
@@ -347,7 +829,39 @@
     "svcCode": "SVC-OCT-ANT",
     "producesFindings": ["closed_angle_gonioscopy"],
     "harmIfSkipped": 3,
-    "notes": "Same RS-330 hardware as posterior OCT, different mode. Imaging-confirms angle status (alternative to gonioscopy when patient can't tolerate the mirror lens) and gives anterior chamber depth + cornea cross-section."
+    "notes": "Same RS-330 hardware as posterior OCT, different mode. Imaging-confirms angle status (alternative to gonioscopy when patient can't tolerate the mirror lens) and gives anterior chamber depth + cornea cross-section.",
+    "measurements": [
+      {
+        "key": "acd",
+        "label": "Anterior chamber depth",
+        "labelVi": "Độ sâu tiền phòng",
+        "unit": "mm",
+        "valueType": "number",
+        "perEye": true,
+        "min": 1,
+        "max": 5,
+        "step": 0.01,
+        "derives": []
+      },
+      {
+        "key": "angle_deg",
+        "label": "Angle (degrees)",
+        "labelVi": "Độ mở góc",
+        "unit": "deg",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 60,
+        "step": 1,
+        "derives": [
+          {
+            "op": "<",
+            "value": 20,
+            "finding": "closed_angle_gonioscopy"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-pachymetry",
@@ -360,7 +874,32 @@
     "svcCode": "SVC-PACHY",
     "producesFindings": ["thin_cornea", "thick_cornea"],
     "harmIfSkipped": 3,
-    "notes": "Used as an interpretation modifier for IOP (thin cornea → IOP under-reads, thick → over-reads) and as a screening for keratoconus (sub-450 µm thinning) and refractive surgery candidacy."
+    "notes": "Used as an interpretation modifier for IOP (thin cornea → IOP under-reads, thick → over-reads) and as a screening for keratoconus (sub-450 µm thinning) and refractive surgery candidacy.",
+    "measurements": [
+      {
+        "key": "cct",
+        "label": "Central corneal thickness",
+        "labelVi": "Độ dày giác mạc trung tâm",
+        "unit": "µm",
+        "valueType": "number",
+        "perEye": true,
+        "min": 400,
+        "max": 700,
+        "step": 1,
+        "derives": [
+          {
+            "op": "<",
+            "value": 500,
+            "finding": "thin_cornea"
+          },
+          {
+            "op": ">",
+            "value": 600,
+            "finding": "thick_cornea"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-amsler-grid",
@@ -384,9 +923,29 @@
     "invasiveness": "none",
     "availableInClinic": true,
     "svcCode": "SVC-TG2M",
-    "producesFindings": [],
+    "producesFindings": ["reduced_stereopsis"],
     "harmIfSkipped": 2,
-    "notes": "Records a stereoacuity value (arcseconds) and a fusion status (fused / suppressed / diplopic). Used in the binocular vision workflow (#2) and for amblyopia / strabismus tracking."
+    "notes": "Records a stereoacuity value (arcseconds) and a fusion status (fused / suppressed / diplopic). Used in the binocular vision workflow (#2) and for amblyopia / strabismus tracking.",
+    "measurements": [
+      {
+        "key": "stereoacuity",
+        "label": "Stereoacuity",
+        "labelVi": "Thị giác lập thể",
+        "unit": "arcsec",
+        "valueType": "number",
+        "perEye": false,
+        "min": 20,
+        "max": 3000,
+        "step": 1,
+        "derives": [
+          {
+            "op": ">",
+            "value": 60,
+            "finding": "reduced_stereopsis"
+          }
+        ]
+      }
+    ]
   },
   {
     "_id": "t-oct-angiography",
@@ -428,4 +987,3 @@
     "notes": "Treatment-defining for bacterial / fungal / Acanthamoeba keratitis. Must be done BEFORE starting topical antibiotics. Not in-house at MAEC — referral to a hospital microbiology lab. Listed here so the rf-bacterial-keratitis actionGuidance has a real KB entry to point at."
   }
 ]
-
