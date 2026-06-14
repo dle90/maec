@@ -492,3 +492,18 @@ After a diagnosis is confirmed, the outcome panel now suggests treatments groupe
 **Deferred / needs action:**
 - [ ] **Review the 171 Vietnamese treatment labels** in `kb/treatments.json` — author-generated, clinically reasonable but not clinic-reviewed. Adjust wording/category as needed.
 - [ ] **Deep-link to ordering (declined for now)** — option to jump from a suggested refractive treatment straight into the clinic's Kính catalog / CL package order. Bigger integration with the catalog/ordering system; revisit if the suggestion-only flow proves too manual.
+
+## Diagnostic assistant — per-eye complaint, bilingual, Khám-embedded (2026-06-14)
+
+Three improvements to the dx assistant, on branch `feat/dx-form-bilingual-kham` (3 commits):
+1. **Per-symptom / per-eye complaint + single screen.** Symptom rows are keyed individually so the same symptom can be added for both eyes; each row carries its own eye + onset + severity (global "Diễn tiến chung" removed; onset flattened conservatively for the engine, full detail kept in `symptomDetails[]`). Richer Tiền sử (bệnh nền / thuốc / tiền sử gia đình / thời gian / hút thuốc / thai sản). The complaint form is now persistent — `POST /sessions/:id/complaint` re-runs the open session so symptoms found during the exam can be added without losing observations.
+2. **Bilingual EN/VN toggle (dx assistant only).** New `LanguageContext` + `pages/diagnostic.i18n.js` (VN→EN map; `t(vn)` is identity in VN). KB data via `pickLang(name/nameVi)`; `treatments.json` gained English `name` for all 171 entries. Toggle in the dx header. App chrome stays Vietnamese.
+3. **Embedded in Khám.** `<DiagnosticAssistant embedded>` extracted from the page; a collapsible "🧠 Hỗ trợ chẩn đoán" section in the encounter pane pre-loads the patient/encounter and writes the confirmed diagnosis → Chẩn đoán and treatments → Kết luận (appended) via `PUT /encounters/:id/clinical-notes`.
+
+Verified locally (Docker Mongo): smoke 60/60, validate-kb, client build, Playwright for all three (dup rows + single-screen; EN/VN toggle; Khám embed + write-back) — 0 console errors.
+
+**Deferred / needs action:**
+- [ ] **Reseed prod after merge** — `treatments.json` changed (EN names): `railway ssh "cd /app/maec-app/server && node diagnostic/seed.js"`.
+- [ ] **Per-eye engine reasoning** — `symptomDetails` (eye/onset/severity per symptom) is captured but the engine still flattens to one global view. A true per-eye differential is a later engine change (user chose capture+flatten for now).
+- [ ] **Bilingual rest-of-app** — only the dx assistant is bilingual; the `LanguageProvider` is app-wide so other pages can adopt `useLanguage`/`t` incrementally (~1,260 inline VN strings remain).
+- [ ] **Treatment EN names** are humanized from tokens + overrides — review for clinical phrasing alongside the VN `[CHECK]` labels.
