@@ -86,7 +86,9 @@ Quy tắc chặt chẽ:
 4) Tuổi: chỉ điền nếu văn bản nói rõ tuổi cụ thể.
 5) Trường explanationVi viết bằng tiếng Việt, súc tích, nêu rõ những gì đã suy luận và những gì để 'unknown' để bác sĩ kiểm tra lại.
 6) Mức độ đau / đỏ / thị lực chỉ điền khi văn bản mô tả, không tự gán dựa trên triệu chứng khác.
-7) Trả về JSON đúng schema, không thêm trường khác.
+7) **MỜ MẮT chung chung → dùng tag CHUNG, KHÔNG tự chi tiết hoá.** Nếu chỉ nói "mờ / nhìn không rõ / kém" mà KHÔNG nêu rõ kiểu, hãy dùng vision_blur_gradual (mờ tăng dần) hoặc vision_drop (giảm thị lực) — KHÔNG được suy ra các tag chuyên biệt như central_scotoma, near_only_blur, distance_only_blur, metamorphopsia, micropsia, night_glare_no_blur. CHỈ dùng các tag chuyên biệt khi văn bản mô tả ĐÚNG kiểu đó: central_scotoma = "mất/tối vùng giữa"; near_only_blur = "mờ khi đọc gần, xa rõ"; distance_only_blur = "mờ khi nhìn xa, gần rõ"; metamorphopsia = "đường thẳng bị cong/méo, sóng lượn"; micropsia = "vật nhìn nhỏ lại".
+8) **ONSET (diễn tiến)** theo mốc thời gian trong văn bản: "đột ngột / bỗng nhiên / ngay lập tức / vừa xảy ra trong vài phút-giờ" → sudden; "vài giờ đến vài ngày / mấy ngày nay tăng dần" → subacute; "từ từ / vài tuần-tháng-năm / lâu nay / ngày càng" → gradual. Nếu có nêu khoảng thời gian mạn tính (tháng/năm) thì chọn gradual, đừng để 'unknown'.
+9) Trả về JSON đúng schema, không thêm trường khác.
 
 Bảng tag (symptom + context + qualifier):
 {{VOCAB}}`
