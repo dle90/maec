@@ -355,5 +355,19 @@
     "urgency": "urgent_referral",
     "actionGuidance": "Khẩn. Nhuộm Gram + cấy mủ kết mạc ngay. Nghi lậu cầu → ceftriaxone toàn thân + rửa mắt nhiều lần, theo dõi giác mạc sát (nguy cơ thủng). Trẻ sơ sinh: điều trị cả mẹ và bé, sàng lọc bệnh lây qua đường tình dục, phối hợp nhi khoa. Ngừng dùng chung khăn/gối (lây lan cao).",
     "actionGuidanceEn": "Urgent. Gram stain + culture of the purulent discharge immediately. Suspected gonococcal → systemic ceftriaxone + frequent saline lavage, watch the cornea closely (perforation risk). Neonate: treat baby and mother, screen for STIs, co-manage with paediatrics. Strict hygiene (highly contagious)."
+  },
+  {
+    "_id": "rf-occipital-stroke",
+    "name": "Occipital lobe stroke (homonymous hemianopia)",
+    "nameVi": "Đột quỵ thùy chẩm (bán manh đồng danh)",
+    "description": "Homonymous field loss — the SAME side missing in both eyes — localises behind the chiasm (optic tract → occipital cortex). When sudden, it is a posterior cerebral artery stroke until proven otherwise. The homonymous perimetry pattern is the discriminator from pre-chiasmal (monocular) and chiasmal (bitemporal) loss; it does not occur in routine ocular disease.",
+    "trigger": {
+      "hasAnySymptoms": ["vf_homonymous", "field_loss_homonymous"]
+    },
+    "services": ["transport"],
+    "candidateDiseases": ["d-occipital-stroke"],
+    "urgency": "emergency",
+    "actionGuidance": "Cấp cứu đột quỵ. Kích hoạt quy trình đột quỵ ngay: chụp CT/CT-A hoặc MRI/MRA não khẩn xác nhận nhồi máu vùng ĐM não sau (PCA). Tham vấn thần kinh; cân nhắc tiêu sợi huyết/lấy huyết khối nếu trong cửa sổ điều trị. Đánh giá các dấu thần kinh kèm theo (đau đầu, bỏ sót nửa người).",
+    "actionGuidanceEn": "Stroke emergency. Activate the stroke pathway: urgent CT/CT-A or MRI/MRA of the brain to confirm a PCA-territory infarct. Neurology consult; consider thrombolysis/thrombectomy if within the treatment window. Assess for accompanying neurologic signs (headache, hemineglect)."
   }
 ]
