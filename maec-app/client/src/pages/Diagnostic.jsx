@@ -22,7 +22,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api, {
   dxParseComplaint, dxParseTestResult, dxCreateSession, dxGetSession, dxUpdateComplaint,
-  dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments,
+  dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments, dxExplainDx,
 } from '../api'
 import { useLanguage } from '../context/LanguageContext'
 import { pickLang } from './diagnostic.i18n'
@@ -258,6 +258,7 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
             busy={busy}
           />
           <DifferentialPanel
+            sessionId={session._id}
             differential={session.differential || []}
             outcome={session.clinicianOutcome}
             onConfirm={handleConfirmOutcome}
@@ -713,14 +714,28 @@ function RedFlagPanel({ redFlags, onExclude, outcomeClosed }) {
 // ─────────────────────────────────────────────────────────────────
 // Differential panel
 // ─────────────────────────────────────────────────────────────────
-function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
+function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy }) {
   const { t: tr, lang } = useLanguage()
   const [expanded, setExp] = useState(new Set())
+  const [aiExplain, setAiExplain] = useState({})   // diseaseId -> { lang, loading, error, data }
 
   function toggle(id) {
     const n = new Set(expanded)
     if (n.has(id)) n.delete(id); else n.add(id)
     setExp(n)
+  }
+
+  async function explainOne(d) {
+    setAiExplain(s => ({ ...s, [d.diseaseId]: { lang, loading: true } }))
+    try {
+      const data = await dxExplainDx(sessionId, d.diseaseId, lang)
+      setAiExplain(s => ({ ...s, [d.diseaseId]: { lang, data } }))
+    } catch (err) {
+      const msg = err.response?.data?.code === 'LLM_NOT_CONFIGURED'
+        ? tr('Trình giải thích AI chưa được cấu hình.')
+        : (err.response?.data?.error || err.message)
+      setAiExplain(s => ({ ...s, [d.diseaseId]: { lang, error: msg } }))
+    }
   }
 
   const confirmedId = outcome?.confirmedDiseaseId
@@ -755,15 +770,34 @@ function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
                     </button>
                   )}
                 </div>
-                {expanded.has(d.diseaseId) && (
+                {expanded.has(d.diseaseId) && (() => {
+                  const ai = aiExplain[d.diseaseId]
+                  const fresh = ai && ai.lang === lang   // cached reasoning is for the current language
+                  return (
                   <div className="mt-2 pl-7 text-xs text-gray-600 space-y-1">
                     <div><strong>{tr('Tóm tắt:')}</strong> {d.summary}</div>
                     {d.supportingFindings?.length > 0 && (
                       <div><strong>{tr('Bằng chứng:')}</strong> <span className="font-mono">{d.supportingFindings.join(', ')}</span></div>
                     )}
                     <div><strong>{tr('Mức độ khẩn:')}</strong> {tr(URGENCY_LABEL[d.urgency]?.label || d.urgency)}</div>
+                    {!fresh && (
+                      <button onClick={() => explainOne(d)} disabled={ai?.loading}
+                        className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white px-2.5 py-1 rounded-lg mt-1">
+                        {ai?.loading ? tr('⏳ Đang giải thích...') : tr('✨ Giải thích bằng AI')}
+                      </button>
+                    )}
+                    {fresh && ai.error && <div className="text-amber-700 bg-amber-50 border border-amber-200 rounded p-1.5">{ai.error}</div>}
+                    {fresh && ai.data && (
+                      <div className="mt-1 p-2 bg-blue-50/60 border border-blue-100 rounded space-y-1 text-gray-700">
+                        <div><strong>{tr('Lý do xếp hạng:')}</strong> {ai.data.rankingReason}</div>
+                        {ai.data.supports?.length > 0 && <div><strong className="text-green-700">{tr('Ủng hộ:')}</strong> {ai.data.supports.join('; ')}</div>}
+                        {ai.data.against?.length > 0 && <div><strong className="text-amber-700">{tr('Phản đối / lưu ý:')}</strong> {ai.data.against.join('; ')}</div>}
+                        {ai.data.nextStep && <div><strong className="text-blue-700">{tr('Bước xác nhận:')}</strong> {ai.data.nextStep}</div>}
+                      </div>
+                    )}
                   </div>
-                )}
+                  )
+                })()}
               </div>
             )
           })}

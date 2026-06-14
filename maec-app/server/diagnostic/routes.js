@@ -12,6 +12,8 @@ const { runDiagnostic, DISCLAIMER } = require('./engine/orchestrator')
 const { deriveFromMeasurement } = require('./engine/deriveFindings')
 const { parseComplaint } = require('./llm/parseComplaint')
 const { parseTestResult } = require('./llm/parseTestResult')
+const { explainDx } = require('./llm/explainDx')
+const { collectActiveFindings } = require('./engine/ranker')
 
 const DxSession = require('./models/DxSession')
 const DxService = require('./models/DxService')
@@ -20,6 +22,7 @@ const DxFinding = require('./models/DxFinding')
 const DxTest = require('./models/DxTest')
 const DxRedFlag = require('./models/DxRedFlag')
 const DxTreatment = require('./models/DxTreatment')
+const DxEdge = require('./models/DxEdge')
 
 const router = express.Router()
 
@@ -201,6 +204,58 @@ router.post('/sessions/:id/complaint', requireAuth, async (req, res) => {
   applyEngineResult(session, result)
   await session.save()
   res.json(session)
+})
+
+// POST /api/diagnostic/sessions/:id/explain
+// Body: { diseaseId, lang? } — LLM explanation of WHY a candidate diagnosis is
+// in this patient's differential, grounded in the engine's own matched/refuting
+// evidence. On-demand; returns 503 if the LLM key isn't configured.
+router.post('/sessions/:id/explain', requireAuth, async (req, res) => {
+  const { diseaseId, lang } = req.body || {}
+  if (!diseaseId) return res.status(400).json({ error: 'diseaseId is required' })
+  const session = await DxSession.findById(req.params.id).lean()
+  if (!session) return res.status(404).json({ error: 'session not found' })
+  const disease = await DxDisease.findById(diseaseId).lean()
+  if (!disease) return res.status(404).json({ error: 'disease not found' })
+
+  const diff = session.differential || []
+  const idx = diff.findIndex(d => d.diseaseId === diseaseId)
+  const entry = idx >= 0 ? diff[idx] : null
+  const edges = await DxEdge.find({ diseaseId }).lean()
+  const live = (session.observations || []).filter(o => !o.amended && !o.supersededBy)
+  const active = await collectActiveFindings(session.complaint, live)
+
+  const supporting = edges.filter(e => e.evokingStrength > 0)
+    .map(e => ({ finding: e.findingId, evoking: e.evokingStrength, frequency: e.frequency, present: active.has(e.findingId) }))
+    .sort((a, b) => b.evoking - a.evoking)
+  const refuting = edges.filter(e => e.evokingStrength <= 0 && active.has(e.findingId))
+    .map(e => ({ finding: e.findingId, evoking: e.evokingStrength }))
+  const presentSupporting = supporting.filter(s => s.present)
+  const notYetObserved = supporting.filter(s => !s.present).slice(0, 6).map(s => s.finding)
+  const ctx = session.complaint?.patientContext || {}
+
+  try {
+    const result = await explainDx({
+      lang: lang === 'en' ? 'en' : 'vi',
+      patient: {
+        ageYears: ctx.ageYears, sex: ctx.sex,
+        context: [...(ctx.systemic || []), ...(ctx.isContactLensWearer ? ['contact lens wearer'] : []), ...(ctx.recentTrauma ? ['recent trauma'] : [])],
+      },
+      complaintSymptoms: session.complaint?.symptoms || [],
+      observations: live.map(o => o.findingId).filter(Boolean),
+      candidate: {
+        nameVi: disease.nameVi, name: disease.name, summary: disease.summary,
+        prevalenceTag: disease.prevalenceTag, urgency: entry?.urgency || disease.urgency,
+        score: entry ? entry.score : 'not in current top list', rank: idx >= 0 ? idx + 1 : '—',
+      },
+      supporting: (presentSupporting.length ? presentSupporting : supporting).slice(0, 8),
+      refuting,
+      notYetObserved,
+    })
+    res.json(result)
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message, code: err.code || 'EXPLAIN_FAILED' })
+  }
 })
 
 // POST /api/diagnostic/sessions/:id/redFlags/:redFlagId/exclude

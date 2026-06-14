@@ -112,6 +112,13 @@ export const EN = {
   'Tóm tắt:': 'Summary:',
   'Bằng chứng:': 'Evidence:',
   'Mức độ khẩn:': 'Urgency:',
+  '✨ Giải thích bằng AI': '✨ Explain with AI',
+  '⏳ Đang giải thích...': '⏳ Explaining…',
+  'Lý do xếp hạng:': 'Why this rank:',
+  'Ủng hộ:': 'Supports:',
+  'Phản đối / lưu ý:': 'Against / caveats:',
+  'Bước xác nhận:': 'To confirm:',
+  'Trình giải thích AI chưa được cấu hình.': 'AI explanation is not configured.',
 
   // outcome / treatment panel
   'Kết luận & điều trị': 'Conclusion & treatment',
