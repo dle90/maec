@@ -8,13 +8,25 @@
     "invasiveness": "none",
     "availableInClinic": true,
     "svcCode": "SVC-REFRACT",
-    "producesFindings": ["va_reduced", "va_severe_loss"],
+    "producesFindings": ["va_reduced", "va_severe_loss", "va_corrects_with_refraction"],
     "harmIfSkipped": 5,
     "measurements": [
       {
-        "key": "va_decimal",
-        "label": "VA (decimal)",
-        "labelVi": "Thị lực (thập phân)",
+        "key": "ucva",
+        "label": "UCVA (uncorrected)",
+        "labelVi": "Thị lực không kính (thập phân)",
+        "unit": "decimal",
+        "valueType": "number",
+        "perEye": true,
+        "min": 0,
+        "max": 2,
+        "step": 0.05,
+        "derives": []
+      },
+      {
+        "key": "bcva",
+        "label": "BCVA (best-corrected)",
+        "labelVi": "Thị lực với kính (thập phân)",
         "unit": "decimal",
         "valueType": "number",
         "perEye": true,
@@ -31,6 +43,24 @@
             "op": "<=",
             "value": 0.1,
             "finding": "va_severe_loss"
+          }
+        ]
+      },
+      {
+        "key": "va_gain",
+        "label": "Correction gain (BCVA − UCVA)",
+        "labelVi": "Mức cải thiện với kính",
+        "unit": "decimal",
+        "valueType": "computed",
+        "compute": "va_correction_gain",
+        "computeFrom": ["bcva", "ucva"],
+        "perEye": true,
+        "input": false,
+        "derives": [
+          {
+            "op": ">=",
+            "value": 0.2,
+            "finding": "va_corrects_with_refraction"
           }
         ]
       }

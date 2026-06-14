@@ -966,7 +966,16 @@
     "producedByTest": "t-va",
     "serviceHints": ["sensor"],
     "implies": ["va_reduced", "vision_drop"],
-    "notes": "[CHECK] Decimal VA ≤ 0.1 (≈ 20/200 or worse)."
+    "notes": "[CHECK] Best-corrected decimal VA ≤ 0.1 (≈ 20/200 or worse)."
+  },
+  {
+    "_id": "va_corrects_with_refraction",
+    "name": "Vision corrects with refraction",
+    "nameVi": "Thị lực cải thiện rõ với kính",
+    "kind": "test_result",
+    "producedByTest": "t-va",
+    "serviceHints": ["optical"],
+    "notes": "[CHECK] Best-corrected VA − uncorrected VA ≥ 0.2 (decimal): the blur corrects with lenses → points to refractive error, argues against media/retinal/neuro pathology."
   },
   {
     "_id": "aqueous_deficiency",

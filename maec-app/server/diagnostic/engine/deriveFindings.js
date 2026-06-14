@@ -25,6 +25,12 @@ const COMPUTE = {
     const cyl = vals.cyl == null ? 0 : vals.cyl
     return Math.round((sph + cyl / 2) * 100) / 100
   },
+  // Visual-acuity gain from correction: best-corrected − uncorrected (decimal).
+  // Needs both values; a large positive gain means the blur corrects with lenses.
+  va_correction_gain(vals) {
+    if (vals.bcva == null || vals.ucva == null) return null
+    return Math.round((vals.bcva - vals.ucva) * 100) / 100
+  },
 }
 
 function evalRule(op, value, rule) {
