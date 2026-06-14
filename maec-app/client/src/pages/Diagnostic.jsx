@@ -811,9 +811,21 @@ function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy }
 
   const confirmedId = outcome?.confirmedDiseaseId
 
+  // Safety net: if the top candidate is an emergency / urgent-referral disease but
+  // no red-flag rule fired for it (e.g. onset/severity weren't entered, so the
+  // strict trigger didn't match), still surface its urgency so it isn't missed.
+  const top = differential[0]
+  const urgentTopUnflagged = top && (top.urgency === 'emergency' || top.urgency === 'urgent_referral') && !top.isRedFlagCandidate
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-4">
       <h2 className="text-base font-semibold text-gray-800 mb-3">{tr('Chẩn đoán phân biệt')}</h2>
+      {urgentTopUnflagged && (
+        <div className={`mb-3 rounded-lg border p-2.5 text-sm ${top.urgency === 'emergency' ? 'bg-red-50 border-red-300 text-red-800' : 'bg-orange-50 border-orange-300 text-orange-800'}`}>
+          <strong>{top.urgency === 'emergency' ? tr('⚠ Cấp cứu tiềm tàng') : tr('⚠ Cần khẩn')}:</strong>{' '}
+          {tr('Ứng cử viên hàng đầu')} “{pickLang(top, lang)}” {tr('được phân loại')} {tr(URGENCY_LABEL[top.urgency]?.label || top.urgency)}. {tr('Nếu lâm sàng phù hợp, xử trí khẩn; kiểm tra lại khởi phát & mức độ để bật cảnh báo đầy đủ.')}
+        </div>
+      )}
       {differential.length === 0 ? (
         <div className="text-sm text-gray-500 italic">{tr('Chưa có ứng cử viên — cần thêm triệu chứng hoặc dữ liệu khám.')}</div>
       ) : (
@@ -829,6 +841,11 @@ function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy }
                     <span key={s} className={`w-2.5 h-2.5 rounded-full ${SERVICE_DOT[s] || 'bg-gray-400'}`} title={s} />
                   ))}
                   <span className="flex-1 text-sm font-medium text-gray-800">{pickLang(d, lang)}</span>
+                  {d.urgency && d.urgency !== 'routine' && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${URGENCY_LABEL[d.urgency]?.cls || ''}`}>
+                      {tr(URGENCY_LABEL[d.urgency]?.label || d.urgency)}
+                    </span>
+                  )}
                   {d.isRedFlagCandidate && <span className="text-xs text-orange-700">⚠</span>}
                   <span className="text-xs font-mono text-gray-600 w-12 text-right">{d.score.toFixed(2)}</span>
                   <button onClick={() => toggle(d.diseaseId)}

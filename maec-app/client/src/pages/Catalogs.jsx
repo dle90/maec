@@ -2153,6 +2153,21 @@ export default function Catalogs() {
     if (activeKey) try { localStorage.setItem(LAST_CATALOG_KEY, activeKey) } catch {}
   }, [activeKey])
 
+  // Packages have an alternate "matrix" view (services × packages grid). These
+  // hooks MUST run before the no-param early return below — React requires a
+  // stable hook count across renders, else minified error #310 (blank page on
+  // a bare /catalogs visit).
+  const isPackages = activeKey === 'packages'
+  const viewParam = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search).get('view') : null
+  const [packagesView, setPackagesView] = useState(viewParam === 'matrix' ? 'matrix' : 'table')
+  useEffect(() => {
+    if (!isPackages) return
+    const sp = new URLSearchParams(window.location.search)
+    if (packagesView === 'matrix') sp.set('view', 'matrix'); else sp.delete('view')
+    const next = sp.toString() ? `?${sp.toString()}` : ''
+    if (window.location.search !== next) window.history.replaceState(null, '', `${window.location.pathname}${next}`)
+  }, [isPackages, packagesView])
+
   // /catalogs with no param — redirect to the last visited catalog, or the
   // first catalog of the first group on a fresh browser.
   if (!activeKey) {
@@ -2177,19 +2192,6 @@ export default function Catalogs() {
   const breadcrumb = activeGroup
     ? <>{activeGroup.label} · <b className="text-gray-700">{activeLabel}</b></>
     : 'Không tìm thấy'
-
-  // Packages have an alternate "matrix" view (services × packages grid).
-  // Toggle persists in URL ?view=matrix so deep-links survive refreshes.
-  const isPackages = activeKey === 'packages'
-  const viewParam = (typeof window !== 'undefined') ? new URLSearchParams(window.location.search).get('view') : null
-  const [packagesView, setPackagesView] = useState(viewParam === 'matrix' ? 'matrix' : 'table')
-  useEffect(() => {
-    if (!isPackages) return
-    const sp = new URLSearchParams(window.location.search)
-    if (packagesView === 'matrix') sp.set('view', 'matrix'); else sp.delete('view')
-    const next = sp.toString() ? `?${sp.toString()}` : ''
-    if (window.location.search !== next) window.history.replaceState(null, '', `${window.location.pathname}${next}`)
-  }, [isPackages, packagesView])
 
   const renderContent = () => {
     if (activeKey === 'hr-employees')    return <EmployeeSection />

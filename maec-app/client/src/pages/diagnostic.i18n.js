@@ -91,6 +91,12 @@ export const EN = {
 
   // urgency
   'CẤP CỨU': 'EMERGENCY', 'KHẨN — chuyển': 'URGENT — refer', 'Khẩn': 'Urgent', 'Thường': 'Routine',
+  '⚠ Cấp cứu tiềm tàng': '⚠ Possible emergency',
+  '⚠ Cần khẩn': '⚠ Urgent',
+  'Ứng cử viên hàng đầu': 'Top candidate',
+  'được phân loại': 'is classified as',
+  'Nếu lâm sàng phù hợp, xử trí khẩn; kiểm tra lại khởi phát & mức độ để bật cảnh báo đầy đủ.':
+    'If clinically consistent, manage urgently; re-check onset & severity to raise the full alert.',
 
   // next-tests panel
   '🎯 Bước tiếp theo': '🎯 Next step',

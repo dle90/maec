@@ -161,7 +161,7 @@
 
   { "diseaseId": "d-allergic-conjunctivitis", "findingId": "itching", "frequency": 0.95, "evokingStrength": 0.95 },
   { "diseaseId": "d-allergic-conjunctivitis", "findingId": "discharge_watery", "frequency": 0.85, "evokingStrength": 0.4 },
-  { "diseaseId": "d-allergic-conjunctivitis", "findingId": "binocular", "frequency": 0.95, "evokingStrength": 0.2 },
+  { "diseaseId": "d-allergic-conjunctivitis", "findingId": "binocular", "frequency": 0.95, "evokingStrength": 0.1 },
 
   { "diseaseId": "d-bacterial-keratitis", "findingId": "pain_severe", "frequency": 0.9, "evokingStrength": 0.5 },
   { "diseaseId": "d-bacterial-keratitis", "findingId": "photophobia", "frequency": 0.9, "evokingStrength": 0.4 },
@@ -291,7 +291,6 @@
   { "diseaseId": "d-migraine-with-aura", "findingId": "visual_aura_zigzag", "frequency": 0.9, "evokingStrength": 0.95 },
   { "diseaseId": "d-migraine-with-aura", "findingId": "flashes", "frequency": 0.7, "evokingStrength": 0.3 },
   { "diseaseId": "d-migraine-with-aura", "findingId": "headache", "frequency": 0.85, "evokingStrength": 0.6 },
-  { "diseaseId": "d-migraine-with-aura", "findingId": "binocular", "frequency": 0.75, "evokingStrength": 0.4 },
   { "diseaseId": "d-migraine-with-aura", "findingId": "nausea_vomiting", "frequency": 0.5, "evokingStrength": 0.2 },
   { "diseaseId": "d-migraine-with-aura", "findingId": "photophobia", "frequency": 0.6, "evokingStrength": 0.25 },
 
@@ -353,7 +352,7 @@
   {"diseaseId":"d-fuchs-dystrophy","findingId":"corneal_guttata","frequency":0.95,"evokingStrength":0.95},
   {"diseaseId":"d-fuchs-dystrophy","findingId":"corneal_edema_bilateral","frequency":0.85,"evokingStrength":0.9},
   {"diseaseId":"d-fuchs-dystrophy","findingId":"halos","frequency":0.7,"evokingStrength":0.4},
-  {"diseaseId":"d-fuchs-dystrophy","findingId":"binocular","frequency":0.95,"evokingStrength":0.3},
+  {"diseaseId":"d-fuchs-dystrophy","findingId":"binocular","frequency":0.95,"evokingStrength":0.1},
   {"diseaseId":"d-nasolacrimal-duct-obstruction","findingId":"epiphora_constant_tearing","frequency":0.95,"evokingStrength":0.85},
   {"diseaseId":"d-nasolacrimal-duct-obstruction","findingId":"mucoid_discharge","frequency":0.7,"evokingStrength":0.65},
   {"diseaseId":"d-nasolacrimal-duct-obstruction","findingId":"medial_canthal_swelling","frequency":0.4,"evokingStrength":0.75},
