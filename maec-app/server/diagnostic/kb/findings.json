@@ -280,7 +280,7 @@
     "nameVi": "Méo hình",
     "kind": "symptom",
     "serviceHints": ["sensor"],
-    "aliases": ["distortion", "wavy_lines", "amsler_distortion"]
+    "aliases": ["distortion", "wavy_lines", "amsler_distortion", "đường thẳng bị cong", "nhìn méo mó", "hình ảnh sóng lượn", "biến dạng hình ảnh"]
   },
   {
     "_id": "central_scotoma",
@@ -288,7 +288,7 @@
     "nameVi": "Ám điểm trung tâm",
     "kind": "symptom",
     "serviceHints": ["sensor", "transport"],
-    "aliases": ["central_blind_spot", "centrocecal_scotoma"]
+    "aliases": ["central_blind_spot", "centrocecal_scotoma", "ám điểm giữa", "mờ vùng trung tâm", "điểm mù trung tâm", "mất thị lực vùng giữa"]
   },
   {
     "_id": "night_blindness",

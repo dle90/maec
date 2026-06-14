@@ -18,10 +18,9 @@
     "_id": "rf-retinal-detachment",
     "name": "Retinal detachment",
     "nameVi": "Bong võng mạc",
-    "description": "Flashes + shower of new floaters + dark curtain across the vision. Often follows a posterior vitreous detachment causing a retinal tear. Surgical urgency.",
+    "description": "Any of: flashes, a shower of new floaters, or a dark curtain/shadow across the vision. A curtain = likely established detachment (surgical urgency); flashes + new floaters = PVD/tear prodrome that can still be lasered BEFORE it detaches. Fire on any single warning symptom — the standard of care is a same-day dilated fundus exam for all of them. (Field loss alone is intentionally NOT a trigger — it is too nonspecific, shared with glaucoma and neuro-ophthalmic disease.)",
     "trigger": {
-      "hasAllSymptoms": ["flashes", "floaters_new"],
-      "hasAnySymptoms": ["curtain", "field_loss"]
+      "hasAnySymptoms": ["curtain", "flashes", "floaters_new"]
     },
     "services": ["sensor"],
     "candidateDiseases": ["d-retinal-detachment", "d-pvd-with-tear"],
@@ -51,7 +50,7 @@
     "description": "Sudden monocular vision loss in a patient age 50+ with any of jaw claudication, scalp tenderness, polymyalgia, headache. Untreated GCA blinds the fellow eye within days — treat empirically while awaiting confirmation.",
     "trigger": {
       "hasAllSymptoms": ["vision_loss_sudden", "monocular"],
-      "hasAnySymptoms": ["jaw_claudication", "scalp_tenderness"],
+      "hasAnySymptoms": ["jaw_claudication", "scalp_tenderness", "headache", "inflammatory_markers_elevated"],
       "patientContext": { "ageMinYears": 50 }
     },
     "services": ["vascular", "immune", "transport"],
@@ -82,7 +81,8 @@
     "nameVi": "Viêm thần kinh thị",
     "description": "Subacute one-eye blur over hours-days + pain on eye movement + colour desaturation + RAPD. Often the first sign of multiple sclerosis (young adult, F>M).",
     "trigger": {
-      "hasAllSymptoms": ["vision_loss_subacute", "monocular", "pain_on_eye_movement"]
+      "hasAllSymptoms": ["vision_loss_subacute"],
+      "hasAnySymptoms": ["color_desaturation", "pain_on_eye_movement"]
     },
     "services": ["transport", "immune"],
     "candidateDiseases": ["d-optic-neuritis"],
@@ -110,7 +110,7 @@
     "nameVi": "Loét giác mạc nhiễm khuẩn",
     "description": "Pain + red + photophobia + a white spot on the cornea, usually a contact-lens wearer. Can perforate and scar within days.",
     "trigger": {
-      "hasAllSymptoms": ["pain_severe_or_moderate", "photophobia"],
+      "hasAllSymptoms": ["pain_severe_or_moderate"],
       "hasAnySymptoms": ["corneal_white_spot", "discharge"],
       "patientContext": { "isContactLensWearerOrUnknown": true }
     },
@@ -282,5 +282,49 @@
     "urgency": "urgent_referral",
     "actionGuidance": "Khám đèn khe và soi củng mạc. Xét nghiệm hệ thống loại trừ bệnh tự miễn (RF, ANA, ANCA, axit uric, sàng lọc nhiễm trùng). Bắt đầu NSAID đường uống; nếu nặng / hoại tử: corticoid + thuốc ức chế miễn dịch. Tham vấn thấp khớp.",
     "actionGuidanceEn": "Slit-lamp + scleral exam. Systemic workup to rule out autoimmune disease (RF, ANA, ANCA, uric acid, infectious screen). Start oral NSAID; if severe / necrotising: systemic steroid + immunomodulator. Rheumatology consult."
+  },
+  {
+    "_id": "rf-pdr",
+    "name": "Proliferative diabetic retinopathy (neovascularization)",
+    "nameVi": "Bệnh võng mạc đái tháo đường tăng sinh (tân mạch)",
+    "description": "Retinal/disc neovascularization is the hallmark that makes diabetic retinopathy 'proliferative' and sight-threatening — the fragile new vessels bleed (vitreous / preretinal hemorrhage → sudden vision loss, floaters) and can drive tractional detachment. Whenever neovascularization is observed, flag for prompt retina referral. Marked redFlag in the disease catalog but previously had no rule.",
+    "trigger": {
+      "hasAnySymptoms": ["neovascularization"]
+    },
+    "services": ["sensor", "vascular"],
+    "candidateDiseases": ["d-dr-pdr"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khẩn cấp. Khám đáy mắt giãn đồng tử cùng ngày; nếu không soi được đáy do xuất huyết dịch kính → siêu âm B loại trừ bong võng mạc. Chuyển bác sĩ võng mạc sớm: laser quang đông toàn võng mạc (PRP) ± tiêm anti-VEGF, cân nhắc cắt dịch kính nếu xuất huyết không tiêu hoặc bong võng mạc co kéo. Kiểm soát đường huyết + huyết áp.",
+    "actionGuidanceEn": "Urgent. Same-day dilated fundus exam; if the view is blocked by vitreous hemorrhage → B-scan ultrasound to rule out tractional detachment. Early retina referral: pan-retinal photocoagulation (PRP) ± intravitreal anti-VEGF, consider vitrectomy for non-clearing hemorrhage or tractional detachment. Optimise glucose + blood pressure."
+  },
+  {
+    "_id": "rf-rvo",
+    "name": "Retinal vein occlusion with macular edema",
+    "nameVi": "Tắc tĩnh mạch võng mạc kèm phù hoàng điểm",
+    "description": "Sudden painless monocular vision loss with scattered retinal hemorrhages and macular edema (intraretinal fluid). Needs prompt retina referral for anti-VEGF, plus a systemic workup (hypertension, glaucoma, hyperviscosity) and exclusion of ischemic complications.",
+    "trigger": {
+      "hasAllSymptoms": ["vision_loss_sudden", "monocular"],
+      "hasAnySymptoms": ["retinal_hemorrhages", "intraretinal_fluid"]
+    },
+    "services": ["sensor", "vascular"],
+    "candidateDiseases": ["d-rvo", "d-rao"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khám đáy mắt giãn đồng tử + OCT hoàng điểm. Chuyển bác sĩ võng mạc để tiêm anti-VEGF cho phù hoàng điểm; theo dõi tân mạch (laser nếu thiếu máu). Xét nghiệm hệ thống: huyết áp, đường huyết, lipid, đo nhãn áp (loại trừ glôcôm), sàng lọc tăng đông ở người trẻ.",
+    "actionGuidanceEn": "Dilated fundus exam + macular OCT. Refer to retina for anti-VEGF for macular edema; watch for neovascularization (laser if ischemic). Systemic workup: blood pressure, glucose, lipids, measure IOP (exclude glaucoma), hypercoagulability screen in younger patients."
+  },
+  {
+    "_id": "rf-wet-amd",
+    "name": "Wet (neovascular) age-related macular degeneration",
+    "nameVi": "Thoái hóa hoàng điểm tuổi già thể ướt",
+    "description": "New central distortion (metamorphopsia), a central scotoma, or sudden central vision drop in an older patient, with subretinal fluid ± fresh subretinal hemorrhage on exam/OCT — choroidal neovascularization. Anti-VEGF works best when started early, so it is time-critical.",
+    "trigger": {
+      "hasAllSymptoms": ["subretinal_fluid"],
+      "hasAnySymptoms": ["vision_loss_sudden", "vision_loss_subacute", "metamorphopsia", "central_scotoma"]
+    },
+    "services": ["sensor"],
+    "candidateDiseases": ["d-wet-amd"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khám đáy mắt giãn đồng tử + OCT hoàng điểm (± chụp mạch huỳnh quang/OCT-A xác nhận tân mạch hắc mạc). Chuyển bác sĩ võng mạc trong vài ngày để tiêm anti-VEGF — bắt đầu càng sớm thị lực giữ được càng tốt. Hướng dẫn bệnh nhân tự theo dõi lưới Amsler và tái khám ngay nếu méo hình tăng.",
+    "actionGuidanceEn": "Dilated fundus exam + macular OCT (± fluorescein angiography / OCT-A to confirm choroidal neovascularization). Refer to retina within days for anti-VEGF — earlier start preserves more vision. Teach Amsler-grid self-monitoring and prompt return if distortion worsens."
   }
 ]

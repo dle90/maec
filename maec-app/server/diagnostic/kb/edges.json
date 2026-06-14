@@ -29,6 +29,7 @@
   { "diseaseId": "d-wet-amd", "findingId": "central_scotoma", "frequency": 0.7, "evokingStrength": 0.6 },
   { "diseaseId": "d-wet-amd", "findingId": "subretinal_fluid", "frequency": 0.95, "evokingStrength": 0.9 },
   { "diseaseId": "d-wet-amd", "findingId": "intraretinal_fluid", "frequency": 0.6, "evokingStrength": 0.5 },
+  { "diseaseId": "d-wet-amd", "findingId": "retinal_hemorrhages", "frequency": 0.6, "evokingStrength": 0.6 },
 
   { "diseaseId": "d-dme", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.3 },
   { "diseaseId": "d-dme", "findingId": "intraretinal_fluid", "frequency": 0.9, "evokingStrength": 0.8 },
@@ -166,7 +167,7 @@
   { "diseaseId": "d-bacterial-keratitis", "findingId": "discharge_purulent", "frequency": 0.5, "evokingStrength": 0.3 },
 
   { "diseaseId": "d-hsv-keratitis", "findingId": "dendritic_corneal_ulcer", "frequency": 0.85, "evokingStrength": 0.95 },
-  { "diseaseId": "d-hsv-keratitis", "findingId": "pain_severe", "frequency": 0.5, "evokingStrength": 0.3 },
+  { "diseaseId": "d-hsv-keratitis", "findingId": "pain_severe_or_moderate", "frequency": 0.6, "evokingStrength": 0.45 },
   { "diseaseId": "d-hsv-keratitis", "findingId": "photophobia", "frequency": 0.85, "evokingStrength": 0.3 },
   { "diseaseId": "d-hsv-keratitis", "findingId": "pain_out_of_proportion", "frequency": 0.3, "evokingStrength": 0.4 },
 
@@ -203,7 +204,8 @@
   { "diseaseId": "d-htn-retinopathy", "findingId": "cotton_wool_spots", "frequency": 0.5, "evokingStrength": 0.4 },
 
   { "diseaseId": "d-rvo", "findingId": "vision_loss_sudden", "frequency": 0.7, "evokingStrength": 0.3 },
-  { "diseaseId": "d-rvo", "findingId": "retinal_hemorrhages", "frequency": 0.95, "evokingStrength": 0.8 },
+  { "diseaseId": "d-rvo", "findingId": "retinal_hemorrhages", "frequency": 0.95, "evokingStrength": 0.85 },
+  { "diseaseId": "d-rvo", "findingId": "intraretinal_fluid", "frequency": 0.8, "evokingStrength": 0.85 },
   { "diseaseId": "d-rvo", "findingId": "monocular", "frequency": 0.9, "evokingStrength": 0.2 },
 
   { "diseaseId": "d-rao", "findingId": "vision_loss_sudden", "frequency": 0.98, "evokingStrength": 0.5 },

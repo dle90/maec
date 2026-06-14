@@ -14,6 +14,7 @@ const { parseComplaint } = require('./llm/parseComplaint')
 const { parseTestResult } = require('./llm/parseTestResult')
 const { explainDx } = require('./llm/explainDx')
 const { collectActiveFindings } = require('./engine/ranker')
+const { getKnownFindingIds } = require('./engine/findingExpansion')
 
 const DxSession = require('./models/DxSession')
 const DxService = require('./models/DxService')
@@ -170,6 +171,13 @@ router.post('/sessions/:id/observations', requireAuth, async (req, res) => {
     // the suggester knows this test was performed.
     const { findingId, eye, value, unit, flag, source, testId } = body
     if (!findingId) return res.status(400).json({ error: 'either findingId or { testId, measurements } is required' })
+    // KB-vocabulary guard: an unknown finding tag matches no edge and no red-flag
+    // trigger, so storing it would silently do nothing (and could mask a missed
+    // emergency). Reject it loudly instead.
+    const known = await getKnownFindingIds()
+    if (!known.has(findingId)) {
+      return res.status(400).json({ error: `unknown finding tag "${findingId}" — not in the KB vocabulary` })
+    }
     session.observations.push({
       at, findingId, eye: eye || null, value, unit, flag, testId,
       source: source || 'manual', enteredBy,
@@ -197,6 +205,14 @@ router.post('/sessions/:id/complaint', requireAuth, async (req, res) => {
   if (!session) return res.status(404).json({ error: 'session not found' })
   if (session.clinicianOutcome?.closedAt) {
     return res.status(409).json({ error: 'session already closed' })
+  }
+  // KB-vocabulary guard on the symptom tags (same rationale as observations).
+  if (Array.isArray(complaint.symptoms) && complaint.symptoms.length) {
+    const known = await getKnownFindingIds()
+    const unknown = complaint.symptoms.filter(t => !known.has(t))
+    if (unknown.length) {
+      return res.status(400).json({ error: `unknown symptom tag(s): ${unknown.join(', ')} — not in the KB vocabulary` })
+    }
   }
   session.complaint = complaint
   const live = session.observations.filter(o => !o.amended && !o.supersededBy)
