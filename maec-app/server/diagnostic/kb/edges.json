@@ -80,6 +80,7 @@
 
   { "diseaseId": "d-neovascular-glaucoma", "findingId": "elevated_IOP", "frequency": 0.9, "evokingStrength": 0.4 },
   { "diseaseId": "d-neovascular-glaucoma", "findingId": "neovascularization", "frequency": 0.95, "evokingStrength": 0.8 },
+  { "diseaseId": "d-neovascular-glaucoma", "findingId": "vision_drop", "frequency": 0.85, "evokingStrength": 0.4 },
   { "diseaseId": "d-neovascular-glaucoma", "findingId": "pain_severe", "frequency": 0.7, "evokingStrength": 0.2 },
 
   { "diseaseId": "d-optic-neuritis", "findingId": "vision_loss_subacute", "frequency": 0.95, "evokingStrength": 0.7 },
@@ -148,6 +149,8 @@
 
   { "diseaseId": "d-blepharitis", "findingId": "itching", "frequency": 0.5, "evokingStrength": 0.3 },
   { "diseaseId": "d-blepharitis", "findingId": "gritty_burning", "frequency": 0.7, "evokingStrength": 0.4 },
+  { "diseaseId": "d-blepharitis", "findingId": "discharge", "frequency": 0.6, "evokingStrength": 0.3 },
+  { "diseaseId": "d-blepharitis", "findingId": "periorbital_swelling", "frequency": 0.4, "evokingStrength": 0.2 },
 
   { "diseaseId": "d-viral-conjunctivitis", "findingId": "discharge_watery", "frequency": 0.85, "evokingStrength": 0.7 },
   { "diseaseId": "d-viral-conjunctivitis", "findingId": "discharge", "frequency": 0.9, "evokingStrength": 0.3 },
@@ -174,6 +177,7 @@
   { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "pain_severe", "frequency": 0.95, "evokingStrength": 0.4 },
   { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "photophobia", "frequency": 0.9, "evokingStrength": 0.3 },
   { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "pain_out_of_proportion", "frequency": 0.8, "evokingStrength": 0.9 },
+  { "diseaseId": "d-acanthamoeba-keratitis", "findingId": "corneal_infiltrate", "frequency": 0.85, "evokingStrength": 0.85 },
 
   { "diseaseId": "d-corneal-abrasion", "findingId": "pain_severe", "frequency": 0.85, "evokingStrength": 0.4 },
   { "diseaseId": "d-corneal-abrasion", "findingId": "trauma_recent", "frequency": 0.7, "evokingStrength": 0.5 },
@@ -181,6 +185,7 @@
   { "diseaseId": "d-keratoconus", "findingId": "vision_blur_gradual", "frequency": 0.7, "evokingStrength": 0.2 },
   { "diseaseId": "d-keratoconus", "findingId": "corneal_steepening_topo", "frequency": 0.95, "evokingStrength": 0.95 },
   { "diseaseId": "d-keratoconus", "findingId": "thin_cornea", "frequency": 0.7, "evokingStrength": 0.5 },
+  { "diseaseId": "d-keratoconus", "findingId": "refractive_astigmatism", "frequency": 0.85, "evokingStrength": 0.75 },
 
   { "diseaseId": "d-pterygium", "findingId": "gritty_burning", "frequency": 0.5, "evokingStrength": 0.2 },
 
@@ -326,6 +331,7 @@
   { "diseaseId": "d-astigmatism", "findingId": "pinhole_no_improvement", "frequency": 0.8, "evokingStrength": -0.4 },
 
   { "diseaseId": "d-myopia", "findingId": "va_corrects_with_refraction", "frequency": 0.9, "evokingStrength": 0.5 },
+  { "diseaseId": "d-myopia", "findingId": "night_blindness", "frequency": 0.95, "evokingStrength": -0.8 },
   { "diseaseId": "d-hyperopia", "findingId": "va_corrects_with_refraction", "frequency": 0.9, "evokingStrength": 0.5 },
   { "diseaseId": "d-astigmatism", "findingId": "va_corrects_with_refraction", "frequency": 0.85, "evokingStrength": 0.45 },
   { "diseaseId": "d-presbyopia", "findingId": "va_corrects_with_refraction", "frequency": 0.7, "evokingStrength": 0.35 }

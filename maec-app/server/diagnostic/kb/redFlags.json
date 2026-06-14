@@ -111,7 +111,7 @@
     "description": "Pain + red + photophobia + a white spot on the cornea, usually a contact-lens wearer. Can perforate and scar within days.",
     "trigger": {
       "hasAllSymptoms": ["pain_severe_or_moderate"],
-      "hasAnySymptoms": ["corneal_white_spot", "discharge"],
+      "hasAnySymptoms": ["corneal_white_spot", "corneal_infiltrate", "discharge"],
       "patientContext": { "isContactLensWearerOrUnknown": true }
     },
     "services": ["surface"],
@@ -326,5 +326,34 @@
     "urgency": "urgent_referral",
     "actionGuidance": "Khám đáy mắt giãn đồng tử + OCT hoàng điểm (± chụp mạch huỳnh quang/OCT-A xác nhận tân mạch hắc mạc). Chuyển bác sĩ võng mạc trong vài ngày để tiêm anti-VEGF — bắt đầu càng sớm thị lực giữ được càng tốt. Hướng dẫn bệnh nhân tự theo dõi lưới Amsler và tái khám ngay nếu méo hình tăng.",
     "actionGuidanceEn": "Dilated fundus exam + macular OCT (± fluorescein angiography / OCT-A to confirm choroidal neovascularization). Refer to retina within days for anti-VEGF — earlier start preserves more vision. Teach Amsler-grid self-monitoring and prompt return if distortion worsens."
+  },
+  {
+    "_id": "rf-neovascular-glaucoma",
+    "name": "Neovascular glaucoma",
+    "nameVi": "Glôcôm tân mạch",
+    "description": "Raised IOP together with iris/angle (or retinal) neovascularization — rubeosis from an ischemic retina (diabetic, CRVO, ocular ischemic syndrome). A painful eye with a dangerously high pressure; the differential ranker otherwise lets proliferative diabetic retinopathy dominate the neovascularization signal, so this rule forces NVG into view when the pressure is also up.",
+    "trigger": {
+      "hasAllSymptoms": ["elevated_IOP"],
+      "hasAnySymptoms": ["neovascularization"]
+    },
+    "services": ["pressure", "sensor", "vascular"],
+    "candidateDiseases": ["d-neovascular-glaucoma"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khẩn cấp. Hạ nhãn áp (thuốc nhỏ + uống/IV nếu rất cao) — tránh thuốc co đồng tử. Chuyển bác sĩ võng mạc + glôcôm: laser quang đông toàn võng mạc (PRP) ± tiêm anti-VEGF để thoái triển tân mạch, song song kiểm soát nhãn áp. Tìm nguyên nhân thiếu máu nền (ĐTĐ, tắc tĩnh mạch võng mạc, hẹp động mạch cảnh).",
+    "actionGuidanceEn": "Urgent. Lower IOP (topical + oral/IV if very high) — avoid miotics. Refer retina + glaucoma: pan-retinal photocoagulation (PRP) ± intravitreal anti-VEGF to regress the neovascularization, alongside IOP control. Work up the underlying ischemia (diabetes, retinal vein occlusion, carotid disease)."
+  },
+  {
+    "_id": "rf-hyperacute-bacterial-conjunctivitis",
+    "name": "Hyperacute / neonatal bacterial conjunctivitis",
+    "nameVi": "Viêm kết mạc vi khuẩn tối cấp / ở trẻ sơ sinh",
+    "description": "Copious purulent discharge WITH lid/periorbital swelling and a hyperacute course suggests gonococcal conjunctivitis (or, in a newborn, ophthalmia neonatorum) — it can perforate the cornea within 24-48h, unlike routine bacterial conjunctivitis. The mandatory periorbital-swelling requirement is the guardrail that keeps routine conjunctivitis (discharge but no swelling) from firing this rule.",
+    "trigger": {
+      "hasAllSymptoms": ["discharge_purulent", "periorbital_swelling"]
+    },
+    "services": ["surface", "immune"],
+    "candidateDiseases": ["d-bacterial-conjunctivitis"],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khẩn. Nhuộm Gram + cấy mủ kết mạc ngay. Nghi lậu cầu → ceftriaxone toàn thân + rửa mắt nhiều lần, theo dõi giác mạc sát (nguy cơ thủng). Trẻ sơ sinh: điều trị cả mẹ và bé, sàng lọc bệnh lây qua đường tình dục, phối hợp nhi khoa. Ngừng dùng chung khăn/gối (lây lan cao).",
+    "actionGuidanceEn": "Urgent. Gram stain + culture of the purulent discharge immediately. Suspected gonococcal → systemic ceftriaxone + frequent saline lavage, watch the cornea closely (perforation risk). Neonate: treat baby and mother, screen for STIs, co-manage with paediatrics. Strict hygiene (highly contagious)."
   }
 ]
