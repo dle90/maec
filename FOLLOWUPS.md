@@ -507,3 +507,12 @@ Verified locally (Docker Mongo): smoke 60/60, validate-kb, client build, Playwri
 - [ ] **Per-eye engine reasoning** — `symptomDetails` (eye/onset/severity per symptom) is captured but the engine still flattens to one global view. A true per-eye differential is a later engine change (user chose capture+flatten for now).
 - [ ] **Bilingual rest-of-app** — only the dx assistant is bilingual; the `LanguageProvider` is app-wide so other pages can adopt `useLanguage`/`t` incrementally (~1,260 inline VN strings remain).
 - [ ] **Treatment EN names** are humanized from tokens + overrides — review for clinical phrasing alongside the VN `[CHECK]` labels.
+
+### Diagnostic engine — clinical-review fixes (2026-06-14, same branch)
+
+From the multi-agent review of the end-to-end flow:
+- **(a)** Test suggester surfaces `availableInClinic:false` tests in an "Order / refer" lane (so e.g. ESR+CRP for GCA is no longer un-suggestable); skips already-performed tests; emergency red-flags (AACG, GCA) lead with "💊 ĐIỀU TRỊ NGAY".
+- **(b)** Refutation: `evokingStrength` may be negative; added refuting edges (myopia↔hyperopia mutual exclusion, pinhole-no-improvement ↛ refractive). validate-kb range now [-1,1].
+- **(c)** Free-text test-result LLM parser (`/diagnostic/parse-test-result` + `llm/parseTestResult.js` + `kbTestVocab.js`), mirroring the complaint parser, scoped per-test, surfaced as "✨ Phân tích KQ bằng AI" on sign-based test cards; clinician confirms (`source:'llm_assisted'`).
+
+**Still deferred (not done):** protocol-layer test suggestions (cyclo-refraction / topography for a young blur — suggester is still purely differential-driven); keratoconus edge weight still below the 0.05 floor for a lone gradual-blur young adult; dry-eye MGD-vs-aqueous fine subtyping (needs meibography + Schirmer threshold review); calibrated probabilities (still relative % of additive scores); per-eye engine reasoning. All [CHECK]-flagged thresholds/guidance still want clinical sign-off.
