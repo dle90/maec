@@ -573,3 +573,12 @@ Second batch: **55 fresh documented cases across 46 diseases** (new diseases + a
   - Verified end-to-end (local server + Docker Mongo): asymptomatic 68yo, screening high IOP + RNFL thinning + myopia → **d-poag #1 (0.95)**, no false red-flag; re-sync idempotent (live-obs stable, no double-count).
 
 **Deferred (exam→dx):** free-text fundus/slit-lamp signs are not auto-mapped (would need structured sign entry or an NLP pass over the notes); cup/disc ratio (`od_cd_ratio`) has no engine derive rule (could add CDR≥0.6→`glaucomatous_cupping`); VA in counting-fingers/text format (ĐNT/BBT/ST) is skipped (not quantifiable to decimal). Mapping table lives in `examMapping.js` `RULES`.
+
+### Prod QA sweep + fixes (2026-06-14)
+
+Playwright sweep of all 24 admin pages + simulated visits on prod. 23/24 pages clean. Fixes shipped (`06c7c37`, force-deployed via `railway up` + prod reseeded):
+- **`/catalogs` white-screen (React #310)** — bare `/catalogs` did an early `return <Navigate>` above two hooks (packages-matrix `useState`/`useEffect`); moved the hooks above the early return. Sidebar links to `/catalogs/services` so daily use was unaffected; bookmarks / the redirect entry crashed. Verified fixed on prod.
+- **Dx urgency surfacing** — an emergency/urgent_referral disease can rank #1 without its red-flag firing (onset/severity not entered → strict trigger unmet). `DifferentialPanel` now shows an urgency badge per row + an advisory banner when the top candidate is emergency/urgent-referral but unflagged. Display-only (urgency already on the differential entry); no change to red-flag firing.
+- **Migraine-with-aura over-surfaced** — the generic `binocular` laterality qualifier was an evoking edge (migraine es 0.4) and rows default to OU, so migraine appeared on any bilateral complaint. Removed migraine's `binocular` edge; capped d-fuchs-dystrophy + d-allergic-conjunctivitis `binocular` to 0.1. Verified absent on prod; all 4 validation batches unchanged, smoke 60/60.
+
+QA harness (gitignored `tmp-playwright/`): `qa-sweep.js` (all-pages console/network/screenshot capture), `dx-flow.js` (simulated dx runs), `verify-fixes.js`.
