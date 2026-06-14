@@ -15,6 +15,8 @@ const { parseTestResult } = require('./llm/parseTestResult')
 const { explainDx } = require('./llm/explainDx')
 const { collectActiveFindings } = require('./engine/ranker')
 const { getKnownFindingIds } = require('./engine/findingExpansion')
+const { mapEncounterExam } = require('./examMapping')
+const Encounter = require('../models/Encounter')
 
 const DxSession = require('./models/DxSession')
 const DxService = require('./models/DxService')
@@ -89,6 +91,23 @@ function applyEngineResult(session, result) {
   session.updatedAt = nowIso()
 }
 
+// Push measurement-derived rows for a test onto a session, superseding that test's
+// prior live rows for the same eyes (so re-entry never double-counts). Returns the
+// derived finding ids added (for a sync summary). Shared by the observations and
+// exam-sync endpoints.
+function applyMeasurementRows(session, testId, rows, at) {
+  const eyesEntered = new Set(rows.map(r => r.eye))
+  for (const o of session.observations) {
+    if (o.amended || o.supersededBy || !o.derivedFrom) continue
+    if (o.derivedFrom.split(':')[0] === testId && eyesEntered.has(o.eye)) {
+      o.amended = true
+      o.supersededBy = at
+    }
+  }
+  session.observations.push(...rows)
+  return rows.filter(r => r.source === 'derived').map(r => r.findingId)
+}
+
 // ── Sessions ────────────────────────────────────────────────
 
 // POST /api/diagnostic/sessions
@@ -154,18 +173,7 @@ router.post('/sessions/:id/observations', requireAuth, async (req, res) => {
     if (rows.length === 0) {
       return res.status(400).json({ error: 'no valid measurement values', details: errors })
     }
-
-    // Supersede prior live rows from the SAME test for the eyes being re-entered,
-    // so a corrected value drops its stale derived finding (never silently double-counts).
-    const eyesEntered = new Set(rows.map(r => r.eye))
-    for (const o of session.observations) {
-      if (o.amended || o.supersededBy || !o.derivedFrom) continue
-      if (o.derivedFrom.split(':')[0] === testId && eyesEntered.has(o.eye)) {
-        o.amended = true
-        o.supersededBy = at
-      }
-    }
-    session.observations.push(...rows)
+    applyMeasurementRows(session, testId, rows, at)
   } else {
     // Shape A — direct finding (manual sign chip). testId optional, recorded so
     // the suggester knows this test was performed.
@@ -190,6 +198,53 @@ router.post('/sessions/:id/observations', requireAuth, async (req, res) => {
   applyEngineResult(session, result)
   await session.save()
   res.json(session)
+})
+
+// POST /api/diagnostic/sessions/:id/sync-exam
+// Body: { encounterId }. Pull the encounter's recorded NUMERIC exam values (IOP,
+// refraction, VA, RNFL, …) into this session as measurement observations, so the
+// engine reacts to incidental screening findings even when the patient had no
+// complaint (the routine-checkup safety net). Each test's rows supersede that test's
+// prior rows, so re-syncing after more exam data is entered is idempotent. Also
+// backfills patientContext age/sex from the encounter for age-gated red-flags.
+// Free-text fundus/slit-lamp notes are NOT mapped (clinician enters those signs).
+router.post('/sessions/:id/sync-exam', requireAuth, async (req, res) => {
+  const { encounterId } = req.body || {}
+  if (!encounterId) return res.status(400).json({ error: 'encounterId is required' })
+  const session = await DxSession.findById(req.params.id)
+  if (!session) return res.status(404).json({ error: 'session not found' })
+  if (session.clinicianOutcome?.closedAt) return res.status(409).json({ error: 'session already closed' })
+  const encounter = await Encounter.findById(encounterId).lean()
+  if (!encounter) return res.status(404).json({ error: `encounter ${encounterId} not found` })
+
+  const enteredBy = req.user?.username || 'exam-sync'
+  const at = nowIso()
+  const { measurements, context } = mapEncounterExam(encounter)
+
+  const synced = []
+  for (const m of measurements) {
+    const test = await DxTest.findById(m.testId).lean()
+    if (!test) continue
+    const { rawObservations, derivedObservations } = deriveFromMeasurement({
+      test, measurementsByEye: m.measurementsByEye, enteredBy, source: 'import', at,
+    })
+    const rows = [...rawObservations, ...derivedObservations]
+    if (rows.length === 0) continue
+    const derivedFindings = applyMeasurementRows(session, m.testId, rows, at)
+    synced.push({ testId: m.testId, label: test.nameVi || test.name || m.testId, derivedFindings })
+  }
+
+  // Backfill patient context (never overwrite values already set from the complaint).
+  const pc = session.complaint?.patientContext || {}
+  if (context.ageYears != null && pc.ageYears == null) pc.ageYears = context.ageYears
+  if (context.sex && (!pc.sex || pc.sex === 'unknown')) pc.sex = context.sex
+  if (session.complaint) { session.complaint.patientContext = pc; session.markModified('complaint') }
+
+  const live = session.observations.filter(o => !o.amended && !o.supersededBy)
+  const result = await runDiagnostic(session.complaint, live)
+  applyEngineResult(session, result)
+  await session.save()
+  res.json({ ...session.toObject(), syncedExam: synced })
 })
 
 // POST /api/diagnostic/sessions/:id/complaint

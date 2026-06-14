@@ -123,6 +123,7 @@ export const dxExplainDx        = (sessionId, diseaseId, lang) => api.post(`/dia
 export const dxCreateSession    = (data) => api.post('/diagnostic/sessions', data).then(r => r.data)
 export const dxGetSession       = (id)   => api.get(`/diagnostic/sessions/${id}`).then(r => r.data)
 export const dxAddObservation   = (sessionId, data) => api.post(`/diagnostic/sessions/${sessionId}/observations`, data).then(r => r.data)
+export const dxSyncExam         = (sessionId, encounterId) => api.post(`/diagnostic/sessions/${sessionId}/sync-exam`, { encounterId }).then(r => r.data)
 export const dxUpdateComplaint  = (sessionId, complaint) => api.post(`/diagnostic/sessions/${sessionId}/complaint`, { complaint }).then(r => r.data)
 export const dxExcludeRedFlag   = (sessionId, redFlagId, data) => api.post(`/diagnostic/sessions/${sessionId}/redFlags/${redFlagId}/exclude`, data).then(r => r.data)
 export const dxConfirmOutcome   = (sessionId, data) => api.post(`/diagnostic/sessions/${sessionId}/outcome`, data).then(r => r.data)

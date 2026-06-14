@@ -22,7 +22,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api, {
   dxParseComplaint, dxParseTestResult, dxCreateSession, dxGetSession, dxUpdateComplaint,
-  dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments, dxExplainDx,
+  dxAddObservation, dxSyncExam, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments, dxExplainDx,
 } from '../api'
 import { useLanguage } from '../context/LanguageContext'
 import { pickLang } from './diagnostic.i18n'
@@ -152,6 +152,8 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
   const [formKey, setFormKey]     = useState(0)      // bump to reset the (persistent) complaint form
   const [busy, setBusy]           = useState(false)
   const [error, setError]         = useState('')
+  const [syncedExam, setSyncedExam] = useState(null)   // last exam-sync summary (for the note)
+  const autoSyncedRef = useRef(false)
   const { t: tr } = useLanguage()
 
   useEffect(() => {
@@ -160,6 +162,39 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
       .then(r => { if (r.data?.[0]) setPatient(r.data[0]) })
       .catch(() => {})
   }, [initialPatientId])
+
+  // Pull the encounter's recorded exam values (IOP, refraction, VA, …) into the dx
+  // session so the engine reacts to incidental screening findings even with no
+  // complaint. Creates a blank session if none yet. Idempotent (server supersedes
+  // per-test rows), so the button can re-sync after more exam data is entered.
+  async function syncExam() {
+    if (!encounterId) return
+    setBusy(true); setError('')
+    try {
+      let s = session
+      if (!s || s.clinicianOutcome?.closedAt) {
+        s = await dxCreateSession({
+          patientId: patient?.patientId || patient?._id || initialPatientId || undefined,
+          encounterId,
+          complaint: { text: '', symptoms: [], onset: 'unknown', pain: 'unknown', redness: 'unknown', visionChange: 'unknown', eyeAffected: 'unknown', patientContext: {} },
+        })
+      }
+      const updated = await dxSyncExam(s._id, encounterId)
+      setSession(updated)
+      setSyncedExam(updated.syncedExam || [])
+    } catch (err) {
+      setError(err.response?.data?.error || err.message)
+    } finally { setBusy(false) }
+  }
+
+  // Embedded in Khám: auto-pull exam findings once when the assistant opens, if no
+  // session exists yet. (The section only mounts when the clinician expands it.)
+  useEffect(() => {
+    if (!embedded || !initialEncounterId || session || autoSyncedRef.current) return
+    autoSyncedRef.current = true
+    syncExam()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded, initialEncounterId])
 
   // Single submit path: create the session on first run, then update the open
   // session's complaint on subsequent runs (so the form stays editable and the
@@ -253,6 +288,21 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
       {/* Complaint form is persistent — stays editable alongside results so new
           symptoms found during the exam can be added without losing the session. */}
       <ComplaintForm key={formKey} onSubmit={handleComplaint} busy={busy} hasSession={!!session} />
+
+      {/* Embedded in Khám: pull this encounter's recorded exam values into the engine
+          (auto on open; re-sync after entering more results). */}
+      {embedded && encounterId && (
+        <div className="flex items-center flex-wrap gap-2 text-xs">
+          <button onClick={syncExam} disabled={busy}
+            className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 disabled:opacity-50">
+            {tr('🔄 Lấy kết quả khám vào trợ lý')}
+          </button>
+          {syncedExam && (syncedExam.length
+            ? <span className="text-gray-500">{tr('Đã lấy:')} {syncedExam.map(s => s.label).join(', ')}</span>
+            : <span className="text-gray-400 italic">{tr('Chưa có kết quả khám dạng số để lấy.')}</span>
+          )}
+        </div>
+      )}
 
       {session && (
         <>

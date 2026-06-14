@@ -19,6 +19,11 @@ export const EN = {
     'Decision support only — the clinician is responsible for the final diagnosis and treatment.',
   'Bắt đầu phiên mới? Phiên hiện tại đã lưu trong hệ thống.': 'Start a new session? The current one is already saved.',
 
+  // exam-sync (Khám integration)
+  '🔄 Lấy kết quả khám vào trợ lý': '🔄 Pull exam results into the assistant',
+  'Đã lấy:': 'Pulled:',
+  'Chưa có kết quả khám dạng số để lấy.': 'No numeric exam results to pull yet.',
+
   // blank / routine check-up ready-state
   '🟢 Trợ lý sẵn sàng': '🟢 Assistant ready',
   'Chưa có triệu chứng hay dấu hiệu bất thường — với khám định kỳ thì đây là bình thường, không có gì để cảnh báo. Thêm triệu chứng ở khung trên khi có; khi khám phát hiện dấu hiệu bất thường (vd. nhãn áp cao, tổn thương đáy mắt) trợ lý sẽ tự đưa ra gợi ý chẩn đoán.':
