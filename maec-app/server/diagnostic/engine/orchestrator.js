@@ -15,7 +15,14 @@ async function runDiagnostic(complaint, observations = []) {
   const redFlags = await runRedFlagGate(complaint, observations)
   const differential = await rankDifferential(complaint, observations, redFlags)
   const activeFindings = await collectActiveFindings(complaint, observations)
-  const recommendedNextTests = await suggestNextTests(differential, activeFindings)
+  // Tests already administered: a measurement row carries `<testId>:<key>` in
+  // derivedFrom; a manual sign row carries `testId`. Either marks a test done.
+  const performedTestIds = new Set(
+    (observations || [])
+      .map(o => (o.derivedFrom ? String(o.derivedFrom).split(':')[0] : o.testId))
+      .filter(Boolean)
+  )
+  const recommendedNextTests = await suggestNextTests(differential, activeFindings, performedTestIds)
   return {
     redFlags,
     differential,

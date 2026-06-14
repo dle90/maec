@@ -156,8 +156,9 @@ for (const e of edges) {
   if (typeof e.frequency !== 'number' || e.frequency < 0 || e.frequency > 1) {
     errors.push(`edge ${e.diseaseId}↔${e.findingId}: frequency out of [0,1]`)
   }
-  if (typeof e.evokingStrength !== 'number' || e.evokingStrength < 0 || e.evokingStrength > 1) {
-    errors.push(`edge ${e.diseaseId}↔${e.findingId}: evokingStrength out of [0,1]`)
+  // evokingStrength may be NEGATIVE (a refuting finding subtracts from the score).
+  if (typeof e.evokingStrength !== 'number' || e.evokingStrength < -1 || e.evokingStrength > 1) {
+    errors.push(`edge ${e.diseaseId}↔${e.findingId}: evokingStrength out of [-1,1]`)
   }
   const key = e.diseaseId + '|' + e.findingId
   if (seenEdge.has(key)) errors.push(`edge: duplicate ${e.diseaseId}↔${e.findingId}`)

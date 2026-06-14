@@ -10,7 +10,9 @@
 const DxEdge = require('../models/DxEdge')
 const DxTest = require('../models/DxTest')
 
-async function suggestNextTests(differential, activeFindings, limit = 5) {
+// performedTestIds: tests already administered this session — skipped so a
+// multi-finding test (e.g. fundus) isn't re-recommended for its other findings.
+async function suggestNextTests(differential, activeFindings, performedTestIds = new Set(), limit = 5) {
   if (!differential || !differential.length) return []
 
   const topIds = differential.slice(0, 6).map(d => d.diseaseId)
@@ -31,9 +33,11 @@ async function suggestNextTests(differential, activeFindings, limit = 5) {
   // For each edge whose finding isn't observed yet, find the test, weight, dedup.
   const byTest = new Map()
   for (const e of edges) {
+    if (!(e.evokingStrength > 0)) continue          // refuting (≤0) edges don't drive test choice
     if (activeFindings.has(e.findingId)) continue
     const test = findingToTest[e.findingId]
-    if (!test || !test.availableInClinic) continue
+    if (!test) continue
+    if (performedTestIds.has(test._id)) continue     // don't re-suggest a test already done
 
     const diseaseObj = differential.find(d => d.diseaseId === e.diseaseId)
     const rfMultiplier = diseaseObj?.isRedFlagCandidate ? 1.5 : 1.0
@@ -56,9 +60,13 @@ async function suggestNextTests(differential, activeFindings, limit = 5) {
     }
   }
 
-  return Array.from(byTest.values())
-    .sort((a, b) => b.expectedUtility - a.expectedUtility)
-    .slice(0, limit)
+  // Surface in-clinic tests first (up to `limit`), then a few "order / refer"
+  // tests (availableInClinic:false) so gold-standard external workups — e.g.
+  // ESR+CRP for GCA — are never silently dropped. The UI groups by availableInClinic.
+  const all = Array.from(byTest.values()).sort((a, b) => b.expectedUtility - a.expectedUtility)
+  const inClinic = all.filter(t => t.availableInClinic).slice(0, limit)
+  const referral = all.filter(t => !t.availableInClinic).slice(0, 3)
+  return [...inClinic, ...referral]
 }
 
 module.exports = { suggestNextTests }

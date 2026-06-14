@@ -11,8 +11,8 @@
     "services": ["pressure"],
     "candidateDiseases": ["d-acute-angle-closure"],
     "urgency": "emergency",
-    "actionGuidance": "Cấp cứu. Đo nhãn áp ngay, soi góc tiền phòng. Hạ nhãn áp khẩn (acetazolamide đường uống/IV, thuốc nhỏ hạ nhãn áp), tránh thuốc giãn đồng tử. Chuyển/khám BS chuyên glôcôm để LPI laser ngay khi nhãn áp xuống.",
-    "actionGuidanceEn": "Emergency. Measure IOP and perform gonioscopy. Lower IOP urgently (oral/IV acetazolamide + topical IOP-lowering); avoid mydriatics. Refer to glaucoma specialist for LPI as soon as IOP drops."
+    "actionGuidance": "💊 ĐIỀU TRỊ NGAY (không chờ xét nghiệm): hạ nhãn áp khẩn — acetazolamide uống/IV + thuốc nhỏ hạ nhãn áp (chẹn beta, pilocarpine), tránh thuốc giãn đồng tử. Sau đó xác nhận: đo nhãn áp + soi góc tiền phòng. Chuyển BS glôcôm để LPI laser ngay khi nhãn áp xuống.",
+    "actionGuidanceEn": "💊 TREAT NOW (don't wait for tests): lower IOP urgently — oral/IV acetazolamide + topical IOP-lowering (beta-blocker, pilocarpine); avoid mydriatics. Then confirm: measure IOP + gonioscopy. Refer to glaucoma specialist for LPI as soon as IOP drops."
   },
   {
     "_id": "rf-retinal-detachment",
@@ -57,8 +57,8 @@
     "services": ["vascular", "immune", "transport"],
     "candidateDiseases": ["d-gca", "d-naion", "d-rao"],
     "urgency": "emergency",
-    "actionGuidance": "Cấp cứu. Xét nghiệm ESR + CRP ngay. BẮT ĐẦU corticoid liều cao (methylprednisolone IV 1g x 3 ngày, sau đó prednisolone uống) NGAY trong khi chờ kết quả — không trì hoãn. Sinh thiết động mạch thái dương sớm (trong 1-2 tuần, vẫn dương tính dù đã dùng steroid). Mục tiêu: cứu mắt còn lại.",
-    "actionGuidanceEn": "Emergency. Order ESR + CRP immediately. START high-dose steroids (IV methylprednisolone 1g x 3 days, then oral prednisolone) WHILE AWAITING results — do not delay. Temporal artery biopsy within 1-2 weeks (still positive after steroid started). Goal: save the fellow eye."
+    "actionGuidance": "💊 ĐIỀU TRỊ NGAY (không chờ KQ): BẮT ĐẦU corticoid liều cao — methylprednisolone IV 1g x 3 ngày, sau đó prednisolone uống. Đồng thời xét nghiệm ESR + CRP ngay; sinh thiết động mạch thái dương trong 1-2 tuần (vẫn dương tính dù đã dùng steroid). Mục tiêu: cứu mắt còn lại.",
+    "actionGuidanceEn": "💊 TREAT NOW (don't wait for results): START high-dose steroids — IV methylprednisolone 1g x 3 days, then oral prednisolone. In parallel order ESR + CRP immediately; temporal artery biopsy within 1-2 weeks (still positive after steroid started). Goal: save the fellow eye."
   },
   {
     "_id": "rf-naion",

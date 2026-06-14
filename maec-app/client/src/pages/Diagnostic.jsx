@@ -21,7 +21,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api, {
-  dxParseComplaint, dxCreateSession, dxGetSession, dxUpdateComplaint,
+  dxParseComplaint, dxParseTestResult, dxCreateSession, dxGetSession, dxUpdateComplaint,
   dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments,
 } from '../api'
 import { useLanguage } from '../context/LanguageContext'
@@ -781,8 +781,10 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
   // Superseded rows (a re-entered measurement) are kept for audit but excluded here.
   const liveObs = useMemo(() => observations.filter(o => !o.amended && !o.supersededBy), [observations])
   const observedFindings = useMemo(() => new Set(liveObs.map(o => o.findingId).filter(Boolean)), [liveObs])
-  const hero = tests[0]
-  const rest = tests.slice(1)
+  const inClinic = tests.filter(t => t.availableInClinic !== false)
+  const referral = tests.filter(t => t.availableInClinic === false)
+  const hero = inClinic[0]
+  const rest = inClinic.slice(1)
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500">
@@ -816,6 +818,25 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
                   busy={busy}
                 />
               ))}
+            </div>
+          )}
+          {/* Gold-standard tests not done in-clinic — order or refer; result can
+              still be entered when it comes back. */}
+          {referral.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-dashed border-gray-200">
+              <div className="text-xs font-semibold text-amber-700 mb-1.5">↗ {tr('Cần chỉ định / chuyển (ngoài phòng khám)')}</div>
+              <div className="space-y-1.5">
+                {referral.map(t => (
+                  <TestCard
+                    key={t.testId}
+                    t={t}
+                    isHero={false}
+                    observedFindings={observedFindings}
+                    onAddObservation={onAddObservation}
+                    busy={busy}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </>
@@ -888,7 +909,30 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
   useEffect(() => { setPicked(manualFindings[0] || '') }, [t.testId])
   async function submitFinding() {
     if (!picked) return
-    await onAddObservation({ findingId: picked, eye, source: 'manual' })
+    await onAddObservation({ findingId: picked, eye, source: 'manual', testId: t.testId })
+  }
+
+  // Free-text result → AI parse → reviewable suggested findings (clinician confirms).
+  const [desc, setDesc] = useState('')
+  const [descParsing, setDescParsing] = useState(false)
+  const [descErr, setDescErr] = useState('')
+  const [parsed, setParsed] = useState([])   // [{findingId, eye, confidence}]
+  async function runResultParser() {
+    if (!desc.trim()) return
+    setDescParsing(true); setDescErr(''); setParsed([])
+    try {
+      const r = await dxParseTestResult(t.testId, desc.trim())
+      setParsed(r.findings || [])
+      if (!(r.findings || []).length) setDescErr(r.explanationVi || 'AI không tìm thấy dấu hiệu nào trong mô tả.')
+    } catch (err) {
+      setDescErr(err.response?.data?.code === 'LLM_NOT_CONFIGURED'
+        ? 'Trình phân tích AI chưa được cấu hình. Vui lòng chọn dấu hiệu thủ công.'
+        : (err.response?.data?.error || err.message))
+    } finally { setDescParsing(false) }
+  }
+  async function addParsed(f) {
+    await onAddObservation({ findingId: f.findingId, eye: f.eye || eye, source: 'llm_assisted', testId: t.testId })
+    setParsed(ps => ps.filter(x => x !== f))
   }
 
   const wrap = isHero
@@ -901,6 +945,7 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
       <div className="flex items-center gap-2">
         {isHero && <span className="text-blue-600 text-sm font-semibold">{tr('⭐ Ưu tiên')}</span>}
         <span className={`flex-1 ${isHero ? 'text-base font-semibold' : 'text-sm font-medium'} text-gray-800`}>{pickLang(t, lang)}</span>
+        {t.availableInClinic === false && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">{tr('↗ chuyển')}</span>}
         <span className="text-xs text-gray-500 font-mono">{t.svcCode}</span>
         <span className="text-xs font-mono text-gray-600 w-12 text-right">{t.expectedUtility.toFixed(2)}</span>
         <button onClick={() => setOpen(!open)}
@@ -970,6 +1015,36 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
               </div>
               <button onClick={submitFinding} disabled={busy || !picked}
                 className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">{tr('Lưu dấu hiệu')}</button>
+
+              {/* Free-text result → AI → reviewable findings (clinician confirms each). */}
+              <div className="pt-2 mt-1 border-t border-dashed border-gray-200 space-y-1.5">
+                <textarea value={desc} onChange={e => setDesc(e.target.value)}
+                  placeholder={tr('Mô tả kết quả khám (tự do)...')}
+                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs h-14 focus:border-purple-400 focus:outline-none" />
+                <button onClick={runResultParser} disabled={descParsing || !desc.trim()}
+                  className="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">
+                  {descParsing ? tr('⏳ Đang phân tích KQ...') : tr('✨ Phân tích KQ bằng AI')}
+                </button>
+                {descErr && <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-1.5">{descErr}</div>}
+                {parsed.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{tr('AI gợi ý — bấm để thêm dấu hiệu:')}</span>
+                      <button onClick={() => parsed.slice().forEach(addParsed)} disabled={busy}
+                        className="text-[11px] text-blue-600 hover:underline">{tr('Thêm tất cả')}</button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {parsed.map((f, i) => (
+                        <button key={i} onClick={() => addParsed(f)} disabled={busy}
+                          className={`text-xs px-2 py-1 rounded border border-purple-300 hover:bg-purple-50 ${f.confidence === 'low' ? 'opacity-60' : ''}`}
+                          title={`confidence: ${f.confidence}`}>
+                          + {f.findingId}{f.eye ? ` (${f.eye})` : ''} {f.confidence !== 'high' && <span className="text-amber-600">?</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

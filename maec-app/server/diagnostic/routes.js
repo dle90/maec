@@ -11,6 +11,7 @@ const { requireAuth } = require('../middleware/auth')
 const { runDiagnostic, DISCLAIMER } = require('./engine/orchestrator')
 const { deriveFromMeasurement } = require('./engine/deriveFindings')
 const { parseComplaint } = require('./llm/parseComplaint')
+const { parseTestResult } = require('./llm/parseTestResult')
 
 const DxSession = require('./models/DxSession')
 const DxService = require('./models/DxService')
@@ -48,6 +49,21 @@ router.post('/parse-complaint', requireAuth, async (req, res) => {
       error: err.message,
       code: err.code || 'PARSE_FAILED',
     })
+  }
+})
+
+// POST /api/diagnostic/parse-test-result
+// Body: { testId, text } — free-text result for a qualitative test (slit-lamp,
+// fundus, OCT…) → finding tags scoped to that test. Clinician reviews before the
+// chips become observations. Returns 503 if the LLM key isn't configured.
+router.post('/parse-test-result', requireAuth, async (req, res) => {
+  const { testId, text } = req.body || {}
+  try {
+    const result = await parseTestResult(testId, text)
+    res.json(result)
+  } catch (err) {
+    const status = err.status || 500
+    res.status(status).json({ error: err.message, code: err.code || 'PARSE_FAILED' })
   }
 })
 
@@ -147,11 +163,12 @@ router.post('/sessions/:id/observations', requireAuth, async (req, res) => {
     }
     session.observations.push(...rows)
   } else {
-    // Shape A — legacy direct finding.
-    const { findingId, eye, value, unit, flag, source } = body
+    // Shape A — direct finding (manual sign chip). testId optional, recorded so
+    // the suggester knows this test was performed.
+    const { findingId, eye, value, unit, flag, source, testId } = body
     if (!findingId) return res.status(400).json({ error: 'either findingId or { testId, measurements } is required' })
     session.observations.push({
-      at, findingId, eye: eye || null, value, unit, flag,
+      at, findingId, eye: eye || null, value, unit, flag, testId,
       source: source || 'manual', enteredBy,
     })
   }

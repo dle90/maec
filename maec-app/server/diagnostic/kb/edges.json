@@ -317,5 +317,11 @@
   { "diseaseId": "d-amblyopia", "findingId": "reduced_stereopsis", "frequency": 0.7, "evokingStrength": 0.5 },
   { "diseaseId": "d-myopia", "findingId": "long_eye", "frequency": 0.6, "evokingStrength": 0.4 },
   { "diseaseId": "d-retinal-detachment", "findingId": "long_eye", "frequency": 0.3, "evokingStrength": 0.3 },
-  { "diseaseId": "d-acute-angle-closure", "findingId": "short_eye", "frequency": 0.5, "evokingStrength": 0.4 }
+  { "diseaseId": "d-acute-angle-closure", "findingId": "short_eye", "frequency": 0.5, "evokingStrength": 0.4 },
+
+  { "diseaseId": "d-hyperopia", "findingId": "refractive_myopia", "frequency": 1.0, "evokingStrength": -0.7 },
+  { "diseaseId": "d-myopia", "findingId": "refractive_hyperopia", "frequency": 1.0, "evokingStrength": -0.7 },
+  { "diseaseId": "d-myopia", "findingId": "pinhole_no_improvement", "frequency": 0.8, "evokingStrength": -0.5 },
+  { "diseaseId": "d-hyperopia", "findingId": "pinhole_no_improvement", "frequency": 0.8, "evokingStrength": -0.5 },
+  { "diseaseId": "d-astigmatism", "findingId": "pinhole_no_improvement", "frequency": 0.8, "evokingStrength": -0.4 }
 ]

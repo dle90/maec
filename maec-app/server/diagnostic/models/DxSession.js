@@ -53,10 +53,11 @@ const dxSessionSchema = new mongoose.Schema({
     value: mongoose.Schema.Types.Mixed,
     unit: String,
     flag: String,
+    testId: String,           // the test this observation came from (manual sign entry)
     measurementKey: String,   // set on a raw measurement row (e.g. 'sphere')
     derivedFrom: String,      // set on a derived finding row: "<testId>:<key>"
     enteredBy: String,
-    source: { type: String, enum: ['manual', 'device', 'patient', 'import', 'derived'], default: 'manual' },
+    source: { type: String, enum: ['manual', 'device', 'patient', 'import', 'derived', 'llm_assisted'], default: 'manual' },
     amended: { type: Boolean, default: false },
     supersededBy: String,
   }],
