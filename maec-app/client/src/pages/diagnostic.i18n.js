@@ -19,6 +19,11 @@ export const EN = {
     'Decision support only — the clinician is responsible for the final diagnosis and treatment.',
   'Bắt đầu phiên mới? Phiên hiện tại đã lưu trong hệ thống.': 'Start a new session? The current one is already saved.',
 
+  // blank / routine check-up ready-state
+  '🟢 Trợ lý sẵn sàng': '🟢 Assistant ready',
+  'Chưa có triệu chứng hay dấu hiệu bất thường — với khám định kỳ thì đây là bình thường, không có gì để cảnh báo. Thêm triệu chứng ở khung trên khi có; khi khám phát hiện dấu hiệu bất thường (vd. nhãn áp cao, tổn thương đáy mắt) trợ lý sẽ tự đưa ra gợi ý chẩn đoán.':
+    'No symptoms or abnormal findings yet — for a routine check-up this is normal, nothing to flag. Add a symptom above if one emerges; when the exam turns up an abnormal finding (e.g. high IOP, a fundus lesion) the assistant will surface diagnostic suggestions automatically.',
+
   // complaint form
   '1. Lý do đến khám (tiếng Việt tự do)': '1. Chief complaint (free text)',
   '2. Triệu chứng': '2. Symptoms',

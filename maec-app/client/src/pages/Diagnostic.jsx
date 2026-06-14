@@ -222,6 +222,16 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
     setError('')
   }
 
+  // A "blank" session: analysis ran but there is nothing to act on yet — no exam
+  // findings entered, no candidates, no red flags. Common for a routine check-up of
+  // an asymptomatic patient. Show a friendly ready-state instead of a stack of empty
+  // panels (the next-tests panel otherwise shows a misleading "enough info" note).
+  const liveObsCount = (session?.observations || []).filter(o => !o.amended && !o.supersededBy).length
+  const isBlank = !!session && !session.clinicianOutcome?.closedAt
+    && (session.differential || []).length === 0
+    && (session.redFlags || []).length === 0
+    && liveObsCount === 0
+
   return (
     <div className="space-y-4">
       <Header
@@ -251,19 +261,30 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
             onExclude={handleExcludeRedFlag}
             outcomeClosed={!!session.clinicianOutcome?.closedAt}
           />
-          <NextTestsPanel
-            tests={session.recommendedNextTests || []}
-            observations={session.observations || []}
-            onAddObservation={handleAddObservation}
-            busy={busy}
-          />
-          <DifferentialPanel
-            sessionId={session._id}
-            differential={session.differential || []}
-            outcome={session.clinicianOutcome}
-            onConfirm={handleConfirmOutcome}
-            busy={busy}
-          />
+          {isBlank ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm">
+              <div className="font-medium text-emerald-800 mb-1">{tr('🟢 Trợ lý sẵn sàng')}</div>
+              <p className="text-emerald-700">
+                {tr('Chưa có triệu chứng hay dấu hiệu bất thường — với khám định kỳ thì đây là bình thường, không có gì để cảnh báo. Thêm triệu chứng ở khung trên khi có; khi khám phát hiện dấu hiệu bất thường (vd. nhãn áp cao, tổn thương đáy mắt) trợ lý sẽ tự đưa ra gợi ý chẩn đoán.')}
+              </p>
+            </div>
+          ) : (
+            <>
+              <NextTestsPanel
+                tests={session.recommendedNextTests || []}
+                observations={session.observations || []}
+                onAddObservation={handleAddObservation}
+                busy={busy}
+              />
+              <DifferentialPanel
+                sessionId={session._id}
+                differential={session.differential || []}
+                outcome={session.clinicianOutcome}
+                onConfirm={handleConfirmOutcome}
+                busy={busy}
+              />
+            </>
+          )}
           <OutcomePanel
             session={session}
             onConfirm={handleConfirmOutcome}
