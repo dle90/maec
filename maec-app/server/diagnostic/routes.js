@@ -51,6 +51,24 @@ router.post('/parse-complaint', requireAuth, async (req, res) => {
   }
 })
 
+// Merge a fresh engine result into the session: preserve clinician red-flag
+// exclusions and never silently drop a previously-fired flag (safety).
+function applyEngineResult(session, result) {
+  const excludedById = Object.fromEntries(
+    (session.redFlags || []).filter(rf => rf.excludedAt).map(rf => [rf.redFlagId, rf])
+  )
+  const merged = result.redFlags.map(rf =>
+    excludedById[rf.redFlagId] ? { ...rf, ...excludedById[rf.redFlagId] } : rf
+  )
+  for (const prev of session.redFlags || []) {
+    if (!merged.find(m => m.redFlagId === prev.redFlagId)) merged.push(prev)
+  }
+  session.redFlags = merged
+  session.differential = result.differential
+  session.recommendedNextTests = result.recommendedNextTests
+  session.updatedAt = nowIso()
+}
+
 // ── Sessions ────────────────────────────────────────────────
 
 // POST /api/diagnostic/sessions
@@ -141,25 +159,29 @@ router.post('/sessions/:id/observations', requireAuth, async (req, res) => {
   // The engine reasons only over live (non-superseded) observations.
   const live = session.observations.filter(o => !o.amended && !o.supersededBy)
   const result = await runDiagnostic(session.complaint, live)
-  // Preserve any clinician-excluded red-flags rather than dropping them.
-  const excludedById = Object.fromEntries(
-    (session.redFlags || [])
-      .filter(rf => rf.excludedAt)
-      .map(rf => [rf.redFlagId, rf])
-  )
-  const merged = result.redFlags.map(rf =>
-    excludedById[rf.redFlagId] ? { ...rf, ...excludedById[rf.redFlagId] } : rf
-  )
-  // Re-include previously-triggered red-flags that no longer fire — they keep
-  // their excludedAt or stay live (safety: never silently drop a fired flag).
-  for (const prev of session.redFlags || []) {
-    if (!merged.find(m => m.redFlagId === prev.redFlagId)) merged.push(prev)
-  }
+  applyEngineResult(session, result)
+  await session.save()
+  res.json(session)
+})
 
-  session.redFlags = merged
-  session.differential = result.differential
-  session.recommendedNextTests = result.recommendedNextTests
-  session.updatedAt = nowIso()
+// POST /api/diagnostic/sessions/:id/complaint
+// Replace the complaint on an OPEN session and re-run the engine — lets the
+// clinician add/adjust symptoms revealed during the exam without losing
+// observations or the outcome-in-progress. Observations are preserved.
+router.post('/sessions/:id/complaint', requireAuth, async (req, res) => {
+  const { complaint } = req.body || {}
+  if (!complaint || typeof complaint !== 'object') {
+    return res.status(400).json({ error: 'complaint is required' })
+  }
+  const session = await DxSession.findById(req.params.id)
+  if (!session) return res.status(404).json({ error: 'session not found' })
+  if (session.clinicianOutcome?.closedAt) {
+    return res.status(409).json({ error: 'session already closed' })
+  }
+  session.complaint = complaint
+  const live = session.observations.filter(o => !o.amended && !o.supersededBy)
+  const result = await runDiagnostic(complaint, live)
+  applyEngineResult(session, result)
   await session.save()
   res.json(session)
 })

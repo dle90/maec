@@ -21,7 +21,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api, {
-  dxParseComplaint, dxCreateSession, dxGetSession,
+  dxParseComplaint, dxCreateSession, dxGetSession, dxUpdateComplaint,
   dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments,
 } from '../api'
 
@@ -57,31 +57,41 @@ const SEVERITY = {
   pain:    [['mild', 'Nhẹ'], ['moderate', 'Vừa'], ['severe', 'Dữ dội']],
   redness: [['mild', 'Nhẹ'], ['moderate', 'Vừa'], ['severe', 'Nặng']],
 }
-const ONSET_OPTS = [['unknown', '— Khởi phát —'], ['sudden', 'Đột ngột'], ['subacute', 'Bán cấp'], ['gradual', 'Từ từ']]
+// Per-row onset ladder (each symptom carries its own onset now).
+const ONSET_ROW = [['sudden', 'Cấp'], ['subacute', 'Bán cấp'], ['gradual', 'Từ từ']]
 const ONSET_RANK = { unknown: 0, gradual: 1, subacute: 2, sudden: 3 }
+const SEV_RANK = { unknown: 0, none: 0, mild: 1, moderate: 2, severe: 3 }
 const EYE_TOGGLE = ['OD', 'OS', 'OU']
 
-// Assemble the engine-facing complaint from the symptom rows. Keeps the flat
-// `symptoms[]` + qualifiers the engine reads, AND a structured per-eye
-// `symptomDetails[]` for display / record / future per-eye reasoning.
-function buildComplaintFromRows(rows, onsetGlobal, text, patientContext) {
+// Tiền sử / bối cảnh quick-pick catalogs (free additions allowed via the "+" input).
+const SYSTEMIC_CHIPS  = ['Đái tháo đường', 'Tăng huyết áp', 'Bệnh tuyến giáp', 'Bệnh tự miễn']
+const MED_CHIPS       = ['Chống đông', 'Corticoid', 'Thuốc hạ nhãn áp']
+const FAMILY_CHIPS    = ['Glôcôm', 'Thoái hóa hoàng điểm', 'Lác / nhược thị']
+const DURATION_UNITS  = [['hours', 'giờ'], ['days', 'ngày'], ['weeks', 'tuần'], ['months', 'tháng']]
+const DURATION_TO_DAYS = { hours: 1 / 24, days: 1, weeks: 7, months: 30 }
+
+// Assemble the engine-facing complaint from the symptom rows. The engine reads
+// the flat `symptoms[]` + global qualifiers, so per-row onset/severity is
+// flattened CONSERVATIVELY (most-urgent wins → red flags never missed); the
+// full per-eye/per-symptom detail is preserved in `symptomDetails[]`.
+function buildComplaintFromRows(rows, text, patientContext) {
   const symptoms = []
-  let pain = 'unknown', redness = 'unknown', visionChange = 'unknown'
-  let onset = onsetGlobal || 'unknown'
+  let pain = 'unknown', redness = 'unknown', visionChange = 'unknown', onset = 'unknown'
   const eyes = new Set()
   const symptomDetails = []
   for (const r of rows) {
-    eyes.add(r.eye)
-    symptomDetails.push({ findingId: r.id, eye: r.eye, severity: r.severity || null })
+    if (r.eye) eyes.add(r.eye)
     const cfg = SYMPTOM_BY_ID[r.id]
+    const rowOnset = (r.onset && r.onset !== 'unknown') ? r.onset : (cfg?.impliesOnset || null)
+    symptomDetails.push({ findingId: r.id, eye: r.eye || null, severity: r.severity || null, onset: rowOnset || null })
+    if (rowOnset && ONSET_RANK[rowOnset] > ONSET_RANK[onset]) onset = rowOnset
     if (cfg?.graded === 'pain') {
-      pain = r.severity || 'unknown'
+      if ((SEV_RANK[r.severity] || 0) > (SEV_RANK[pain] || 0)) pain = r.severity || pain
       symptoms.push(r.severity === 'severe' ? 'pain_severe' : r.severity === 'moderate' ? 'pain_severe_or_moderate' : 'pain')
     } else if (cfg?.graded === 'redness') {
-      redness = r.severity || 'unknown'   // qualifier only — no redness finding in the KB
+      if ((SEV_RANK[r.severity] || 0) > (SEV_RANK[redness] || 0)) redness = r.severity || redness  // qualifier only — no redness finding
     } else {
       symptoms.push(r.id)
-      if (cfg?.impliesOnset && ONSET_RANK[cfg.impliesOnset] > ONSET_RANK[onset]) onset = cfg.impliesOnset
       if (cfg?.impliesVision) visionChange = cfg.impliesVision
     }
   }
@@ -121,6 +131,7 @@ export default function Diagnostic() {
   const [patient, setPatient]     = useState(null)   // {patientId, name, dob, gender}
   const [encounterId, setEncId]   = useState(seedEncounter)
   const [session, setSession]     = useState(null)   // engine response, or null before first run
+  const [formKey, setFormKey]     = useState(0)      // bump to reset the (persistent) complaint form
   const [busy, setBusy]           = useState(false)
   const [error, setError]         = useState('')
 
@@ -131,14 +142,19 @@ export default function Diagnostic() {
       .catch(() => {})
   }, [seedPatientId])
 
-  async function handleStart(complaint) {
+  // Single submit path: create the session on first run, then update the open
+  // session's complaint on subsequent runs (so the form stays editable and the
+  // doctor can add symptoms revealed during the exam without losing results).
+  async function handleComplaint(complaint) {
     setBusy(true); setError('')
     try {
-      const result = await dxCreateSession({
-        patientId: patient?.patientId || patient?._id || undefined,
-        encounterId: encounterId || undefined,
-        complaint,
-      })
+      const result = (session && !session.clinicianOutcome?.closedAt)
+        ? await dxUpdateComplaint(session._id, complaint)
+        : await dxCreateSession({
+            patientId: patient?.patientId || patient?._id || undefined,
+            encounterId: encounterId || undefined,
+            complaint,
+          })
       setSession(result)
     } catch (err) {
       setError(err.response?.data?.error || err.message)
@@ -181,6 +197,7 @@ export default function Diagnostic() {
   function handleReset() {
     if (!confirm('Bắt đầu phiên mới? Phiên hiện tại đã lưu trong hệ thống.')) return
     setSession(null)
+    setFormKey(k => k + 1)   // remount the form to clear it
     setError('')
   }
 
@@ -202,9 +219,9 @@ export default function Diagnostic() {
           </div>
         )}
 
-        {!session && (
-          <ComplaintForm onSubmit={handleStart} busy={busy} />
-        )}
+        {/* Complaint form is persistent — stays editable alongside results so new
+            symptoms found during the exam can be added without losing the session. */}
+        <ComplaintForm key={formKey} onSubmit={handleComplaint} busy={busy} hasSession={!!session} />
 
         {session && (
           <>
@@ -324,31 +341,55 @@ function InlinePatientPicker({ onPick }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Complaint form — free text + per-symptom rows (eye + severity) + LLM
+// Complaint form — free text + per-symptom rows (eye + onset + severity) + LLM.
+// Persistent: stays editable after a session exists so the doctor can add a
+// symptom revealed during the exam (onSubmit then re-runs on the open session).
 // ─────────────────────────────────────────────────────────────────
-function ComplaintForm({ onSubmit, busy }) {
+function ComplaintForm({ onSubmit, busy, hasSession }) {
   const [text, setText]   = useState('')
-  const [rows, setRows]   = useState([])        // [{ id, label, graded, eye, severity }]
-  const [onset, setOnset] = useState('unknown')
+  const [rows, setRows]   = useState([])        // [{ key, id, label, graded, eye, severity, onset }]
   const [age, setAge]     = useState('')
   const [sex, setSex]     = useState('unknown')
   const [cl, setCL]       = useState(null)       // null | true | false
   const [trauma, setTrauma] = useState(null)
   const [postOp, setPostOp] = useState(null)
+  const [pregnant, setPregnant] = useState(null)
+  const [smoker, setSmoker] = useState(null)
+  const [systemic, setSystemic] = useState([])
+  const [meds, setMeds]   = useState([])
+  const [family, setFamily] = useState([])
+  const [durVal, setDurVal]   = useState('')
+  const [durUnit, setDurUnit] = useState('days')
   const [parsing, setParsing] = useState(false)
   const [parseInfo, setParseInfo] = useState(null)
   const [parseErr, setParseErr]   = useState('')
+  const keyCtr = useRef(0)
 
-  const activeIds = new Set(rows.map(r => r.id))
-
-  function toggleSymptom(id) {
-    setRows(rs => {
-      if (rs.some(r => r.id === id)) return rs.filter(r => r.id !== id)
-      const cfg = SYMPTOM_BY_ID[id] || { id, label: id }
-      return [...rs, { id, label: cfg.label, graded: cfg.graded || null, eye: 'OU', severity: cfg.graded ? 'moderate' : null }]
-    })
+  const newRow = (id, { eye = 'OU', severity, onset } = {}) => {
+    const cfg = SYMPTOM_BY_ID[id] || { id, label: id }
+    return {
+      key: `r${keyCtr.current++}`, id, label: cfg.label, graded: cfg.graded || null,
+      eye, severity: severity ?? (cfg.graded ? 'moderate' : null),
+      onset: onset ?? (cfg.impliesOnset || 'unknown'),
+    }
   }
-  const updateRow = (id, patch) => setRows(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r))
+  const addRow    = (id) => setRows(rs => [...rs, newRow(id)])
+  const removeRow = (key) => setRows(rs => rs.filter(r => r.key !== key))
+  const updateRow = (key, patch) => setRows(rs => rs.map(r => r.key === key ? { ...r, ...patch } : r))
+  const countOf   = (id) => rows.filter(r => r.id === id).length
+
+  function buildContext() {
+    return {
+      ageYears: age ? Number(age) : null,
+      sex,
+      isContactLensWearer: cl,
+      recentTrauma: trauma,
+      recentIntraocularSurgeryOrInjection: postOp,
+      pregnantOrLactating: sex === 'F' ? pregnant : null,
+      smoker,
+      systemic, medications: meds, familyHistory: family, allergies: [],
+    }
+  }
 
   async function runParser() {
     if (!text.trim()) return
@@ -357,22 +398,23 @@ function ComplaintForm({ onSubmit, busy }) {
       const result = await dxParseComplaint(text.trim())
       const c = result.complaint
       const eye = c.eyeAffected && c.eyeAffected !== 'unknown' ? c.eyeAffected : 'OU'
-      const byId = Object.fromEntries(rows.map(r => [r.id, r]))   // preserve what the doctor already entered
-      const addRow = (id, severity) => {
-        if (byId[id]) return
-        const cfg = SYMPTOM_BY_ID[id] || { id, label: id }
-        byId[id] = { id, label: cfg.label, graded: cfg.graded || null, eye, severity: cfg.graded ? (severity || 'moderate') : null }
+      const onset = c.onset && c.onset !== 'unknown' ? c.onset : undefined
+      const have = new Set(rows.map(r => r.id))   // don't double-add symptoms already present
+      const added = []
+      const addRowParsed = (id, severity) => {
+        if (have.has(id)) return
+        have.add(id)
+        added.push(newRow(id, { eye, severity, onset }))
       }
       for (const tag of c.symptoms || []) {
-        if (tag === 'pain_severe') addRow('pain', 'severe')
-        else if (tag === 'pain_severe_or_moderate') addRow('pain', 'moderate')
-        else if (tag === 'pain') addRow('pain', c.pain !== 'unknown' ? c.pain : 'mild')
-        else addRow(tag)
+        if (tag === 'pain_severe') addRowParsed('pain', 'severe')
+        else if (tag === 'pain_severe_or_moderate') addRowParsed('pain', 'moderate')
+        else if (tag === 'pain') addRowParsed('pain', c.pain !== 'unknown' ? c.pain : 'mild')
+        else addRowParsed(tag)
       }
-      if (c.pain && !['unknown', 'none'].includes(c.pain)) addRow('pain', c.pain)
-      if (c.redness && !['unknown', 'none'].includes(c.redness)) addRow('redness', c.redness)
-      setRows(Object.values(byId))
-      if (c.onset && c.onset !== 'unknown') setOnset(c.onset)
+      if (c.pain && !['unknown', 'none'].includes(c.pain)) addRowParsed('pain', c.pain)
+      if (c.redness && !['unknown', 'none'].includes(c.redness)) addRowParsed('redness', c.redness)
+      if (added.length) setRows(rs => [...rs, ...added])
       if (c.patientContext?.ageYears) setAge(String(c.patientContext.ageYears))
       if (c.patientContext?.sex && c.patientContext.sex !== 'unknown') setSex(c.patientContext.sex)
       if (typeof c.patientContext?.isContactLensWearer === 'boolean')  setCL(c.patientContext.isContactLensWearer)
@@ -387,13 +429,9 @@ function ComplaintForm({ onSubmit, busy }) {
   }
 
   function submit() {
-    onSubmit(buildComplaintFromRows(rows, onset, text.trim(), {
-      ageYears: age ? Number(age) : null,
-      sex,
-      isContactLensWearer: cl,
-      recentTrauma: trauma,
-      recentIntraocularSurgeryOrInjection: postOp,
-    }))
+    const complaint = buildComplaintFromRows(rows, text.trim(), buildContext())
+    if (durVal && Number(durVal) > 0) complaint.durationDays = Number(durVal) * DURATION_TO_DAYS[durUnit]
+    onSubmit(complaint)
   }
 
   const canRun = rows.length > 0 || text.trim().length > 5
@@ -416,7 +454,7 @@ function ComplaintForm({ onSubmit, busy }) {
           >
             {parsing ? '⏳ Đang phân tích...' : '✨ Phân tích bằng AI'}
           </button>
-          <span className="text-xs text-gray-500">Tự thêm triệu chứng bên dưới. Bác sĩ kiểm tra mắt & mức độ trước khi chạy.</span>
+          <span className="text-xs text-gray-500">Tự thêm triệu chứng bên dưới. Bác sĩ kiểm tra mắt, khởi phát & mức độ trước khi chạy.</span>
         </div>
         {parseErr && <div className="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">{parseErr}</div>}
         {parseInfo && (
@@ -429,43 +467,49 @@ function ComplaintForm({ onSubmit, busy }) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          2. Triệu chứng <span className="text-xs font-normal text-gray-500">— bấm để thêm; ghi rõ mắt & mức độ cho từng triệu chứng</span>
+          2. Triệu chứng <span className="text-xs font-normal text-gray-500">— bấm để thêm (có thể thêm cùng triệu chứng cho 2 mắt); ghi rõ mắt, khởi phát & mức độ từng dòng</span>
         </label>
         <div className="flex flex-wrap gap-2 mb-3">
-          {SYMPTOMS.map(s => (
-            <button
-              key={s.id}
-              onClick={() => toggleSymptom(s.id)}
-              className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                activeIds.has(s.id)
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
-              }`}
-            >{activeIds.has(s.id) ? '✓ ' : '+ '}{s.label}</button>
-          ))}
+          {SYMPTOMS.map(s => {
+            const n = countOf(s.id)
+            return (
+              <button
+                key={s.id}
+                onClick={() => addRow(s.id)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                  n > 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
+                }`}
+              >+ {s.label}{n > 0 && <span className="ml-1 opacity-80">({n})</span>}</button>
+            )
+          })}
         </div>
         {rows.length === 0 ? (
           <div className="text-xs text-gray-400 italic">Chưa chọn triệu chứng nào.</div>
         ) : (
           <div className="space-y-1.5">
             {rows.map(r => (
-              <div key={r.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5 flex-wrap">
-                <span className="text-sm font-medium text-gray-800 w-36 shrink-0">{r.label}</span>
+              <div key={r.key} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5 flex-wrap">
+                <span className="text-sm font-medium text-gray-800 w-32 shrink-0">{r.label}</span>
                 <span className="text-xs text-gray-500">Mắt:</span>
                 {EYE_TOGGLE.map(e => (
-                  <button key={e} onClick={() => updateRow(r.id, { eye: e })}
+                  <button key={e} onClick={() => updateRow(r.key, { eye: e })}
                     className={`text-xs px-2 py-0.5 rounded ${r.eye === e ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{e}</button>
+                ))}
+                <span className="text-xs text-gray-500 ml-2">Khởi phát:</span>
+                {ONSET_ROW.map(([v, l]) => (
+                  <button key={v} onClick={() => updateRow(r.key, { onset: r.onset === v ? 'unknown' : v })}
+                    className={`text-xs px-2 py-0.5 rounded ${r.onset === v ? 'bg-indigo-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{l}</button>
                 ))}
                 {r.graded && (
                   <>
                     <span className="text-xs text-gray-500 ml-2">Mức độ:</span>
                     {SEVERITY[r.graded].map(([v, l]) => (
-                      <button key={v} onClick={() => updateRow(r.id, { severity: v })}
+                      <button key={v} onClick={() => updateRow(r.key, { severity: v })}
                         className={`text-xs px-2 py-0.5 rounded ${r.severity === v ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{l}</button>
                     ))}
                   </>
                 )}
-                <button onClick={() => toggleSymptom(r.id)} className="ml-auto text-gray-400 hover:text-red-500" title="Bỏ">✕</button>
+                <button onClick={() => removeRow(r.key)} className="ml-auto text-gray-400 hover:text-red-500" title="Bỏ">✕</button>
               </div>
             ))}
           </div>
@@ -473,20 +517,28 @@ function ComplaintForm({ onSubmit, busy }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">3. Diễn tiến chung</label>
-        <SelectField value={onset} onChange={setOnset} opts={ONSET_OPTS} />
-        <span className="text-xs text-gray-400 ml-2">Mặc định lấy theo triệu chứng (vd. mất TL đột ngột → đột ngột).</span>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">4. Tiền sử / bối cảnh</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 items-center">
+        <label className="block text-sm font-medium text-gray-700 mb-2">3. Tiền sử / bối cảnh</label>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 items-center mb-3">
           <input type="number" value={age} onChange={e => setAge(e.target.value)}
             placeholder="Tuổi" className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm" />
           <SelectField value={sex} onChange={setSex} opts={[['unknown', '— Giới —'], ['M', 'Nam'], ['F', 'Nữ']]} />
-          <TristateChip label="Đeo CL" value={cl} onChange={setCL} />
+          <div className="flex items-center gap-1">
+            <input type="number" value={durVal} onChange={e => setDurVal(e.target.value)}
+              placeholder="Thời gian bị" className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-24" />
+            <SelectField value={durUnit} onChange={setDurUnit} opts={DURATION_UNITS} />
+          </div>
+          <TristateChip label="Đeo kính tiếp xúc" value={cl} onChange={setCL} />
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-2 mb-3">
           <TristateChip label="Chấn thương gần đây" value={trauma} onChange={setTrauma} />
           <TristateChip label="Mổ/tiêm nội nhãn gần đây" value={postOp} onChange={setPostOp} />
+          <TristateChip label="Hút thuốc" value={smoker} onChange={setSmoker} />
+          {sex === 'F' && <TristateChip label="Có thai / cho con bú" value={pregnant} onChange={setPregnant} />}
+        </div>
+        <div className="space-y-2">
+          <ChipMultiSelect label="Bệnh nền" options={SYSTEMIC_CHIPS} value={systemic} onChange={setSystemic} />
+          <ChipMultiSelect label="Thuốc đang dùng" options={MED_CHIPS} value={meds} onChange={setMeds} />
+          <ChipMultiSelect label="Tiền sử gia đình" options={FAMILY_CHIPS} value={family} onChange={setFamily} />
         </div>
       </div>
 
@@ -496,9 +548,37 @@ function ComplaintForm({ onSubmit, busy }) {
           disabled={busy || !canRun}
           className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium px-5 py-2 rounded-lg text-sm"
         >
-          {busy ? '⏳ Đang chạy...' : 'Chạy phân tích chẩn đoán →'}
+          {busy ? '⏳ Đang chạy...' : hasSession ? '↻ Cập nhật triệu chứng' : 'Chạy phân tích chẩn đoán →'}
         </button>
         {!canRun && <span className="text-xs text-gray-500">Cần chọn ít nhất 1 triệu chứng hoặc nhập mô tả tự do.</span>}
+        {hasSession && canRun && <span className="text-xs text-gray-500">Thêm/bớt triệu chứng rồi cập nhật — kết quả khám phía dưới được giữ nguyên.</span>}
+      </div>
+    </div>
+  )
+}
+
+// Multi-select chips with a free-text "+ thêm" input. value/onChange is a string[].
+function ChipMultiSelect({ label, options, value, onChange }) {
+  const [custom, setCustom] = useState('')
+  const has = (o) => value.includes(o)
+  const toggle = (o) => onChange(has(o) ? value.filter(v => v !== o) : [...value, o])
+  const addCustom = () => { const v = custom.trim(); if (v && !value.includes(v)) onChange([...value, v]); setCustom('') }
+  const customs = value.filter(v => !options.includes(v))
+  return (
+    <div className="flex items-start gap-2 text-xs">
+      <span className="text-gray-600 w-28 shrink-0 pt-1">{label}:</span>
+      <div className="flex flex-wrap gap-1.5 items-center flex-1">
+        {options.map(o => (
+          <button key={o} onClick={() => toggle(o)}
+            className={`px-2 py-0.5 rounded-full border ${has(o) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-200 hover:border-blue-300'}`}>{o}</button>
+        ))}
+        {customs.map(o => (
+          <button key={o} onClick={() => toggle(o)}
+            className="px-2 py-0.5 rounded-full border bg-blue-600 text-white border-blue-600">{o} ✕</button>
+        ))}
+        <input value={custom} onChange={e => setCustom(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom() } }}
+          placeholder="+ thêm" className="border border-gray-200 rounded px-2 py-0.5 w-24" />
       </div>
     </div>
   )

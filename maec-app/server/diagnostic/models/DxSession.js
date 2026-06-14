@@ -27,6 +27,7 @@ const dxSessionSchema = new mongoose.Schema({
       findingId: String,
       eye: { type: String, enum: ['OD', 'OS', 'OU', null], default: null },
       severity: String,
+      onset: { type: String, enum: ['sudden', 'subacute', 'gradual', 'unknown', null], default: null },
     }],
     patientContext: {
       ageYears: Number,
@@ -34,9 +35,12 @@ const dxSessionSchema = new mongoose.Schema({
       isContactLensWearer: Boolean,
       recentTrauma: Boolean,
       recentIntraocularSurgeryOrInjection: Boolean,
+      pregnantOrLactating: Boolean,
+      smoker: Boolean,
       systemic: [String],
       medications: [String],
       familyHistory: [String],
+      allergies: [String],
     },
   },
 
