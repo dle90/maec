@@ -24,6 +24,8 @@ import api, {
   dxParseComplaint, dxCreateSession, dxGetSession, dxUpdateComplaint,
   dxAddObservation, dxExcludeRedFlag, dxConfirmOutcome, dxGetTreatments,
 } from '../api'
+import { useLanguage } from '../context/LanguageContext'
+import { pickLang } from './diagnostic.i18n'
 
 // ── Symptom catalog ──
 // Each symptom is added as a ROW that carries its own eye (OD/OS/OU) and, if
@@ -134,6 +136,7 @@ export default function Diagnostic() {
   const [formKey, setFormKey]     = useState(0)      // bump to reset the (persistent) complaint form
   const [busy, setBusy]           = useState(false)
   const [error, setError]         = useState('')
+  const { t: tr } = useLanguage()
 
   useEffect(() => {
     if (!seedPatientId) return
@@ -195,7 +198,7 @@ export default function Diagnostic() {
   }
 
   function handleReset() {
-    if (!confirm('Bắt đầu phiên mới? Phiên hiện tại đã lưu trong hệ thống.')) return
+    if (!confirm(tr('Bắt đầu phiên mới? Phiên hiện tại đã lưu trong hệ thống.'))) return
     setSession(null)
     setFormKey(k => k + 1)   // remount the form to clear it
     setError('')
@@ -215,7 +218,7 @@ export default function Diagnostic() {
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800">
-            <strong>Lỗi:</strong> {error}
+            <strong>{tr('Lỗi:')}</strong> {error}
           </div>
         )}
 
@@ -251,7 +254,7 @@ export default function Diagnostic() {
         )}
 
         <footer className="text-xs text-gray-500 italic pt-4 border-t border-gray-200">
-          ⚙ {DISCLAIMER_VI}
+          ⚙ {tr(DISCLAIMER_VI)}
         </footer>
       </div>
     </div>
@@ -262,15 +265,16 @@ export default function Diagnostic() {
 // Header: patient picker + encounter id + session id
 // ─────────────────────────────────────────────────────────────────
 function Header({ patient, setPatient, encounterId, setEncId, session, onReset }) {
+  const { t: tr, lang, setLang } = useLanguage()
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3 sticky top-0 z-10">
-      <div className="font-semibold text-lg text-gray-800">Hỗ trợ chẩn đoán</div>
+      <div className="font-semibold text-lg text-gray-800">{tr('Hỗ trợ chẩn đoán')}</div>
       <div className="flex-1 min-w-[260px]">
         {patient ? (
           <div className="flex items-center gap-2 text-sm">
             <span className="font-medium">{patient.name}</span>
             <span className="font-mono text-gray-500 text-xs">{patient.patientId || patient._id}</span>
-            <button onClick={() => setPatient(null)} className="text-xs text-blue-600 hover:underline">Đổi</button>
+            <button onClick={() => setPatient(null)} className="text-xs text-blue-600 hover:underline">{tr('Đổi')}</button>
           </div>
         ) : (
           <InlinePatientPicker onPick={setPatient} />
@@ -279,14 +283,23 @@ function Header({ patient, setPatient, encounterId, setEncId, session, onReset }
       <input
         value={encounterId}
         onChange={e => setEncId(e.target.value)}
-        placeholder="Lượt khám (tuỳ chọn)"
+        placeholder={tr('Lượt khám (tuỳ chọn)')}
         className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-44 font-mono"
         disabled={!!session}
       />
+      {/* EN / VN language toggle (dx assistant only) */}
+      <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+        {['vi', 'en'].map(l => (
+          <button key={l} onClick={() => setLang(l)}
+            className={`px-2.5 py-1.5 ${lang === l ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+            {l === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+          </button>
+        ))}
+      </div>
       {session && (
         <>
           <span className="text-xs text-gray-500 font-mono">{session._id}</span>
-          <button onClick={onReset} className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg">+ Phiên mới</button>
+          <button onClick={onReset} className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg">{tr('+ Phiên mới')}</button>
         </>
       )}
     </div>
@@ -294,6 +307,7 @@ function Header({ patient, setPatient, encounterId, setEncId, session, onReset }
 }
 
 function InlinePatientPicker({ onPick }) {
+  const { t: tr } = useLanguage()
   const [q, setQ]         = useState('')
   const [results, setRes] = useState([])
   const [open, setOpen]   = useState(false)
@@ -321,7 +335,7 @@ function InlinePatientPicker({ onPick }) {
         onChange={e => setQ(e.target.value)}
         onFocus={() => results.length && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="Tìm bệnh nhân (tên / SĐT / mã)..."
+        placeholder={tr('Tìm bệnh nhân (tên / SĐT / mã)...')}
         className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full focus:border-blue-400 focus:ring-2 focus:ring-blue-50 focus:outline-none"
       />
       {loading && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">…</span>}
@@ -346,6 +360,7 @@ function InlinePatientPicker({ onPick }) {
 // symptom revealed during the exam (onSubmit then re-runs on the open session).
 // ─────────────────────────────────────────────────────────────────
 function ComplaintForm({ onSubmit, busy, hasSession }) {
+  const { t: tr } = useLanguage()
   const [text, setText]   = useState('')
   const [rows, setRows]   = useState([])        // [{ key, id, label, graded, eye, severity, onset }]
   const [age, setAge]     = useState('')
@@ -423,7 +438,7 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
       setParseInfo({ confidence: result.confidence, explanationVi: result.explanationVi, dropped: result.droppedUnknownTags })
     } catch (err) {
       const code = err.response?.data?.code
-      if (code === 'LLM_NOT_CONFIGURED') setParseErr('Trình phân tích AI chưa được cấu hình. Vui lòng chọn triệu chứng thủ công bên dưới.')
+      if (code === 'LLM_NOT_CONFIGURED') setParseErr(tr('Trình phân tích AI chưa được cấu hình. Vui lòng chọn triệu chứng thủ công bên dưới.'))
       else setParseErr(err.response?.data?.error || err.message)
     } finally { setParsing(false) }
   }
@@ -439,11 +454,11 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">1. Lý do đến khám (tiếng Việt tự do)</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{tr('1. Lý do đến khám (tiếng Việt tự do)')}</label>
         <textarea
           value={text}
           onChange={e => setText(e.target.value)}
-          placeholder='VD: "Mắt phải đau dữ dội 4 giờ nay, đỏ, thấy quầng sáng quanh đèn, buồn nôn"'
+          placeholder={tr('VD: "Mắt phải đau dữ dội 4 giờ nay, đỏ, thấy quầng sáng quanh đèn, buồn nôn"')}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm h-20 focus:border-blue-400 focus:ring-2 focus:ring-blue-50 focus:outline-none"
         />
         <div className="flex items-center gap-2 mt-2">
@@ -452,22 +467,22 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
             disabled={parsing || !text.trim()}
             className="text-sm bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg"
           >
-            {parsing ? '⏳ Đang phân tích...' : '✨ Phân tích bằng AI'}
+            {parsing ? tr('⏳ Đang phân tích...') : tr('✨ Phân tích bằng AI')}
           </button>
-          <span className="text-xs text-gray-500">Tự thêm triệu chứng bên dưới. Bác sĩ kiểm tra mắt, khởi phát & mức độ trước khi chạy.</span>
+          <span className="text-xs text-gray-500">{tr('Tự thêm triệu chứng bên dưới. Bác sĩ kiểm tra mắt, khởi phát & mức độ trước khi chạy.')}</span>
         </div>
         {parseErr && <div className="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">{parseErr}</div>}
         {parseInfo && (
           <div className={`mt-2 text-xs rounded-lg p-2 ${parseInfo.confidence === 'high' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-blue-50 border border-blue-200 text-blue-800'}`}>
-            <strong>Độ tin cậy: {parseInfo.confidence}.</strong> {parseInfo.explanationVi}
-            {parseInfo.dropped?.length > 0 && <div className="mt-1 text-amber-700">⚠ Bỏ qua tag không hợp lệ: {parseInfo.dropped.join(', ')}</div>}
+            <strong>{tr('Độ tin cậy')}: {parseInfo.confidence}.</strong> {parseInfo.explanationVi}
+            {parseInfo.dropped?.length > 0 && <div className="mt-1 text-amber-700">⚠ {tr('Bỏ qua tag không hợp lệ')}: {parseInfo.dropped.join(', ')}</div>}
           </div>
         )}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          2. Triệu chứng <span className="text-xs font-normal text-gray-500">— bấm để thêm (có thể thêm cùng triệu chứng cho 2 mắt); ghi rõ mắt, khởi phát & mức độ từng dòng</span>
+          {tr('2. Triệu chứng')} <span className="text-xs font-normal text-gray-500">{tr('— bấm để thêm (có thể thêm cùng triệu chứng cho 2 mắt); ghi rõ mắt, khởi phát & mức độ từng dòng')}</span>
         </label>
         <div className="flex flex-wrap gap-2 mb-3">
           {SYMPTOMS.map(s => {
@@ -479,37 +494,37 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
                 className={`px-3 py-1.5 rounded-full text-sm border transition ${
                   n > 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
                 }`}
-              >+ {s.label}{n > 0 && <span className="ml-1 opacity-80">({n})</span>}</button>
+              >+ {tr(s.label)}{n > 0 && <span className="ml-1 opacity-80">({n})</span>}</button>
             )
           })}
         </div>
         {rows.length === 0 ? (
-          <div className="text-xs text-gray-400 italic">Chưa chọn triệu chứng nào.</div>
+          <div className="text-xs text-gray-400 italic">{tr('Chưa chọn triệu chứng nào.')}</div>
         ) : (
           <div className="space-y-1.5">
             {rows.map(r => (
               <div key={r.key} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5 flex-wrap">
-                <span className="text-sm font-medium text-gray-800 w-32 shrink-0">{r.label}</span>
-                <span className="text-xs text-gray-500">Mắt:</span>
+                <span className="text-sm font-medium text-gray-800 w-32 shrink-0">{tr(r.label)}</span>
+                <span className="text-xs text-gray-500">{tr('Mắt:')}</span>
                 {EYE_TOGGLE.map(e => (
                   <button key={e} onClick={() => updateRow(r.key, { eye: e })}
                     className={`text-xs px-2 py-0.5 rounded ${r.eye === e ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{e}</button>
                 ))}
-                <span className="text-xs text-gray-500 ml-2">Khởi phát:</span>
+                <span className="text-xs text-gray-500 ml-2">{tr('Khởi phát:')}</span>
                 {ONSET_ROW.map(([v, l]) => (
                   <button key={v} onClick={() => updateRow(r.key, { onset: r.onset === v ? 'unknown' : v })}
-                    className={`text-xs px-2 py-0.5 rounded ${r.onset === v ? 'bg-indigo-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{l}</button>
+                    className={`text-xs px-2 py-0.5 rounded ${r.onset === v ? 'bg-indigo-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{tr(l)}</button>
                 ))}
                 {r.graded && (
                   <>
-                    <span className="text-xs text-gray-500 ml-2">Mức độ:</span>
+                    <span className="text-xs text-gray-500 ml-2">{tr('Mức độ:')}</span>
                     {SEVERITY[r.graded].map(([v, l]) => (
                       <button key={v} onClick={() => updateRow(r.key, { severity: v })}
-                        className={`text-xs px-2 py-0.5 rounded ${r.severity === v ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{l}</button>
+                        className={`text-xs px-2 py-0.5 rounded ${r.severity === v ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{tr(l)}</button>
                     ))}
                   </>
                 )}
-                <button onClick={() => removeRow(r.key)} className="ml-auto text-gray-400 hover:text-red-500" title="Bỏ">✕</button>
+                <button onClick={() => removeRow(r.key)} className="ml-auto text-gray-400 hover:text-red-500" title={tr('Bỏ')}>✕</button>
               </div>
             ))}
           </div>
@@ -517,14 +532,14 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">3. Tiền sử / bối cảnh</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">{tr('3. Tiền sử / bối cảnh')}</label>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 items-center mb-3">
           <input type="number" value={age} onChange={e => setAge(e.target.value)}
-            placeholder="Tuổi" className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm" />
+            placeholder={tr('Tuổi')} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm" />
           <SelectField value={sex} onChange={setSex} opts={[['unknown', '— Giới —'], ['M', 'Nam'], ['F', 'Nữ']]} />
           <div className="flex items-center gap-1">
             <input type="number" value={durVal} onChange={e => setDurVal(e.target.value)}
-              placeholder="Thời gian bị" className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-24" />
+              placeholder={tr('Thời gian bị')} className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-24" />
             <SelectField value={durUnit} onChange={setDurUnit} opts={DURATION_UNITS} />
           </div>
           <TristateChip label="Đeo kính tiếp xúc" value={cl} onChange={setCL} />
@@ -548,10 +563,10 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
           disabled={busy || !canRun}
           className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium px-5 py-2 rounded-lg text-sm"
         >
-          {busy ? '⏳ Đang chạy...' : hasSession ? '↻ Cập nhật triệu chứng' : 'Chạy phân tích chẩn đoán →'}
+          {busy ? tr('⏳ Đang chạy...') : hasSession ? tr('↻ Cập nhật triệu chứng') : tr('Chạy phân tích chẩn đoán →')}
         </button>
-        {!canRun && <span className="text-xs text-gray-500">Cần chọn ít nhất 1 triệu chứng hoặc nhập mô tả tự do.</span>}
-        {hasSession && canRun && <span className="text-xs text-gray-500">Thêm/bớt triệu chứng rồi cập nhật — kết quả khám phía dưới được giữ nguyên.</span>}
+        {!canRun && <span className="text-xs text-gray-500">{tr('Cần chọn ít nhất 1 triệu chứng hoặc nhập mô tả tự do.')}</span>}
+        {hasSession && canRun && <span className="text-xs text-gray-500">{tr('Thêm/bớt triệu chứng rồi cập nhật — kết quả khám phía dưới được giữ nguyên.')}</span>}
       </div>
     </div>
   )
@@ -559,6 +574,7 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
 
 // Multi-select chips with a free-text "+ thêm" input. value/onChange is a string[].
 function ChipMultiSelect({ label, options, value, onChange }) {
+  const { t: tr } = useLanguage()
   const [custom, setCustom] = useState('')
   const has = (o) => value.includes(o)
   const toggle = (o) => onChange(has(o) ? value.filter(v => v !== o) : [...value, o])
@@ -566,11 +582,11 @@ function ChipMultiSelect({ label, options, value, onChange }) {
   const customs = value.filter(v => !options.includes(v))
   return (
     <div className="flex items-start gap-2 text-xs">
-      <span className="text-gray-600 w-28 shrink-0 pt-1">{label}:</span>
+      <span className="text-gray-600 w-28 shrink-0 pt-1">{tr(label)}:</span>
       <div className="flex flex-wrap gap-1.5 items-center flex-1">
         {options.map(o => (
           <button key={o} onClick={() => toggle(o)}
-            className={`px-2 py-0.5 rounded-full border ${has(o) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-200 hover:border-blue-300'}`}>{o}</button>
+            className={`px-2 py-0.5 rounded-full border ${has(o) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-200 hover:border-blue-300'}`}>{tr(o)}</button>
         ))}
         {customs.map(o => (
           <button key={o} onClick={() => toggle(o)}
@@ -578,30 +594,32 @@ function ChipMultiSelect({ label, options, value, onChange }) {
         ))}
         <input value={custom} onChange={e => setCustom(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom() } }}
-          placeholder="+ thêm" className="border border-gray-200 rounded px-2 py-0.5 w-24" />
+          placeholder={tr('+ thêm')} className="border border-gray-200 rounded px-2 py-0.5 w-24" />
       </div>
     </div>
   )
 }
 
 function SelectField({ value, onChange, opts }) {
+  const { t: tr } = useLanguage()
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
       className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white">
-      {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      {opts.map(([v, l]) => <option key={v} value={v}>{tr(l)}</option>)}
     </select>
   )
 }
 
 function TristateChip({ label, value, onChange }) {
   // null = unknown, true = yes, false = no
+  const { t: tr } = useLanguage()
   return (
     <div className="flex items-center gap-1 text-xs">
-      <span className="text-gray-600">{label}:</span>
+      <span className="text-gray-600">{tr(label)}:</span>
       {[
         [null, '?', value === null],
-        [true, 'Có', value === true],
-        [false, 'Không', value === false],
+        [true, tr('Có'), value === true],
+        [false, tr('Không'), value === false],
       ].map(([v, l, active]) => (
         <button key={String(v)} onClick={() => onChange(v)}
           className={`px-2 py-0.5 rounded ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
@@ -615,6 +633,7 @@ function TristateChip({ label, value, onChange }) {
 // Red-flag panel — sticky banner with exclude flow
 // ─────────────────────────────────────────────────────────────────
 function RedFlagPanel({ redFlags, onExclude, outcomeClosed }) {
+  const { t: tr, lang } = useLanguage()
   const [showExclude, setShowExclude] = useState(null)  // redFlagId being excluded
   const [reason, setReason] = useState('')
 
@@ -631,27 +650,27 @@ function RedFlagPanel({ redFlags, onExclude, outcomeClosed }) {
             <div className="text-2xl">⚠️</div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-bold text-lg">{rf.nameVi || rf.name}</span>
+                <span className="font-bold text-lg">{pickLang(rf, lang)}</span>
                 <span className={`text-xs px-2 py-0.5 rounded border ${URGENCY_LABEL[rf.urgency]?.cls || ''}`}>
-                  {URGENCY_LABEL[rf.urgency]?.label || rf.urgency}
+                  {tr(URGENCY_LABEL[rf.urgency]?.label || rf.urgency)}
                 </span>
               </div>
-              <p className="text-sm">{rf.actionGuidance}</p>
+              <p className="text-sm">{lang === 'en' ? (rf.actionGuidanceEn || rf.actionGuidance) : rf.actionGuidance}</p>
               {!outcomeClosed && (
                 <button onClick={() => { setShowExclude(rf.redFlagId); setReason('') }}
-                  className="mt-2 text-xs text-gray-700 underline hover:no-underline">Loại trừ với lý do →</button>
+                  className="mt-2 text-xs text-gray-700 underline hover:no-underline">{tr('Loại trừ với lý do →')}</button>
               )}
             </div>
           </div>
           {showExclude === rf.redFlagId && (
             <div className="mt-3 pt-3 border-t border-current/20 flex items-center gap-2">
               <input value={reason} onChange={e => setReason(e.target.value)}
-                placeholder="Lý do loại trừ (vd: 'gonioscopy: góc mở')"
+                placeholder={tr("Lý do loại trừ (vd: 'gonioscopy: góc mở')")}
                 className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white" />
               <button onClick={() => { onExclude(rf.redFlagId, reason); setShowExclude(null) }}
                 disabled={!reason.trim()}
-                className="bg-gray-700 hover:bg-gray-800 disabled:bg-gray-300 text-white text-sm px-3 py-1.5 rounded-lg">Loại trừ</button>
-              <button onClick={() => setShowExclude(null)} className="text-sm text-gray-600 hover:underline">Huỷ</button>
+                className="bg-gray-700 hover:bg-gray-800 disabled:bg-gray-300 text-white text-sm px-3 py-1.5 rounded-lg">{tr('Loại trừ')}</button>
+              <button onClick={() => setShowExclude(null)} className="text-sm text-gray-600 hover:underline">{tr('Huỷ')}</button>
             </div>
           )}
         </div>
@@ -659,8 +678,8 @@ function RedFlagPanel({ redFlags, onExclude, outcomeClosed }) {
       {excluded.map(rf => (
         <div key={rf.redFlagId} className="rounded-xl border border-gray-200 bg-gray-50 p-3 opacity-60">
           <div className="text-sm">
-            <span className="line-through font-medium">{rf.nameVi}</span>
-            <span className="ml-2 text-xs text-gray-600">— đã loại trừ: <em>{rf.excludedReason || '(không có lý do)'}</em></span>
+            <span className="line-through font-medium">{pickLang(rf, lang)}</span>
+            <span className="ml-2 text-xs text-gray-600">{tr('— đã loại trừ:')} <em>{rf.excludedReason || tr('(không có lý do)')}</em></span>
           </div>
         </div>
       ))}
@@ -672,6 +691,7 @@ function RedFlagPanel({ redFlags, onExclude, outcomeClosed }) {
 // Differential panel
 // ─────────────────────────────────────────────────────────────────
 function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
+  const { t: tr, lang } = useLanguage()
   const [expanded, setExp] = useState(new Set())
 
   function toggle(id) {
@@ -684,9 +704,9 @@ function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4">
-      <h2 className="text-base font-semibold text-gray-800 mb-3">Chẩn đoán phân biệt</h2>
+      <h2 className="text-base font-semibold text-gray-800 mb-3">{tr('Chẩn đoán phân biệt')}</h2>
       {differential.length === 0 ? (
-        <div className="text-sm text-gray-500 italic">Chưa có ứng cử viên — cần thêm triệu chứng hoặc dữ liệu khám.</div>
+        <div className="text-sm text-gray-500 italic">{tr('Chưa có ứng cử viên — cần thêm triệu chứng hoặc dữ liệu khám.')}</div>
       ) : (
         <div className="space-y-1.5">
           {differential.map((d, i) => {
@@ -699,26 +719,26 @@ function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
                   {(d.services || []).slice(0, 2).map(s => (
                     <span key={s} className={`w-2.5 h-2.5 rounded-full ${SERVICE_DOT[s] || 'bg-gray-400'}`} title={s} />
                   ))}
-                  <span className="flex-1 text-sm font-medium text-gray-800">{d.nameVi || d.name}</span>
+                  <span className="flex-1 text-sm font-medium text-gray-800">{pickLang(d, lang)}</span>
                   {d.isRedFlagCandidate && <span className="text-xs text-orange-700">⚠</span>}
                   <span className="text-xs font-mono text-gray-600 w-12 text-right">{d.score.toFixed(2)}</span>
                   <button onClick={() => toggle(d.diseaseId)}
-                    className="text-xs text-blue-600 hover:underline w-12 text-right">{expanded.has(d.diseaseId) ? '↑' : 'Vì sao?'}</button>
+                    className="text-xs text-blue-600 hover:underline w-12 text-right">{expanded.has(d.diseaseId) ? '↑' : tr('Vì sao?')}</button>
                   {!outcome?.closedAt && (
                     <button onClick={() => onConfirm({ confirmedDiseaseId: d.diseaseId, confirmedDiseaseName: d.nameVi || d.name, accepted: true })}
                       disabled={busy || isConfirmed}
                       className={`text-xs px-2 py-1 rounded ${isConfirmed ? 'bg-green-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>
-                      {isConfirmed ? '✓ Đã xác nhận' : 'Xác nhận'}
+                      {isConfirmed ? tr('✓ Đã xác nhận') : tr('Xác nhận')}
                     </button>
                   )}
                 </div>
                 {expanded.has(d.diseaseId) && (
                   <div className="mt-2 pl-7 text-xs text-gray-600 space-y-1">
-                    <div><strong>Tóm tắt:</strong> {d.summary}</div>
+                    <div><strong>{tr('Tóm tắt:')}</strong> {d.summary}</div>
                     {d.supportingFindings?.length > 0 && (
-                      <div><strong>Bằng chứng:</strong> <span className="font-mono">{d.supportingFindings.join(', ')}</span></div>
+                      <div><strong>{tr('Bằng chứng:')}</strong> <span className="font-mono">{d.supportingFindings.join(', ')}</span></div>
                     )}
-                    <div><strong>Mức độ khẩn:</strong> {URGENCY_LABEL[d.urgency]?.label || d.urgency}</div>
+                    <div><strong>{tr('Mức độ khẩn:')}</strong> {tr(URGENCY_LABEL[d.urgency]?.label || d.urgency)}</div>
                   </div>
                 )}
               </div>
@@ -734,6 +754,7 @@ function DifferentialPanel({ differential, outcome, onConfirm, busy }) {
 // Next tests panel — per-eye observation entry
 // ─────────────────────────────────────────────────────────────────
 function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
+  const { t: tr } = useLanguage()
   // Superseded rows (a re-entered measurement) are kept for audit but excluded here.
   const liveObs = useMemo(() => observations.filter(o => !o.amended && !o.supersededBy), [observations])
   const observedFindings = useMemo(() => new Set(liveObs.map(o => o.findingId).filter(Boolean)), [liveObs])
@@ -743,11 +764,11 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500">
       <div className="flex items-baseline justify-between mb-2">
-        <h2 className="text-base font-semibold text-gray-800">🎯 Bước tiếp theo</h2>
-        <span className="text-xs text-gray-500">Nhập kết quả → danh sách chẩn đoán cập nhật tự động</span>
+        <h2 className="text-base font-semibold text-gray-800">{tr('🎯 Bước tiếp theo')}</h2>
+        <span className="text-xs text-gray-500">{tr('Nhập kết quả → danh sách chẩn đoán cập nhật tự động')}</span>
       </div>
       {tests.length === 0 ? (
-        <div className="text-sm text-gray-500 italic py-2">Đã có đủ thông tin — không cần thêm xét nghiệm. Chuyển sang xác nhận chẩn đoán.</div>
+        <div className="text-sm text-gray-500 italic py-2">{tr('Đã có đủ thông tin — không cần thêm xét nghiệm. Chuyển sang xác nhận chẩn đoán.')}</div>
       ) : (
         <>
           {/* Hero card for the highest-utility test */}
@@ -779,14 +800,14 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
 
       {liveObs.length > 0 && (
         <div className="mt-4 pt-3 border-t border-gray-100">
-          <div className="text-xs font-medium text-gray-600 mb-1">Đã ghi nhận ({liveObs.length}):</div>
+          <div className="text-xs font-medium text-gray-600 mb-1">{tr('Đã ghi nhận')} ({liveObs.length}):</div>
           <div className="space-y-0.5">
             {liveObs.map((o, i) => (
               <div key={i} className="text-xs flex items-center gap-2">
                 <span className="font-mono w-12 text-gray-600">{o.eye || '—'}</span>
                 <span className="flex-1 font-mono">
                   {o.findingId || o.measurementKey}
-                  {o.source === 'derived' && <span className="ml-1 text-blue-500 not-italic">↳ tự suy ra</span>}
+                  {o.source === 'derived' && <span className="ml-1 text-blue-500 not-italic">{tr('↳ tự suy ra')}</span>}
                 </span>
                 {o.value !== undefined && o.value !== null && o.value !== '' && (
                   <span className="text-gray-700">{o.value} {o.unit}</span>
@@ -805,6 +826,7 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
 // values via thresholds); tests with qualitative signs render finding chips. A
 // test can have BOTH (e.g. OCT macula: CMT value + fluid signs).
 function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
+  const { t: tr, lang } = useLanguage()
   const [open, setOpen] = useState(isHero)  // hero auto-expands
 
   // Typed measurement fields (skip computed/derived-only like SE).
@@ -854,13 +876,13 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
   return (
     <div className={wrap}>
       <div className="flex items-center gap-2">
-        {isHero && <span className="text-blue-600 text-sm font-semibold">⭐ Ưu tiên</span>}
-        <span className={`flex-1 ${isHero ? 'text-base font-semibold' : 'text-sm font-medium'} text-gray-800`}>{t.nameVi || t.name}</span>
+        {isHero && <span className="text-blue-600 text-sm font-semibold">{tr('⭐ Ưu tiên')}</span>}
+        <span className={`flex-1 ${isHero ? 'text-base font-semibold' : 'text-sm font-medium'} text-gray-800`}>{pickLang(t, lang)}</span>
         <span className="text-xs text-gray-500 font-mono">{t.svcCode}</span>
         <span className="text-xs font-mono text-gray-600 w-12 text-right">{t.expectedUtility.toFixed(2)}</span>
         <button onClick={() => setOpen(!open)}
           className={`text-xs px-2.5 py-1 rounded ${isHero ? 'bg-blue-600 hover:bg-blue-700 text-white font-medium' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}>
-          {open ? '↑' : '💾 Nhập KQ'}
+          {open ? '↑' : tr('💾 Nhập KQ')}
         </button>
       </div>
       <div className="pl-1 mt-1 text-xs text-gray-500">{t.rationale}</div>
@@ -880,7 +902,7 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
               {measurements.map(m => (
                 <div key={m.key} className="flex items-center gap-2 text-xs">
                   <span className="flex-1 text-gray-700">
-                    {m.labelVi || m.label}{m.unit && <span className="text-gray-400"> ({m.unit})</span>}
+                    {lang === 'en' ? (m.label || m.labelVi) : (m.labelVi || m.label)}{m.unit && <span className="text-gray-400"> ({m.unit})</span>}
                   </span>
                   {(m.perEye === false ? ['OU'] : ['OD', 'OS', 'OU']).map(e => (
                     <input
@@ -898,7 +920,7 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
               <div className="pt-1">
                 <button onClick={submitMeasurements} disabled={busy}
                   className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">
-                  💾 Lưu kết quả
+                  {tr('💾 Lưu kết quả')}
                 </button>
               </div>
             </div>
@@ -907,9 +929,9 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
           {/* ── Qualitative signs (chips) ── */}
           {manualFindings.length > 0 && (
             <div className="space-y-2">
-              {measurements.length > 0 && <div className="text-xs text-gray-500 font-medium">Dấu hiệu quan sát:</div>}
+              {measurements.length > 0 && <div className="text-xs text-gray-500 font-medium">{tr('Dấu hiệu quan sát:')}</div>}
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-gray-600">Mắt:</span>
+                <span className="text-gray-600">{tr('Mắt:')}</span>
                 {['OD', 'OS', 'OU'].map(e => (
                   <button key={e} onClick={() => setEye(e)}
                     className={`px-2 py-0.5 rounded ${eye === e ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>{e}</button>
@@ -924,7 +946,7 @@ function TestCard({ t, isHero, observedFindings, onAddObservation, busy }) {
                 ))}
               </div>
               <button onClick={submitFinding} disabled={busy || !picked}
-                className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">Lưu dấu hiệu</button>
+                className="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg">{tr('Lưu dấu hiệu')}</button>
             </div>
           )}
         </div>
@@ -966,18 +988,20 @@ function useTreatmentVocab() {
   return vocab
 }
 
-// Group an array of treatment tokens by category, ordered, with Vietnamese labels.
-function groupTreatments(tokens, vocab) {
+// Group an array of treatment tokens by category, ordered, with localized labels.
+function groupTreatments(tokens, vocab, lang) {
   const g = {}
   for (const tok of tokens) {
     const meta = vocab[tok] || { nameVi: tok, category: 'supportive' }
     const cat = meta.category || 'supportive'
-    ;(g[cat] = g[cat] || []).push({ tok, nameVi: meta.nameVi || tok })
+    const label = lang === 'en' ? (meta.name || meta.nameVi || tok) : (meta.nameVi || meta.name || tok)
+    ;(g[cat] = g[cat] || []).push({ tok, label })
   }
   return Object.entries(g).sort((a, b) => (TREATMENT_CATEGORY[a[0]]?.order || 99) - (TREATMENT_CATEGORY[b[0]]?.order || 99))
 }
 
 function OutcomePanel({ session, onConfirm, busy }) {
+  const { t: tr, lang } = useLanguage()
   const outcome = session.clinicianOutcome || {}
   const closed = !!outcome.closedAt
   const [notes, setNotes] = useState(outcome.notes || '')
@@ -989,8 +1013,8 @@ function OutcomePanel({ session, onConfirm, busy }) {
   // Confirmed disease's suggested treatments (tokens surfaced on the differential entry).
   const confirmedDx = (session.differential || []).find(d => d.diseaseId === outcome.confirmedDiseaseId)
   const confirmedTreatments = confirmedDx?.treatments || []
-  const grouped = useMemo(() => groupTreatments(confirmedTreatments, vocab), [confirmedTreatments, vocab])
-  const chosenGrouped = useMemo(() => groupTreatments([...(outcome.selectedTreatments || [])], vocab), [outcome.selectedTreatments, vocab])
+  const grouped = useMemo(() => groupTreatments(confirmedTreatments, vocab, lang), [confirmedTreatments, vocab, lang])
+  const chosenGrouped = useMemo(() => groupTreatments([...(outcome.selectedTreatments || [])], vocab, lang), [outcome.selectedTreatments, vocab, lang])
 
   function toggleRx(id) {
     const n = new Set(chosenTreatments)
@@ -1015,35 +1039,35 @@ function OutcomePanel({ session, onConfirm, busy }) {
 
   return (
     <div className={`rounded-xl shadow-sm p-4 ${closed ? 'bg-green-50 border border-green-200' : 'bg-white'}`}>
-      <h2 className="text-base font-semibold text-gray-800 mb-3">Kết luận & điều trị</h2>
+      <h2 className="text-base font-semibold text-gray-800 mb-3">{tr('Kết luận & điều trị')}</h2>
       {outcome.confirmedDiseaseName && (
         <div className="text-sm mb-3">
-          <strong>✓ Chẩn đoán xác nhận:</strong> {outcome.confirmedDiseaseName}
+          <strong>{tr('✓ Chẩn đoán xác nhận:')}</strong> {outcome.confirmedDiseaseName}
           <span className="ml-2 font-mono text-xs text-gray-500">{outcome.confirmedDiseaseId}</span>
         </div>
       )}
       {closed && (
         <div className="text-xs text-gray-600 mb-2">
-          Đã đóng phiên lúc {new Date(outcome.closedAt).toLocaleString('vi-VN')} bởi {outcome.closedBy || '—'}
+          {tr('Đã đóng phiên lúc')} {new Date(outcome.closedAt).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')} · {outcome.closedBy || '—'}
         </div>
       )}
 
       {!closed && grouped.length > 0 && (
         <div className="mb-4">
           <div className="text-sm font-medium text-gray-700 mb-2">
-            Đề xuất điều trị <span className="text-xs font-normal text-gray-500">— chọn nhóm phù hợp; bác sĩ kê đơn cụ thể</span>
+            {tr('Đề xuất điều trị')} <span className="text-xs font-normal text-gray-500">{tr('— chọn nhóm phù hợp; bác sĩ kê đơn cụ thể')}</span>
           </div>
           <div className="space-y-2">
             {grouped.map(([cat, items]) => (
               <div key={cat} className="flex items-start gap-2">
                 <span className="text-xs text-gray-500 w-40 shrink-0 pt-1.5">
-                  {TREATMENT_CATEGORY[cat]?.icon} {TREATMENT_CATEGORY[cat]?.label || cat}
+                  {TREATMENT_CATEGORY[cat]?.icon} {tr(TREATMENT_CATEGORY[cat]?.label || cat)}
                 </span>
                 <div className="flex flex-wrap gap-1.5 flex-1">
-                  {items.map(({ tok, nameVi }) => (
+                  {items.map(({ tok, label }) => (
                     <button key={tok} onClick={() => toggleRx(tok)} title={tok}
                       className={`text-xs px-2.5 py-1 rounded-full border ${chosenTreatments.has(tok) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-300'}`}>
-                      {nameVi}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -1056,37 +1080,37 @@ function OutcomePanel({ session, onConfirm, busy }) {
       {!closed && (
         <>
           <div className="mb-3">
-            <label className="block text-sm text-gray-700 mb-1">Ghi chú</label>
+            <label className="block text-sm text-gray-700 mb-1">{tr('Ghi chú')}</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder="Ghi chú lâm sàng, kế hoạch theo dõi..."
+              placeholder={tr('Ghi chú lâm sàng, kế hoạch theo dõi...')}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm h-20 focus:border-blue-400 focus:ring-2 focus:ring-blue-50 focus:outline-none" />
           </div>
           <div className="flex items-center gap-3 mb-3">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={referred} onChange={e => setReferred(e.target.checked)} />
-              Chuyển khám chuyên khoa
+              {tr('Chuyển khám chuyên khoa')}
             </label>
             {referred && (
               <input value={referredReason} onChange={e => setRefReason(e.target.value)}
-                placeholder="Lý do chuyển"
+                placeholder={tr('Lý do chuyển')}
                 className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm" />
             )}
           </div>
           <button onClick={finalize} disabled={busy}
             className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-medium px-5 py-2 rounded-lg text-sm">
-            {busy ? '⏳ Đang lưu...' : 'Lưu vào hồ sơ & đóng phiên'}
+            {busy ? tr('⏳ Đang lưu...') : tr('Lưu vào hồ sơ & đóng phiên')}
           </button>
         </>
       )}
 
       {closed && chosenGrouped.length > 0 && (
         <div className="mt-3 mb-1">
-          <div className="text-sm font-medium text-gray-700 mb-1.5">Điều trị đã chọn:</div>
+          <div className="text-sm font-medium text-gray-700 mb-1.5">{tr('Điều trị đã chọn:')}</div>
           <div className="space-y-1">
             {chosenGrouped.map(([cat, items]) => (
               <div key={cat} className="flex items-start gap-2 text-sm">
-                <span className="text-xs text-gray-500 w-40 shrink-0 pt-0.5">{TREATMENT_CATEGORY[cat]?.icon} {TREATMENT_CATEGORY[cat]?.label || cat}</span>
-                <span className="flex-1 text-gray-800">{items.map(i => i.nameVi).join(' · ')}</span>
+                <span className="text-xs text-gray-500 w-40 shrink-0 pt-0.5">{TREATMENT_CATEGORY[cat]?.icon} {tr(TREATMENT_CATEGORY[cat]?.label || cat)}</span>
+                <span className="flex-1 text-gray-800">{items.map(i => i.label).join(' · ')}</span>
               </div>
             ))}
           </div>

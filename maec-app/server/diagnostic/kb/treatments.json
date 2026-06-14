@@ -1,856 +1,1027 @@
 [
   {
     "_id": "20_20_20_rule",
+    "name": "20-20-20 rule",
     "nameVi": "Quy tắc 20-20-20",
     "category": "lifestyle"
   },
   {
     "_id": "AREDS2_supplements",
+    "name": "AREDS2 supplements",
     "nameVi": "Bổ sung AREDS2",
     "category": "medication"
   },
   {
     "_id": "CT_orbits_with_contrast",
+    "name": "CT orbits with contrast",
     "nameVi": "CT hốc mắt có cản quang",
     "category": "referral"
   },
   {
     "_id": "ENT_and_ophth_consult",
+    "name": "ENT and ophth consult",
     "nameVi": "Hội chẩn TMH + Mắt",
     "category": "referral"
   },
   {
     "_id": "IOP_lowering",
+    "name": "IOP lowering",
     "nameVi": "Hạ nhãn áp",
     "category": "medication"
   },
   {
     "_id": "IOP_lowering_drops",
+    "name": "IOP lowering drops",
     "nameVi": "Thuốc nhỏ hạ nhãn áp",
     "category": "medication"
   },
   {
     "_id": "IOP_lowering_drops_PGA_first",
+    "name": "IOP-lowering drops (PGA first)",
     "nameVi": "Thuốc hạ nhãn áp (ưu tiên PGA)",
     "category": "medication"
   },
   {
     "_id": "IOP_lowering_drops_if_high_risk",
+    "name": "IOP-lowering drops (if high risk)",
     "nameVi": "Thuốc hạ nhãn áp (nếu nguy cơ cao)",
     "category": "medication"
   },
   {
     "_id": "IOP_lowering_drops_non_PGA_first",
+    "name": "IOP-lowering drops (non-PGA first)",
     "nameVi": "Thuốc hạ nhãn áp (không ưu tiên PGA)",
     "category": "medication"
   },
   {
     "_id": "IOP_lowering_if_high",
+    "name": "IOP lowering if high",
     "nameVi": "Hạ nhãn áp (nếu cao)",
     "category": "medication"
   },
   {
     "_id": "IPL_therapy",
+    "name": "IPL therapy",
     "nameVi": "Liệu pháp ánh sáng xung (IPL)",
     "category": "procedure"
   },
   {
     "_id": "IV_antibiotics_tetanus",
+    "name": "IV antibiotics + tetanus prophylaxis",
     "nameVi": "Kháng sinh TM + phòng uốn ván",
     "category": "systemic"
   },
   {
     "_id": "IV_broad_spectrum_antibiotics",
+    "name": "IV broad spectrum antibiotics",
     "nameVi": "Kháng sinh phổ rộng tĩnh mạch",
     "category": "systemic"
   },
   {
     "_id": "IV_methylprednisolone",
+    "name": "IV methylprednisolone",
     "nameVi": "Methylprednisolone tĩnh mạch",
     "category": "systemic"
   },
   {
     "_id": "MIGS",
+    "name": "MIGS",
     "nameVi": "Phẫu thuật glôcôm xâm lấn tối thiểu (MIGS)",
     "category": "surgery"
   },
   {
     "_id": "MS_disease_modifying_therapy",
+    "name": "MS disease-modifying therapy",
     "nameVi": "Điều trị điều biến bệnh (xơ cứng rải rác)",
     "category": "systemic"
   },
   {
     "_id": "NPO",
+    "name": "NPO",
     "nameVi": "Nhịn ăn uống (NPO)",
     "category": "supportive"
   },
   {
     "_id": "PRP",
+    "name": "PRP",
     "nameVi": "Laser quang đông toàn võng mạc (PRP)",
     "category": "laser"
   },
   {
     "_id": "PRP_for_ischemia",
+    "name": "PRP for ischemia",
     "nameVi": "Laser PRP cho thiếu máu võng mạc",
     "category": "laser"
   },
   {
     "_id": "PRP_laser",
+    "name": "PRP laser",
     "nameVi": "Laser PRP",
     "category": "laser"
   },
   {
     "_id": "PTK_phototherapeutic_keratectomy",
+    "name": "PTK (phototherapeutic keratectomy)",
     "nameVi": "PTK (laser điều trị bề mặt giác mạc)",
     "category": "laser"
   },
   {
     "_id": "SLT_laser",
+    "name": "SLT laser",
     "nameVi": "Laser tạo hình vùng bè (SLT)",
     "category": "laser"
   },
   {
     "_id": "abortive_triptan_or_NSAID",
+    "name": "Abortive triptan or NSAID",
     "nameVi": "Triptan / NSAID cắt cơn",
     "category": "medication"
   },
   {
     "_id": "acetazolamide",
+    "name": "Acetazolamide",
     "nameVi": "Acetazolamide (uống)",
     "category": "medication"
   },
   {
     "_id": "amblyopia_treatment",
+    "name": "Amblyopia treatment",
     "nameVi": "Điều trị nhược thị",
     "category": "procedure"
   },
   {
     "_id": "amniotic_membrane",
+    "name": "Amniotic membrane",
     "nameVi": "Ghép màng ối",
     "category": "procedure"
   },
   {
     "_id": "anterior_stromal_puncture",
+    "name": "Anterior stromal puncture",
     "nameVi": "Chọc nhu mô trước",
     "category": "procedure"
   },
   {
     "_id": "anti_VEGF_injection",
+    "name": "Anti-VEGF injection",
     "nameVi": "Tiêm nội nhãn anti-VEGF",
     "category": "injection"
   },
   {
     "_id": "anti_infective_if_indicated",
+    "name": "anti infective if indicated",
     "nameVi": "Thuốc kháng nhiễm (nếu có chỉ định)",
     "category": "medication"
   },
   {
     "_id": "artificial_tears",
+    "name": "Artificial tears",
     "nameVi": "Nước mắt nhân tạo",
     "category": "medication"
   },
   {
     "_id": "atropine_penalization",
+    "name": "Atropine penalization",
     "nameVi": "Atropine phạt thị (nhược thị)",
     "category": "medication"
   },
   {
     "_id": "avoid_steroid_monotherapy",
+    "name": "Avoid steroid monotherapy",
     "nameVi": "Tránh dùng corticoid đơn độc",
     "category": "medication"
   },
   {
     "_id": "avoid_trigger",
+    "name": "Avoid trigger",
     "nameVi": "Tránh yếu tố khởi phát",
     "category": "lifestyle"
   },
   {
     "_id": "bandage_contact_lens",
+    "name": "Bandage contact lens",
     "nameVi": "Kính tiếp xúc băng (bảo vệ)",
     "category": "contact_lens"
   },
   {
     "_id": "bed_rest_head_elevated",
+    "name": "Bed rest head elevated",
     "nameVi": "Nghỉ ngơi, kê cao đầu",
     "category": "supportive"
   },
   {
     "_id": "bifocal_or_progressive_lenses",
+    "name": "Bifocal / progressive lenses",
     "nameVi": "Kính 2 tròng / đa tròng",
     "category": "spectacles"
   },
   {
     "_id": "blood_pressure_control",
+    "name": "Blood pressure control",
     "nameVi": "Kiểm soát huyết áp",
     "category": "systemic"
   },
   {
     "_id": "botulinum_toxin",
+    "name": "Botulinum toxin",
     "nameVi": "Tiêm botulinum toxin",
     "category": "injection"
   },
   {
     "_id": "chemotherapy",
+    "name": "Chemotherapy",
     "nameVi": "Hóa trị",
     "category": "systemic"
   },
   {
     "_id": "cold_compress",
+    "name": "Cold compress",
     "nameVi": "Chườm lạnh",
     "category": "lifestyle"
   },
   {
     "_id": "complement_inhibitor_injection_for_GA",
+    "name": "Complement inhibitor injection (GA)",
     "nameVi": "Tiêm ức chế bổ thể (teo địa đồ)",
     "category": "injection"
   },
   {
     "_id": "contact_lens_or_secondary_IOL",
+    "name": "Contact lens or secondary IOL",
     "nameVi": "Kính tiếp xúc hoặc IOL thứ phát",
     "category": "contact_lens"
   },
   {
     "_id": "copious_irrigation_until_pH_neutral",
+    "name": "Copious irrigation until pH neutral",
     "nameVi": "Rửa mắt liên tục đến pH trung tính",
     "category": "procedure"
   },
   {
     "_id": "corneal_crosslinking_CXL",
+    "name": "Corneal cross-linking (CXL)",
     "nameVi": "Cross-linking giác mạc (CXL)",
     "category": "procedure"
   },
   {
     "_id": "corneal_culture_then_intensive_fluoroquinolone_or_fortified_antibiotics",
+    "name": "Corneal culture then intensive fluoroquinolone / fortified antibiotics",
     "nameVi": "Cấy giác mạc rồi kháng sinh mạnh",
     "category": "medication"
   },
   {
     "_id": "corneal_transplant",
+    "name": "Corneal transplant",
     "nameVi": "Ghép giác mạc",
     "category": "surgery"
   },
   {
     "_id": "correct_refraction",
+    "name": "Correct refractive error",
     "nameVi": "Chỉnh tật khúc xạ",
     "category": "optical_other"
   },
   {
     "_id": "cryotherapy",
+    "name": "Cryotherapy",
     "nameVi": "Lạnh đông (cryo)",
     "category": "procedure"
   },
   {
     "_id": "csf_shunt_or_optic_nerve_sheath_fenestration",
+    "name": "CSF shunt / optic nerve sheath fenestration",
     "nameVi": "Shunt DNT / mở bao thần kinh thị",
     "category": "surgery"
   },
   {
     "_id": "cycloplegic",
+    "name": "Cycloplegic",
     "nameVi": "Liệt điều tiết (cycloplegic)",
     "category": "medication"
   },
   {
     "_id": "cycloplegic_to_break_synechiae",
+    "name": "Cycloplegic to break synechiae",
     "nameVi": "Liệt điều tiết (phá dính)",
     "category": "medication"
   },
   {
     "_id": "cyclosporine_drops",
+    "name": "Cyclosporine drops",
     "nameVi": "Cyclosporine nhỏ mắt",
     "category": "medication"
   },
   {
     "_id": "cylinder_spectacles",
+    "name": "Cylinder spectacles (astigmatism)",
     "nameVi": "Kính gọng (loạn thị)",
     "category": "spectacles"
   },
   {
     "_id": "emergent_IOP_lowering",
+    "name": "Emergent IOP lowering",
     "nameVi": "Hạ nhãn áp cấp cứu",
     "category": "medication"
   },
   {
     "_id": "emergent_stroke_workup",
+    "name": "Emergent stroke workup",
     "nameVi": "Đánh giá đột quỵ cấp",
     "category": "referral"
   },
   {
     "_id": "endocrinology_for_hormone_secreting_tumour",
+    "name": "Endocrinology for hormone secreting tumour",
     "nameVi": "Chuyển nội tiết (u tiết hormone)",
     "category": "referral"
   },
   {
     "_id": "enucleation_if_advanced",
+    "name": "Enucleation if advanced",
     "nameVi": "Khoét bỏ nhãn cầu (nếu nặng)",
     "category": "surgery"
   },
   {
     "_id": "ergonomic_workstation",
+    "name": "Ergonomic workstation",
     "nameVi": "Bố trí chỗ làm việc hợp lý",
     "category": "lifestyle"
   },
   {
     "_id": "focal_laser",
+    "name": "Focal laser",
     "nameVi": "Laser khu trú",
     "category": "laser"
   },
   {
     "_id": "gene_therapy_RPE65",
+    "name": "Gene therapy (RPE65)",
     "nameVi": "Liệu pháp gen (RPE65)",
     "category": "medication"
   },
   {
     "_id": "glycemic_control",
+    "name": "Glycemic control",
     "nameVi": "Kiểm soát đường huyết",
     "category": "systemic"
   },
   {
     "_id": "high_dose_steroids_immediately",
+    "name": "High dose steroids immediately",
     "nameVi": "Corticoid liều cao ngay lập tức",
     "category": "systemic"
   },
   {
     "_id": "hyperosmotic_drops",
+    "name": "Hyperosmotic drops",
     "nameVi": "Thuốc nhỏ tăng thẩm thấu",
     "category": "medication"
   },
   {
     "_id": "improve_sleep",
+    "name": "Improve sleep",
     "nameVi": "Cải thiện giấc ngủ",
     "category": "lifestyle"
   },
   {
     "_id": "incision_curettage",
+    "name": "Incision curettage",
     "nameVi": "Rạch + nạo",
     "category": "procedure"
   },
   {
     "_id": "incision_drainage_if_persistent",
+    "name": "Incision drainage if persistent",
     "nameVi": "Rạch dẫn lưu (nếu dai dẳng)",
     "category": "procedure"
   },
   {
     "_id": "intra_arterial_chemo",
+    "name": "Intra arterial chemo",
     "nameVi": "Hóa trị nội động mạch",
     "category": "systemic"
   },
   {
     "_id": "intracorneal_ring_segments",
+    "name": "Intracorneal ring segments",
     "nameVi": "Vòng đệm giác mạc (ICRS)",
     "category": "surgery"
   },
   {
     "_id": "intralesional_steroid",
+    "name": "Intralesional steroid",
     "nameVi": "Tiêm corticoid tại tổn thương",
     "category": "injection"
   },
   {
     "_id": "intravitreal_steroid",
+    "name": "Intravitreal steroid",
     "nameVi": "Tiêm corticoid nội nhãn",
     "category": "injection"
   },
   {
     "_id": "laser_for_secondary_tear",
+    "name": "Laser for secondary tear",
     "nameVi": "Laser cho vết rách thứ phát",
     "category": "laser"
   },
   {
     "_id": "laser_or_surgical_if_refractory",
+    "name": "Laser or surgical if refractory",
     "nameVi": "Laser / phẫu thuật nếu kháng trị",
     "category": "surgery"
   },
   {
     "_id": "laser_peripheral_iridotomy",
+    "name": "Laser peripheral iridotomy (LPI)",
     "nameVi": "Laser cắt mống mắt chu biên (LPI)",
     "category": "laser"
   },
   {
     "_id": "laser_photocoagulation",
+    "name": "Laser photocoagulation",
     "nameVi": "Quang đông laser",
     "category": "laser"
   },
   {
     "_id": "laser_retinopexy",
+    "name": "Laser retinopexy",
     "nameVi": "Laser hàn võng mạc",
     "category": "laser"
   },
   {
     "_id": "lens_extraction",
+    "name": "Lens extraction",
     "nameVi": "Lấy thể thủy tinh",
     "category": "surgery"
   },
   {
     "_id": "lid_hygiene",
+    "name": "Lid hygiene",
     "nameVi": "Vệ sinh bờ mi",
     "category": "lifestyle"
   },
   {
     "_id": "lubricant",
+    "name": "Lubricant",
     "nameVi": "Thuốc dưỡng ẩm bề mặt",
     "category": "medication"
   },
   {
     "_id": "lubricants",
+    "name": "Lubricants",
     "nameVi": "Thuốc dưỡng ẩm bề mặt",
     "category": "medication"
   },
   {
     "_id": "lubricating_ointment_at_bedtime",
+    "name": "Lubricating ointment at bedtime",
     "nameVi": "Mỡ dưỡng ẩm trước khi ngủ",
     "category": "medication"
   },
   {
     "_id": "minus_contact_lenses",
+    "name": "Minus contact lenses",
     "nameVi": "Kính tiếp xúc (cận)",
     "category": "contact_lens"
   },
   {
     "_id": "minus_spectacles",
+    "name": "Minus spectacles (myopia)",
     "nameVi": "Kính gọng (cận thị)",
     "category": "spectacles"
   },
   {
     "_id": "monitor",
+    "name": "Monitor",
     "nameVi": "Theo dõi",
     "category": "monitoring"
   },
   {
     "_id": "monitoring",
+    "name": "Monitoring",
     "nameVi": "Theo dõi",
     "category": "monitoring"
   },
   {
     "_id": "monovision_contact_lenses",
+    "name": "Monovision contact lenses",
     "nameVi": "Kính tiếp xúc monovision",
     "category": "contact_lens"
   },
   {
     "_id": "muscle_surgery",
+    "name": "Muscle surgery",
     "nameVi": "Phẫu thuật cơ vận nhãn",
     "category": "surgery"
   },
   {
     "_id": "neurology_referral_if_first_episode_or_atypical",
+    "name": "Neurology referral if first episode or atypical",
     "nameVi": "Chuyển thần kinh (lần đầu / không điển hình)",
     "category": "referral"
   },
   {
     "_id": "neurosurgery",
+    "name": "Neurosurgery",
     "nameVi": "Phẫu thuật thần kinh",
     "category": "surgery"
   },
   {
     "_id": "observation",
+    "name": "Observation",
     "nameVi": "Quan sát, theo dõi",
     "category": "monitoring"
   },
   {
     "_id": "ocular_massage_paracentesis_unproven",
+    "name": "Ocular massage / paracentesis (unproven)",
     "nameVi": "Xoa nhãn cầu / chọc tiền phòng (chưa chứng minh)",
     "category": "procedure"
   },
   {
     "_id": "oral_or_topical_antiviral",
+    "name": "Oral or topical antiviral",
     "nameVi": "Kháng virus (uống / nhỏ mắt)",
     "category": "medication"
   },
   {
     "_id": "ortho_k",
+    "name": "Ortho-K (overnight corneal reshaping)",
     "nameVi": "Ortho-K (chỉnh hình giác mạc ban đêm)",
     "category": "optical_other"
   },
   {
     "_id": "patching",
+    "name": "Patching",
     "nameVi": "Bịt mắt (điều trị nhược thị)",
     "category": "procedure"
   },
   {
     "_id": "pediatric_cataract_surgery",
+    "name": "Pediatric cataract surgery",
     "nameVi": "Phẫu thuật đục TTT trẻ em",
     "category": "surgery"
   },
   {
     "_id": "phacoemulsification_with_IOL",
+    "name": "Phacoemulsification with IOL",
     "nameVi": "Phaco + đặt IOL",
     "category": "surgery"
   },
   {
     "_id": "plus_contact_lenses",
+    "name": "Plus contact lenses",
     "nameVi": "Kính tiếp xúc (viễn)",
     "category": "contact_lens"
   },
   {
     "_id": "plus_spectacles",
+    "name": "Plus spectacles (hyperopia)",
     "nameVi": "Kính gọng (viễn thị)",
     "category": "spectacles"
   },
   {
     "_id": "pneumatic_retinopexy",
+    "name": "Pneumatic retinopexy",
     "nameVi": "Bơm khí nội nhãn cố định võng mạc",
     "category": "procedure"
   },
   {
     "_id": "presbyopic_IOL",
+    "name": "Presbyopic IOL",
     "nameVi": "IOL đa tiêu (lão thị)",
     "category": "surgery"
   },
   {
     "_id": "preventive_topiramate_or_propranolol_if_frequent",
+    "name": "Preventive topiramate / propranolol (if frequent)",
     "nameVi": "Dự phòng topiramate / propranolol (nếu thường xuyên)",
     "category": "medication"
   },
   {
     "_id": "prism",
+    "name": "Prism",
     "nameVi": "Lăng kính",
     "category": "optical_other"
   },
   {
     "_id": "prism_glasses",
+    "name": "Prism glasses",
     "nameVi": "Kính lăng kính",
     "category": "optical_other"
   },
   {
     "_id": "punctal_plugs",
+    "name": "Punctal plugs",
     "nameVi": "Nút điểm lệ",
     "category": "procedure"
   },
   {
     "_id": "reading_add",
+    "name": "Reading add (ADD)",
     "nameVi": "Cộng kính đọc (ADD)",
     "category": "spectacles"
   },
   {
     "_id": "reading_add_if_presbyope",
+    "name": "Reading add (if presbyopic)",
     "nameVi": "Cộng kính đọc (nếu lão thị)",
     "category": "spectacles"
   },
   {
     "_id": "reassurance",
+    "name": "Reassurance",
     "nameVi": "Trấn an",
     "category": "monitoring"
   },
   {
     "_id": "reduce_caffeine_and_stress",
+    "name": "Reduce caffeine and stress",
     "nameVi": "Giảm caffeine & căng thẳng",
     "category": "lifestyle"
   },
   {
     "_id": "refractive_surgery",
+    "name": "Refractive surgery",
     "nameVi": "Phẫu thuật khúc xạ",
     "category": "surgery"
   },
   {
     "_id": "refractive_surgery_laser",
+    "name": "Laser refractive surgery",
     "nameVi": "Phẫu thuật khúc xạ laser",
     "category": "surgery"
   },
   {
     "_id": "rigid_or_scleral_contact_lens",
+    "name": "Rigid / scleral contact lens",
     "nameVi": "Kính tiếp xúc cứng / scleral",
     "category": "contact_lens"
   },
   {
     "_id": "rigid_shield",
+    "name": "Rigid shield",
     "nameVi": "Che chắn mắt cứng (bảo vệ)",
     "category": "procedure"
   },
   {
     "_id": "risk_factor_optimization",
+    "name": "Risk factor optimization",
     "nameVi": "Tối ưu yếu tố nguy cơ",
     "category": "systemic"
   },
   {
     "_id": "scleral_buckle",
+    "name": "Scleral buckle",
     "nameVi": "Đai củng mạc",
     "category": "surgery"
   },
   {
     "_id": "screen_sickle_cell",
+    "name": "Screen sickle cell",
     "nameVi": "Tầm soát hồng cầu hình liềm",
     "category": "systemic"
   },
   {
     "_id": "secondary_prevention",
+    "name": "Secondary prevention",
     "nameVi": "Dự phòng thứ phát",
     "category": "systemic"
   },
   {
     "_id": "serum_drops",
+    "name": "Serum drops",
     "nameVi": "Nước mắt huyết thanh tự thân",
     "category": "medication"
   },
   {
     "_id": "specialist_referral",
+    "name": "Specialist referral",
     "nameVi": "Chuyển chuyên khoa",
     "category": "referral"
   },
   {
     "_id": "stop_contact_lens",
+    "name": "Stop contact lens wear",
     "nameVi": "Ngừng đeo kính tiếp xúc",
     "category": "contact_lens"
   },
   {
     "_id": "strict_hygiene",
+    "name": "Strict hygiene",
     "nameVi": "Vệ sinh nghiêm ngặt",
     "category": "lifestyle"
   },
   {
     "_id": "stroke_unit_care",
+    "name": "Stroke unit care",
     "nameVi": "Chăm sóc đột quỵ chuyên khoa",
     "category": "systemic"
   },
   {
     "_id": "supportive_care",
+    "name": "Supportive care",
     "nameVi": "Chăm sóc hỗ trợ",
     "category": "supportive"
   },
   {
     "_id": "supportive_low_vision",
+    "name": "Supportive low vision",
     "nameVi": "Hỗ trợ thị lực kém",
     "category": "supportive"
   },
   {
     "_id": "surgery",
+    "name": "Surgery",
     "nameVi": "Phẫu thuật",
     "category": "surgery"
   },
   {
     "_id": "surgical_drainage_if_abscess",
+    "name": "Surgical drainage if abscess",
     "nameVi": "Rạch dẫn lưu (nếu áp-xe)",
     "category": "procedure"
   },
   {
     "_id": "surgical_excision_with_conjunctival_autograft",
+    "name": "Excision + conjunctival autograft",
     "nameVi": "Cắt mộng + ghép kết mạc tự thân",
     "category": "surgery"
   },
   {
     "_id": "systemic_NSAID_or_steroid_or_immunomodulator",
+    "name": "Systemic NSAID or steroid or immunomodulator",
     "nameVi": "NSAID / corticoid / ức chế miễn dịch toàn thân",
     "category": "systemic"
   },
   {
     "_id": "systemic_steroid_or_immunomodulator",
+    "name": "Systemic steroid or immunomodulator",
     "nameVi": "Corticoid / ức chế miễn dịch toàn thân",
     "category": "systemic"
   },
   {
     "_id": "temporal_artery_biopsy",
+    "name": "Temporal artery biopsy",
     "nameVi": "Sinh thiết động mạch thái dương",
     "category": "procedure"
   },
   {
     "_id": "tocilizumab",
+    "name": "Tocilizumab",
     "nameVi": "Tocilizumab",
     "category": "systemic"
   },
   {
     "_id": "topical_NSAID_or_mild_steroid",
+    "name": "Topical NSAID or mild steroid",
     "nameVi": "NSAID / corticoid nhẹ nhỏ mắt",
     "category": "medication"
   },
   {
     "_id": "topical_anti_inflammatory_drops",
+    "name": "Topical anti inflammatory drops",
     "nameVi": "Thuốc nhỏ kháng viêm",
     "category": "medication"
   },
   {
     "_id": "topical_antibiotic_optional",
+    "name": "Topical antibiotic optional",
     "nameVi": "Kháng sinh nhỏ mắt (tùy chọn)",
     "category": "medication"
   },
   {
     "_id": "topical_antibiotic_prophylaxis",
+    "name": "Topical antibiotic prophylaxis",
     "nameVi": "Kháng sinh nhỏ mắt dự phòng",
     "category": "medication"
   },
   {
     "_id": "topical_antibiotic_steroid_short_course",
+    "name": "Topical antibiotic steroid short course",
     "nameVi": "Kháng sinh + corticoid (đợt ngắn)",
     "category": "medication"
   },
   {
     "_id": "topical_antihistamine_for_symptom_relief",
+    "name": "Topical antihistamine for symptom relief",
     "nameVi": "Kháng histamine nhỏ mắt (giảm triệu chứng)",
     "category": "medication"
   },
   {
     "_id": "topical_antihistamine_mast_cell_stabilizer",
+    "name": "Topical antihistamine mast cell stabilizer",
     "nameVi": "Kháng histamine / ổn định dưỡng bào nhỏ mắt",
     "category": "medication"
   },
   {
     "_id": "topical_biguanides_PHMB_or_chlorhexidine_long_course",
+    "name": "Topical PHMB / chlorhexidine (long course)",
     "nameVi": "PHMB / chlorhexidine nhỏ mắt (đợt dài, Acanthamoeba)",
     "category": "medication"
   },
   {
     "_id": "topical_broad_spectrum_antibiotic",
+    "name": "Topical broad spectrum antibiotic",
     "nameVi": "Kháng sinh phổ rộng nhỏ mắt",
     "category": "medication"
   },
   {
     "_id": "topical_steroid",
+    "name": "Topical steroid",
     "nameVi": "Corticoid nhỏ mắt",
     "category": "medication"
   },
   {
     "_id": "topical_steroid_antibiotic",
+    "name": "Topical steroid antibiotic",
     "nameVi": "Corticoid + kháng sinh nhỏ mắt",
     "category": "medication"
   },
   {
     "_id": "topical_steroid_cycloplegic",
+    "name": "Topical steroid cycloplegic",
     "nameVi": "Corticoid + liệt điều tiết",
     "category": "medication"
   },
   {
     "_id": "topical_steroid_to_quiet_inflammation",
+    "name": "Topical steroid to quiet inflammation",
     "nameVi": "Corticoid nhỏ mắt (giảm viêm)",
     "category": "medication"
   },
   {
     "_id": "toric_contact_lenses",
+    "name": "Toric contact lenses",
     "nameVi": "Kính tiếp xúc Toric (loạn)",
     "category": "contact_lens"
   },
   {
     "_id": "trabeculectomy",
+    "name": "Trabeculectomy",
     "nameVi": "Cắt bè củng - giác mạc",
     "category": "surgery"
   },
   {
     "_id": "treat_concurrent_dry_eye",
+    "name": "Treat concurrent dry eye",
     "nameVi": "Điều trị khô mắt kèm theo",
     "category": "medication"
   },
   {
     "_id": "treat_dry_eye_if_present",
+    "name": "Treat dry eye if present",
     "nameVi": "Điều trị khô mắt (nếu có)",
     "category": "medication"
   },
   {
     "_id": "treat_sleep_apnea",
+    "name": "Treat sleep apnea",
     "nameVi": "Điều trị ngưng thở khi ngủ",
     "category": "systemic"
   },
   {
     "_id": "treat_systemic_autoimmune",
+    "name": "Treat systemic autoimmune",
     "nameVi": "Điều trị bệnh tự miễn nền",
     "category": "systemic"
   },
   {
     "_id": "treat_underlying",
+    "name": "Treat underlying",
     "nameVi": "Điều trị nguyên nhân nền",
     "category": "systemic"
   },
   {
     "_id": "treat_underlying_ICP_cause",
+    "name": "Treat underlying ICP cause",
     "nameVi": "Điều trị nguyên nhân tăng áp nội sọ",
     "category": "systemic"
   },
   {
     "_id": "treat_underlying_cause",
+    "name": "Treat underlying cause",
     "nameVi": "Điều trị nguyên nhân nền",
     "category": "systemic"
   },
   {
     "_id": "treat_underlying_systemic",
+    "name": "Treat underlying systemic",
     "nameVi": "Điều trị bệnh toàn thân nền",
     "category": "systemic"
   },
   {
     "_id": "treat_vascular_risk_factors",
+    "name": "Treat vascular risk factors",
     "nameVi": "Kiểm soát yếu tố nguy cơ mạch máu",
     "category": "systemic"
   },
   {
     "_id": "trigger_avoidance",
+    "name": "Trigger avoidance",
     "nameVi": "Tránh yếu tố khởi phát",
     "category": "lifestyle"
   },
   {
     "_id": "tube_shunt",
+    "name": "Tube shunt",
     "nameVi": "Đặt van dẫn lưu",
     "category": "surgery"
   },
   {
     "_id": "urgent_imaging_to_localize",
+    "name": "Urgent imaging to localize",
     "nameVi": "Chẩn đoán hình ảnh khẩn để định khu",
     "category": "referral"
   },
   {
     "_id": "urgent_neurovascular_imaging_and_intervention",
+    "name": "Urgent neurovascular imaging and intervention",
     "nameVi": "Hình ảnh + can thiệp thần kinh-mạch khẩn",
     "category": "referral"
   },
   {
     "_id": "urgent_surgical_repair",
+    "name": "Urgent surgical repair",
     "nameVi": "Phẫu thuật sửa chữa cấp cứu",
     "category": "surgery"
   },
   {
     "_id": "vision_therapy",
+    "name": "Vision therapy",
     "nameVi": "Liệu pháp thị giác",
     "category": "optical_other"
   },
   {
     "_id": "vitamin_C_doxycycline_for_alkali",
+    "name": "Vitamin C + doxycycline (alkali burn)",
     "nameVi": "Vitamin C + doxycycline (bỏng kiềm)",
     "category": "medication"
   },
   {
     "_id": "vitrectomy",
+    "name": "Vitrectomy",
     "nameVi": "Cắt dịch kính",
     "category": "surgery"
   },
   {
     "_id": "vitrectomy_if_severe",
+    "name": "Vitrectomy if severe",
     "nameVi": "Cắt dịch kính (nếu nặng)",
     "category": "surgery"
   },
   {
     "_id": "vitrectomy_with_ILM_peel",
+    "name": "Vitrectomy with ILM peel",
     "nameVi": "Cắt dịch kính + bóc màng ILM",
     "category": "surgery"
   },
   {
     "_id": "vitrectomy_with_membrane_peel",
+    "name": "Vitrectomy with membrane peel",
     "nameVi": "Cắt dịch kính + bóc màng trước võng mạc",
     "category": "surgery"
   },
   {
     "_id": "vitreous_tap_and_intravitreal_antibiotics",
+    "name": "Vitreous tap + intravitreal antibiotics",
     "nameVi": "Chọc hút dịch kính + kháng sinh nội nhãn",
     "category": "procedure"
   },
   {
     "_id": "warm_compress",
+    "name": "Warm compress",
     "nameVi": "Chườm ấm",
     "category": "lifestyle"
   },
   {
     "_id": "warm_compress_and_lid_hygiene",
+    "name": "Warm compress and lid hygiene",
     "nameVi": "Chườm ấm + vệ sinh bờ mi",
     "category": "lifestyle"
   },
   {
     "_id": "warm_compress_lid_hygiene",
+    "name": "Warm compress lid hygiene",
     "nameVi": "Chườm ấm + vệ sinh bờ mi",
     "category": "lifestyle"
   },
   {
     "_id": "warm_compress_lid_massage",
+    "name": "Warm compress lid massage",
     "nameVi": "Chườm ấm + massage bờ mi",
     "category": "lifestyle"
   },
   {
     "_id": "weight_loss",
+    "name": "Weight loss",
     "nameVi": "Giảm cân",
     "category": "lifestyle"
   },
   {
     "_id": "yag_capsulotomy_for_PCO",
+    "name": "YAG capsulotomy (PCO)",
     "nameVi": "Laser YAG mở bao sau",
     "category": "laser"
   }
