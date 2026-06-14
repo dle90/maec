@@ -369,5 +369,30 @@
     "urgency": "emergency",
     "actionGuidance": "Cấp cứu đột quỵ. Kích hoạt quy trình đột quỵ ngay: chụp CT/CT-A hoặc MRI/MRA não khẩn xác nhận nhồi máu vùng ĐM não sau (PCA). Tham vấn thần kinh; cân nhắc tiêu sợi huyết/lấy huyết khối nếu trong cửa sổ điều trị. Đánh giá các dấu thần kinh kèm theo (đau đầu, bỏ sót nửa người).",
     "actionGuidanceEn": "Stroke emergency. Activate the stroke pathway: urgent CT/CT-A or MRI/MRA of the brain to confirm a PCA-territory infarct. Neurology consult; consider thrombolysis/thrombectomy if within the treatment window. Assess for accompanying neurologic signs (headache, hemineglect)."
+  },
+  {
+    "_id": "rf-posterior-uveitis",
+    "name": "Posterior / intermediate uveitis (vitritis)",
+    "nameVi": "Viêm màng bồ đào sau / trung gian (viêm dịch kính)",
+    "description": "Vitreous cells/haze (vitritis) indicate inflammation behind the lens — intermediate or posterior uveitis (toxoplasma, sarcoid, Behçet, etc.), distinct from anterior uveitis (cells in the anterior chamber). Sight-threatening; needs prompt work-up and treatment.",
+    "trigger": {
+      "hasAllSymptoms": [
+        "vitritis"
+      ],
+      "hasAnySymptoms": [
+        "vision_drop",
+        "floaters_new",
+        "photophobia"
+      ]
+    },
+    "services": [
+      "immune"
+    ],
+    "candidateDiseases": [
+      "d-posterior-uveitis"
+    ],
+    "urgency": "urgent_referral",
+    "actionGuidance": "Khám đáy mắt giãn đồng tử + đánh giá dịch kính/võng mạc. Xét nghiệm tìm nguyên nhân (toxoplasma, lao, giang mai, sarcoid, Behçet, HLA). Chuyển chuyên khoa màng bồ đào; điều trị corticoid ± ức chế miễn dịch ± kháng sinh đặc hiệu tùy nguyên nhân.",
+    "actionGuidanceEn": "Dilated fundus + vitreous/retina assessment. Work up the cause (toxoplasma, TB, syphilis, sarcoid, Behçet, HLA). Refer to a uveitis specialist; treat with steroid ± immunosuppression ± cause-specific anti-infectives."
   }
 ]

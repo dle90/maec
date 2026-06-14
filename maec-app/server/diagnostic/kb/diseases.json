@@ -1063,5 +1063,164 @@
     "summary": "Telangiectatic retinal vessels in a child, often unilateral, presenting with leukocoria or strabismus. Distinguished from retinoblastoma on imaging.",
     "treatments": ["laser_photocoagulation", "cryotherapy", "anti_VEGF_injection", "surgery"],
     "provenance": { "sources": ["disease-index.md"], "checkFlags": [] }
+  },
+  {
+    "_id": "d-csr",
+    "name": "Central serous retinopathy",
+    "nameVi": "Bệnh thấm thấu huyết tương dưới loạn",
+    "services": [
+      "sensor"
+    ],
+    "codes": {
+      "snomed": "232016006"
+    },
+    "redFlag": false,
+    "urgency": "routine",
+    "ageMin": 25,
+    "ageMax": 55,
+    "prevalenceTag": "common",
+    "summary": "Serous detachment of the neurosensory retina at the macula, typically in young-to-middle-aged men under stress or on corticosteroids. Presents with acute-to-subacute central blur, metamorphopsia, micropsia, and a central scotoma. OCT shows subretinal fluid without retinal hemorrhage or drusen, distinguishing it from wet-AMD which occurs in older patients with hemorrhage and macular drusen.",
+    "treatments": [
+      "observation",
+      "reduce_caffeine_and_stress"
+    ],
+    "provenance": {
+      "sources": [
+        "tier2-coverage-2026-06-14"
+      ],
+      "checkFlags": [
+        "CHECK"
+      ]
+    }
+  },
+  {
+    "_id": "d-fuchs-dystrophy",
+    "name": "Fuchs endothelial corneal dystrophy",
+    "nameVi": "Thoái hoá nội mô giác mạc Fuchs",
+    "services": [
+      "surface"
+    ],
+    "codes": {
+      "snomed": "441689003"
+    },
+    "redFlag": false,
+    "urgency": "routine",
+    "ageMin": 50,
+    "ageMax": 100,
+    "prevalenceTag": "uncommon",
+    "summary": "Progressive endothelial cell loss leads to stromal corneal edema, worse on waking (when the pump is weakest) and improving through the day as the eye dries. Bilateral gradual blur, glare, and halos. Guttata visible on slit-lamp exam. Late stage may require corneal transplant.",
+    "treatments": [
+      "observation",
+      "hyperosmotic_drops",
+      "lubricants",
+      "lubricating_ointment_at_bedtime",
+      "specialist_referral",
+      "corneal_transplant"
+    ],
+    "provenance": {
+      "sources": [
+        "tier2-coverage-2026-06-14"
+      ],
+      "checkFlags": [
+        "CHECK"
+      ]
+    }
+  },
+  {
+    "_id": "d-nasolacrimal-duct-obstruction",
+    "name": "Nasolacrimal duct obstruction (NLDO)",
+    "nameVi": "Tắc ống dẫn lệ (NLDO)",
+    "services": [
+      "surface"
+    ],
+    "codes": {
+      "snomed": "37141004"
+    },
+    "redFlag": false,
+    "urgency": "routine",
+    "ageMin": 0,
+    "ageMax": 100,
+    "prevalenceTag": "common",
+    "summary": "The nasolacrimal duct (carrying tears from the eye to the nose) is partially or completely blocked, causing constant tearing (epiphora), watery discharge, and sometimes tender medial-canthal swelling (dacryocystitis or mucocele). Common in infants (congenital, often self-resolve by 12 months) and older adults (acquired obstruction). Conservative management with lid hygiene and warm compresses; probing in infants or dacryocystorhinostomy if chronic.",
+    "treatments": [
+      "warm_compress_and_lid_hygiene",
+      "observation",
+      "incision_drainage_if_persistent",
+      "ENT_and_ophth_consult"
+    ],
+    "provenance": {
+      "sources": [
+        "tier2-coverage-2026-06-14"
+      ],
+      "checkFlags": [
+        "CHECK"
+      ]
+    }
+  },
+  {
+    "_id": "d-strabismus-pediatric",
+    "name": "Strabismus (childhood, esotropia or exotropia)",
+    "nameVi": "Lác mắt trẻ em (vào trong hoặc vào ngoài)",
+    "services": [
+      "coordination"
+    ],
+    "codes": {
+      "snomed": "22951003"
+    },
+    "redFlag": false,
+    "urgency": "urgent_referral",
+    "ageMin": 0,
+    "ageMax": 12,
+    "prevalenceTag": "common",
+    "summary": "Manifest eye turn (eso- or exotropia) detected in a child. Children suppress the misaligned eye's image (unlike adults who report diplopia), creating amblyopia risk. Treatable during the critical window (~age 0–8) with spectacles, prism, patching, or muscle surgery.",
+    "treatments": [
+      "correct_refraction",
+      "prism",
+      "patching",
+      "muscle_surgery",
+      "amblyopia_treatment",
+      "monitoring"
+    ],
+    "provenance": {
+      "sources": [
+        "tier2-coverage-2026-06-14"
+      ],
+      "checkFlags": [
+        "CHECK"
+      ]
+    }
+  },
+  {
+    "_id": "d-exposure-keratopathy",
+    "name": "Exposure keratopathy",
+    "nameVi": "Bệnh giác mạc do tiếp xúc (khô do bất toàn đóng mi)",
+    "services": [
+      "surface"
+    ],
+    "codes": {
+      "snomed": "18685008"
+    },
+    "redFlag": false,
+    "urgency": "urgent_referral",
+    "ageMin": 0,
+    "ageMax": 100,
+    "prevalenceTag": "uncommon",
+    "summary": "Incomplete eyelid closure (lagophthalmos) from facial nerve palsy (CN VII), severe proptosis, or post-blepharoplasty → inferior corneal drying and epithelial breakdown. Presents with gritty/burning inferior eye, foreign-body sensation, and risk of infectious keratitis or corneal scarring if untreated.",
+    "treatments": [
+      "artificial_tears",
+      "lubricating_ointment_at_bedtime",
+      "rigid_shield",
+      "bandage_contact_lens",
+      "topical_antibiotic_prophylaxis",
+      "treat_underlying_cause"
+    ],
+    "provenance": {
+      "sources": [
+        "tier2-coverage-2026-06-14"
+      ],
+      "checkFlags": [
+        "CHECK"
+      ]
+    }
   }
 ]

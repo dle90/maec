@@ -1031,5 +1031,271 @@
     "producedByTest": "t-stereopsis",
     "serviceHints": ["coordination"],
     "notes": "[CHECK] Stereoacuity > 60 arcsec."
+  },
+  {
+    "_id": "epithelial_defect",
+    "name": "Epithelial defect on fluorescein staining",
+    "nameVi": "Mất bề mô giác mạc trên nhuộm fluorescein",
+    "kind": "test_result",
+    "serviceHints": [
+      "surface"
+    ],
+    "aliases": [
+      "fluorescein_uptake",
+      "corneal_abrasion_stain",
+      "epithelial_break"
+    ],
+    "producedByTest": "t-fluorescein-stain"
+  },
+  {
+    "_id": "vitritis",
+    "name": "Vitritis (vitreous cells and haze)",
+    "nameVi": "Viêm dịch kính (tế bào và sương mù dịch kính)",
+    "kind": "test_result",
+    "serviceHints": [
+      "immune"
+    ],
+    "aliases": [
+      "vitreous_cells",
+      "vitreous_haze",
+      "cells_in_vitreous"
+    ],
+    "producedByTest": "t-slit-lamp"
+  },
+  {
+    "_id": "sectoral_redness_episclera",
+    "name": "Sectoral episcleral redness (blanches with phenylephrine)",
+    "nameVi": "Đỏ thượng củng mạc hình quạt (phai màu với phenylephrine)",
+    "kind": "sign",
+    "serviceHints": [
+      "immune"
+    ],
+    "aliases": [
+      "sectoral_redness",
+      "episcleral_injection",
+      "superficial_episcleral_redness"
+    ]
+  },
+  {
+    "_id": "cellophane_membrane_oct",
+    "name": "Cellophane membrane appearance on OCT",
+    "nameVi": "Hình ảnh màng trong suốt trên OCT",
+    "kind": "test_result",
+    "serviceHints": [
+      "sensor"
+    ],
+    "aliases": [
+      "epiretinal_membrane_oct",
+      "macular_pucker_oct",
+      "cellophane_maculopathy"
+    ],
+    "producedByTest": "t-oct-macula"
+  },
+  {
+    "_id": "micropsia",
+    "name": "Micropsia (objects appear smaller)",
+    "nameVi": "Vật thể nhìn bé hơn",
+    "kind": "symptom",
+    "serviceHints": [
+      "sensor"
+    ],
+    "aliases": [
+      "objects_appear_small",
+      "visual_demagnification"
+    ]
+  },
+  {
+    "_id": "morning_blur_improves_through_day",
+    "name": "Blur on waking that improves during the day",
+    "nameVi": "Mờ khi mở mắt sáng, tự đỡ dần trong ngày",
+    "kind": "symptom",
+    "serviceHints": [
+      "surface",
+      "optical"
+    ],
+    "aliases": [
+      "morning_blur_improves",
+      "corneal_edema_pattern"
+    ],
+    "implies": [
+      "vision_blur_gradual"
+    ]
+  },
+  {
+    "_id": "corneal_guttata",
+    "name": "Corneal guttata (endothelial cell loss pattern)",
+    "nameVi": "Guttata giác mạc",
+    "kind": "sign",
+    "serviceHints": [
+      "surface",
+      "optical"
+    ],
+    "aliases": [
+      "guttata",
+      "endothelial_changes",
+      "corneal_endothelial_guttata"
+    ]
+  },
+  {
+    "_id": "corneal_edema_bilateral",
+    "name": "Bilateral corneal edema (stromal haze)",
+    "nameVi": "Phù giác mạc hai bên",
+    "kind": "sign",
+    "serviceHints": [
+      "surface",
+      "optical"
+    ],
+    "aliases": [
+      "corneal_edema",
+      "stromal_haze",
+      "corneal_haze"
+    ]
+  },
+  {
+    "_id": "epiphora_constant_tearing",
+    "name": "Constant tearing and watering of the eye",
+    "nameVi": "Chảy nước mắt liên tục",
+    "kind": "symptom",
+    "serviceHints": [
+      "surface"
+    ],
+    "aliases": [
+      "epiphora",
+      "constant_watering",
+      "excessive_tearing",
+      "constant_tearing",
+      "watery_eye"
+    ]
+  },
+  {
+    "_id": "mucoid_discharge",
+    "name": "Mucoid or stringy discharge",
+    "nameVi": "Tiết dịch nhầy, sợi",
+    "kind": "symptom",
+    "serviceHints": [
+      "surface"
+    ],
+    "aliases": [
+      "mucoid_discharge",
+      "stringy_discharge",
+      "sticky_discharge_mucoid"
+    ],
+    "implies": [
+      "discharge"
+    ]
+  },
+  {
+    "_id": "medial_canthal_swelling",
+    "name": "Tender swelling at the inner corner of the eye (medial canthus)",
+    "nameVi": "Sưng cạnh mắt bên trong",
+    "kind": "sign",
+    "serviceHints": [
+      "surface"
+    ],
+    "aliases": [
+      "medial_canthal_swelling",
+      "lacrimal_sac_swelling",
+      "dacryocele",
+      "tender_inner_eye_corner"
+    ],
+    "implies": [
+      "periorbital_swelling"
+    ]
+  },
+  {
+    "_id": "eye_turn_manifest",
+    "name": "Manifest eye turn (observable ocular misalignment)",
+    "nameVi": "Lác mắt hiển hiện (lệch mắt có thể nhìn thấy)",
+    "kind": "sign",
+    "serviceHints": [
+      "coordination"
+    ],
+    "aliases": [
+      "esotropia",
+      "exotropia",
+      "ocular_misalignment",
+      "strabismus_manifest",
+      "visible_eye_turn",
+      "infantile_strabismus"
+    ]
+  },
+  {
+    "_id": "incomplete_lid_closure",
+    "name": "Incomplete eyelid closure (lagophthalmos)",
+    "nameVi": "Không đóng mi hoàn toàn (lagophthalmos)",
+    "kind": "sign",
+    "serviceHints": [
+      "surface",
+      "autonomic"
+    ],
+    "aliases": [
+      "lagophthalmos",
+      "incomplete_closure",
+      "exposed_globe",
+      "lid_gap",
+      "eyelid_gap"
+    ]
+  },
+  {
+    "_id": "diplopia_vertical",
+    "name": "Vertical / torsional diplopia (worse on downgaze)",
+    "nameVi": "Song thị dọc / xoáy (nặng khi nhìn xuống)",
+    "kind": "symptom",
+    "serviceHints": [
+      "coordination"
+    ],
+    "aliases": [
+      "vertical_diplopia",
+      "torsional_diplopia",
+      "diplopia_downgaze"
+    ],
+    "implies": [
+      "diplopia_binocular"
+    ]
+  },
+  {
+    "_id": "diplopia_horizontal",
+    "name": "Horizontal diplopia (side-by-side, worse at distance / affected-side gaze)",
+    "nameVi": "Song thị ngang (nặng khi nhìn xa / về phía mắt liệt)",
+    "kind": "symptom",
+    "serviceHints": [
+      "coordination"
+    ],
+    "aliases": [
+      "horizontal_diplopia",
+      "side_by_side_double_vision"
+    ],
+    "implies": [
+      "diplopia_binocular"
+    ]
+  },
+  {
+    "_id": "head_tilt",
+    "name": "Compensatory head tilt",
+    "nameVi": "Nghiêng đầu bù trừ",
+    "kind": "sign",
+    "serviceHints": [
+      "coordination"
+    ],
+    "aliases": [
+      "ocular_torticollis",
+      "compensatory_head_posture"
+    ]
+  },
+  {
+    "_id": "abduction_deficit",
+    "name": "Abduction deficit (eye cannot turn outward)",
+    "nameVi": "Hạn chế đưa mắt ra ngoài",
+    "kind": "sign",
+    "serviceHints": [
+      "coordination"
+    ],
+    "aliases": [
+      "lateral_rectus_weakness",
+      "cannot_abduct"
+    ],
+    "implies": [
+      "restricted_motility"
+    ]
   }
 ]
