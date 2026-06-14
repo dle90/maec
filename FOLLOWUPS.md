@@ -516,3 +516,9 @@ From the multi-agent review of the end-to-end flow:
 - **(c)** Free-text test-result LLM parser (`/diagnostic/parse-test-result` + `llm/parseTestResult.js` + `kbTestVocab.js`), mirroring the complaint parser, scoped per-test, surfaced as "✨ Phân tích KQ bằng AI" on sign-based test cards; clinician confirms (`source:'llm_assisted'`).
 
 **Still deferred (not done):** protocol-layer test suggestions (cyclo-refraction / topography for a young blur — suggester is still purely differential-driven); keratoconus edge weight still below the 0.05 floor for a lone gradual-blur young adult; dry-eye MGD-vs-aqueous fine subtyping (needs meibography + Schirmer threshold review); calibrated probabilities (still relative % of additive scores); per-eye engine reasoning. All [CHECK]-flagged thresholds/guidance still want clinical sign-off.
+
+### Diagnostic — refraction fixes (2026-06-14)
+
+- **Antimetropia regression fixed:** removed the myopia↔hyperopia mutual-exclusion refuting edges (they assumed one eye, but the engine flattens per-eye findings globally → cross-refuted a patient myopic in one eye + hyperopic in the other). Antimetropia now keeps both at full score. Per-eye engine reasoning is still the proper long-term fix (findings remain globally flattened).
+- **VA UCVA/BCVA:** `t-va` now captures uncorrected + best-corrected per eye + computed gain. BCVA<0.5 → `va_reduced` (true loss / pathology signal); gain≥0.2 → new `va_corrects_with_refraction` (refractive signal). Validated on prod: 7 common optic cases, 11/11 checks, incl. "doesn't correct → cataract" discriminator.
+- Minor: mixed myopic-astigmatism ranks myopia above astigmatism (cyl's spherical-equivalent); both still surface. [CHECK] thresholds (gain≥0.2, BCVA<0.5) for clinical review.
