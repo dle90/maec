@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import api, { downloadEncounterPrintout, concludeEncounter, reopenEncounter } from '../api'
+import api, { downloadEncounterPrintout, concludeEncounter, reopenEncounter, dxGetTreatments } from '../api'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { formatDate } from '../lib/date'
 import EncounterAttachments from '../components/EncounterAttachments'
+import { DiagnosticAssistant } from './Diagnostic'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
 const fmtTime = (iso) => {
@@ -672,6 +673,7 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
   const [showAddItem, setShowAddItem] = useState(null) // 'service' | 'kinh' | 'thuoc'
   const [showAssignPackage, setShowAssignPackage] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [dxOpen, setDxOpen] = useState(false)
 
   // `silent` skips the loading state so post-save reloads don't blank the
   // whole pane back to "Đang tải..." while the GET roundtrips. The initial
@@ -694,6 +696,34 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
   // Silent so the pane stays in place — the user just saw their save succeed,
   // they shouldn't see a loading spinner immediately afterwards.
   const reload = async () => { await load({ silent: true }); if (onMutated) onMutated() }
+
+  // Write a closed diagnostic session back onto the encounter's Chẩn đoán / Kết
+  // luận fields. Appends (never clobbers) so the doctor's own notes survive.
+  const dxWriteBack = async (session) => {
+    const o = session?.clinicianOutcome || {}
+    const dx = o.confirmedDiseaseName || ''
+    const lines = []
+    const toks = o.selectedTreatments || []
+    if (toks.length) {
+      let names = toks
+      try {
+        const vocab = await dxGetTreatments()
+        const byId = Object.fromEntries(vocab.map(t => [t._id, t]))
+        names = toks.map(t => byId[t]?.nameVi || t)
+      } catch {}
+      lines.push('Điều trị: ' + names.join(', '))
+    }
+    if (o.referred && o.referredReason) lines.push('Chuyển khám: ' + o.referredReason)
+    if (o.notes) lines.push(o.notes)
+    const conclusionAdd = lines.join('\n')
+    const body = {}
+    const append = (prev, add) => add ? (prev?.trim() ? `${prev}\n${add}` : add) : prev
+    if (dx) body.diagnosis = append(enc.diagnosis, dx)
+    if (conclusionAdd) body.conclusion = append(enc.conclusion, conclusionAdd)
+    if (Object.keys(body).length) {
+      try { await api.put(`/encounters/${enc._id}/clinical-notes`, body); reload() } catch {}
+    }
+  }
 
   if (loading || !enc) {
     return <div className="h-full flex items-center justify-center text-gray-400">Đang tải...</div>
@@ -890,6 +920,24 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
         </section>
           )
         })()}
+
+        {/* Hỗ trợ chẩn đoán — embedded diagnostic assistant, pre-loaded with this
+            patient/encounter. On final save it writes the diagnosis + treatment
+            back onto Chẩn đoán / Kết luận above. */}
+        <section>
+          <button onClick={() => setDxOpen(o => !o)}
+            className="w-full text-left flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900">
+            <span className="text-xs text-gray-400">{dxOpen ? '▾' : '▸'}</span>
+            <span>🧠</span>
+            <span>Hỗ trợ chẩn đoán</span>
+            <span className="text-xs text-gray-400 font-normal">— gợi ý chẩn đoán & điều trị</span>
+          </button>
+          {dxOpen && (
+            <div className="mt-2 border border-gray-200 rounded-xl p-3 bg-gray-50/50">
+              <DiagnosticAssistant embedded initialPatientId={enc.patientId} initialEncounterId={enc._id} onConfirmed={dxWriteBack} />
+            </div>
+          )}
+        </section>
 
         {/* Patient history */}
         <section>

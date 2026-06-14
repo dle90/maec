@@ -123,15 +123,31 @@ const SERVICE_DOT = {
 const DISCLAIMER_VI = 'Công cụ này chỉ hỗ trợ chẩn đoán — bác sĩ chịu trách nhiệm chẩn đoán cuối cùng và quyết định điều trị.'
 
 // ─────────────────────────────────────────────────────────────────
-// Top-level page
+// Standalone route (/diagnostic): page chrome + the assistant.
 // ─────────────────────────────────────────────────────────────────
 export default function Diagnostic() {
   const [searchParams] = useSearchParams()
-  const seedPatientId  = searchParams.get('patientId')  || ''
-  const seedEncounter  = searchParams.get('encounterId') || ''
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-4 lg:p-6 space-y-4">
+        <DiagnosticAssistant
+          initialPatientId={searchParams.get('patientId') || ''}
+          initialEncounterId={searchParams.get('encounterId') || ''}
+        />
+      </div>
+    </div>
+  )
+}
 
+// ─────────────────────────────────────────────────────────────────
+// Reusable assistant — owns the session lifecycle. Standalone shows a patient
+// picker; `embedded` (e.g. inside the Khám encounter) takes patient/encounter
+// from props and calls `onConfirmed(session)` when the session is closed so the
+// host can write the diagnosis/treatment back to the encounter.
+// ─────────────────────────────────────────────────────────────────
+export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId = '', embedded = false, onConfirmed }) {
   const [patient, setPatient]     = useState(null)   // {patientId, name, dob, gender}
-  const [encounterId, setEncId]   = useState(seedEncounter)
+  const [encounterId, setEncId]   = useState(initialEncounterId)
   const [session, setSession]     = useState(null)   // engine response, or null before first run
   const [formKey, setFormKey]     = useState(0)      // bump to reset the (persistent) complaint form
   const [busy, setBusy]           = useState(false)
@@ -139,11 +155,11 @@ export default function Diagnostic() {
   const { t: tr } = useLanguage()
 
   useEffect(() => {
-    if (!seedPatientId) return
-    api.get('/registration/patients', { params: { q: seedPatientId, limit: 1 } })
+    if (!initialPatientId) return
+    api.get('/registration/patients', { params: { q: initialPatientId, limit: 1 } })
       .then(r => { if (r.data?.[0]) setPatient(r.data[0]) })
       .catch(() => {})
-  }, [seedPatientId])
+  }, [initialPatientId])
 
   // Single submit path: create the session on first run, then update the open
   // session's complaint on subsequent runs (so the form stays editable and the
@@ -154,7 +170,7 @@ export default function Diagnostic() {
       const result = (session && !session.clinicianOutcome?.closedAt)
         ? await dxUpdateComplaint(session._id, complaint)
         : await dxCreateSession({
-            patientId: patient?.patientId || patient?._id || undefined,
+            patientId: patient?.patientId || patient?._id || initialPatientId || undefined,
             encounterId: encounterId || undefined,
             complaint,
           })
@@ -192,6 +208,8 @@ export default function Diagnostic() {
     try {
       const updated = await dxConfirmOutcome(session._id, payload)
       setSession(updated)
+      // On final save (close), let the host (e.g. Khám) write the result back.
+      if (updated.clinicianOutcome?.closedAt && onConfirmed) onConfirmed(updated)
     } catch (err) {
       setError(err.response?.data?.error || err.message)
     } finally { setBusy(false) }
@@ -205,58 +223,57 @@ export default function Diagnostic() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-4 lg:p-6 space-y-4">
-        <Header
-          patient={patient}
-          setPatient={setPatient}
-          encounterId={encounterId}
-          setEncId={setEncId}
-          session={session}
-          onReset={handleReset}
-        />
+    <div className="space-y-4">
+      <Header
+        patient={patient}
+        setPatient={setPatient}
+        encounterId={encounterId}
+        setEncId={setEncId}
+        session={session}
+        onReset={handleReset}
+        embedded={embedded}
+      />
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800">
-            <strong>{tr('Lỗi:')}</strong> {error}
-          </div>
-        )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800">
+          <strong>{tr('Lỗi:')}</strong> {error}
+        </div>
+      )}
 
-        {/* Complaint form is persistent — stays editable alongside results so new
-            symptoms found during the exam can be added without losing the session. */}
-        <ComplaintForm key={formKey} onSubmit={handleComplaint} busy={busy} hasSession={!!session} />
+      {/* Complaint form is persistent — stays editable alongside results so new
+          symptoms found during the exam can be added without losing the session. */}
+      <ComplaintForm key={formKey} onSubmit={handleComplaint} busy={busy} hasSession={!!session} />
 
-        {session && (
-          <>
-            <RedFlagPanel
-              redFlags={session.redFlags || []}
-              onExclude={handleExcludeRedFlag}
-              outcomeClosed={!!session.clinicianOutcome?.closedAt}
-            />
-            <NextTestsPanel
-              tests={session.recommendedNextTests || []}
-              observations={session.observations || []}
-              onAddObservation={handleAddObservation}
-              busy={busy}
-            />
-            <DifferentialPanel
-              differential={session.differential || []}
-              outcome={session.clinicianOutcome}
-              onConfirm={handleConfirmOutcome}
-              busy={busy}
-            />
-            <OutcomePanel
-              session={session}
-              onConfirm={handleConfirmOutcome}
-              busy={busy}
-            />
-          </>
-        )}
+      {session && (
+        <>
+          <RedFlagPanel
+            redFlags={session.redFlags || []}
+            onExclude={handleExcludeRedFlag}
+            outcomeClosed={!!session.clinicianOutcome?.closedAt}
+          />
+          <NextTestsPanel
+            tests={session.recommendedNextTests || []}
+            observations={session.observations || []}
+            onAddObservation={handleAddObservation}
+            busy={busy}
+          />
+          <DifferentialPanel
+            differential={session.differential || []}
+            outcome={session.clinicianOutcome}
+            onConfirm={handleConfirmOutcome}
+            busy={busy}
+          />
+          <OutcomePanel
+            session={session}
+            onConfirm={handleConfirmOutcome}
+            busy={busy}
+          />
+        </>
+      )}
 
-        <footer className="text-xs text-gray-500 italic pt-4 border-t border-gray-200">
-          ⚙ {tr(DISCLAIMER_VI)}
-        </footer>
-      </div>
+      <footer className="text-xs text-gray-500 italic pt-4 border-t border-gray-200">
+        ⚙ {tr(DISCLAIMER_VI)}
+      </footer>
     </div>
   )
 }
@@ -264,29 +281,35 @@ export default function Diagnostic() {
 // ─────────────────────────────────────────────────────────────────
 // Header: patient picker + encounter id + session id
 // ─────────────────────────────────────────────────────────────────
-function Header({ patient, setPatient, encounterId, setEncId, session, onReset }) {
+function Header({ patient, setPatient, encounterId, setEncId, session, onReset, embedded = false }) {
   const { t: tr, lang, setLang } = useLanguage()
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3 sticky top-0 z-10">
+    <div className={`bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3 ${embedded ? '' : 'sticky top-0 z-10'}`}>
       <div className="font-semibold text-lg text-gray-800">{tr('Hỗ trợ chẩn đoán')}</div>
-      <div className="flex-1 min-w-[260px]">
-        {patient ? (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="font-medium">{patient.name}</span>
-            <span className="font-mono text-gray-500 text-xs">{patient.patientId || patient._id}</span>
-            <button onClick={() => setPatient(null)} className="text-xs text-blue-600 hover:underline">{tr('Đổi')}</button>
+      {/* Standalone shows a patient picker; embedded takes patient + encounter from the host. */}
+      {!embedded && (
+        <>
+          <div className="flex-1 min-w-[260px]">
+            {patient ? (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium">{patient.name}</span>
+                <span className="font-mono text-gray-500 text-xs">{patient.patientId || patient._id}</span>
+                <button onClick={() => setPatient(null)} className="text-xs text-blue-600 hover:underline">{tr('Đổi')}</button>
+              </div>
+            ) : (
+              <InlinePatientPicker onPick={setPatient} />
+            )}
           </div>
-        ) : (
-          <InlinePatientPicker onPick={setPatient} />
-        )}
-      </div>
-      <input
-        value={encounterId}
-        onChange={e => setEncId(e.target.value)}
-        placeholder={tr('Lượt khám (tuỳ chọn)')}
-        className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-44 font-mono"
-        disabled={!!session}
-      />
+          <input
+            value={encounterId}
+            onChange={e => setEncId(e.target.value)}
+            placeholder={tr('Lượt khám (tuỳ chọn)')}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-44 font-mono"
+            disabled={!!session}
+          />
+        </>
+      )}
+      {embedded && <div className="flex-1" />}
       {/* EN / VN language toggle (dx assistant only) */}
       <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
         {['vi', 'en'].map(l => (
