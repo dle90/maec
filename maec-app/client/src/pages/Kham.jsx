@@ -663,6 +663,269 @@ function CreateEncounterModal({ onClose, onCreated }) {
 // fills its container) and the mobile/legacy drawer (embedded=false, fixed
 // modal with backdrop). All the encounter detail UI lives here.
 
+// ── Reworked encounter pane: 2×2 clinical grid cells + collapsible bill rail ──
+
+// One cell of the 2×2 clinical grid: a titled card whose body scrolls internally
+// on wide screens (xl) so the grid frame stays put (cockpit feel), and grows
+// naturally when the grid collapses to a single column on tablet/phone.
+function GridCell({ n, title, extra, children }) {
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white flex flex-col overflow-hidden xl:max-h-[46vh]">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50/70 flex-shrink-0">
+        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 min-w-0">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] flex-shrink-0">{n}</span>
+          <span className="truncate">{title}</span>
+        </h3>
+        {extra != null && <span className="text-xs font-mono text-gray-500 flex-shrink-0">{extra}</span>}
+      </div>
+      <div className="p-3 space-y-3 overflow-y-auto flex-1">{children}</div>
+    </section>
+  )
+}
+
+function EmptyHint({ children }) {
+  return <div className="text-xs text-gray-400 italic px-1 py-3">{children}</div>
+}
+
+// Collapsible free-text record fields — the old "Hồ sơ bệnh án" textareas split
+// across cells ① (bệnh sử) and ④ (kết luận). Each ClinicalNoteInput self-saves on
+// blur; the header badge shows how many are filled so the doctor can scan.
+function NotesGroup({ encounterId, enc, fields, isClosed, onSaved, open, setOpen, title, icon = '📝' }) {
+  const filled = fields.filter(f => (enc[f.field] || '').trim()).length
+  return (
+    <section className="border border-gray-200 rounded-lg">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <span className="text-xs text-gray-400">{open ? '▾' : '▸'}</span>
+        <span>{icon}</span>
+        <span className="flex-1 text-left">{title}</span>
+        <span className={`text-[11px] font-normal px-1.5 py-0.5 rounded ${filled === 0 ? 'bg-gray-100 text-gray-500' : filled === fields.length ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+          {filled}/{fields.length}
+        </span>
+      </button>
+      {open && (
+        <div className="p-2 space-y-2 border-t border-gray-100">
+          {fields.map(cfg => (
+            <ClinicalNoteInput key={cfg.field} encounterId={encounterId} field={cfg.field} label={cfg.label}
+              value={enc[cfg.field] || ''} rows={cfg.rows} placeholder={cfg.placeholder} disabled={isClosed} onSaved={onSaved} />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+// Prior visits for this patient — folded into cell ① (the patient-history cell).
+function PatientHistoryList({ history, open, setOpen, onOpenOther }) {
+  return (
+    <section className="border border-gray-200 rounded-lg">
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <span className="text-xs text-gray-400">{open ? '▾' : '▸'}</span>
+        <span>🗂</span>
+        <span className="flex-1 text-left">Lịch sử khám</span>
+        <span className="text-[11px] text-gray-400 font-normal">{history.length} lượt trước</span>
+      </button>
+      {open && (
+        history.length === 0
+          ? <div className="px-2.5 py-2 text-xs text-gray-400 italic border-t border-gray-100">Bệnh nhân này chưa có lượt khám nào trước đó.</div>
+          : <div className="border-t border-gray-100 divide-y max-h-56 overflow-y-auto">
+              {history.map(h => (
+                <button key={h._id} onClick={() => onOpenOther && onOpenOther(h._id)}
+                  className="w-full text-left px-2.5 py-2 hover:bg-blue-50 flex items-center gap-2 text-xs">
+                  <span className="text-gray-500 font-mono w-20 flex-shrink-0">{formatDate(h.createdAt) || '—'}</span>
+                  <span className="text-gray-500 w-14 flex-shrink-0 truncate">{h.site || '—'}</span>
+                  <span className="flex-1 truncate">
+                    {(h.packages || []).length === 0
+                      ? <span className="text-gray-400">— chưa gán gói —</span>
+                      : (h.packages || []).map(p => p.name).join(' + ')}
+                    {h.assignedServices?.length > 0 && <span className="text-gray-500 ml-1">({h.assignedServices.length} DV)</span>}
+                  </span>
+                  <span className="font-mono text-blue-700 flex-shrink-0">{fmtMoney(h.billTotal)}đ</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${h.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {h.status === 'paid' ? 'Đã trả' : h.status === 'cancelled' ? 'Hủy' : 'Mở'}
+                  </span>
+                </button>
+              ))}
+            </div>
+      )}
+    </section>
+  )
+}
+
+// Ordered services for THIS visit (cell ③), excluding those already shown as
+// orderable dx suggestions (hideServiceCodes) so a suggested+ordered test isn't
+// double-listed. Covers gói-derived and manually-added services.
+function AssignedServicesList({ enc, isClosed, hideServiceCodes, onOpen, onDelete }) {
+  const all = enc.assignedServices || []
+  const list = all.filter(s => !(hideServiceCodes && hideServiceCodes.has(s.serviceCode)))
+  if (all.length === 0) return null
+  return (
+    <div>
+      <div className="text-xs font-medium text-gray-500 mb-1.5 pt-1">Đã chỉ định ({all.length})</div>
+      {list.length === 0 ? (
+        <div className="text-xs text-gray-400 italic">Tất cả dịch vụ đã chỉ định nằm trong danh sách đề xuất ở trên.</div>
+      ) : (
+        <div className="space-y-1.5">
+          {list.map(s => {
+            const badge = STATUS_BADGE[s.status] || STATUS_BADGE.pending
+            return (
+              <div key={s.serviceCode} className="border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 flex items-center gap-2">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.cls} flex-shrink-0`}>{badge.label}</span>
+                <button onClick={() => onOpen(s.serviceCode)} className="text-sm flex-1 text-left truncate hover:text-blue-700">
+                  {s.serviceName}
+                  {s.assignedToName && <span className="ml-1.5 text-[10px] text-gray-500 font-normal">· {s.assignedToName}</span>}
+                </button>
+                {s.addedAt && (
+                  <span
+                    className={`text-[10px] flex-shrink-0 tabular-nums ${s.status === 'done' ? 'text-emerald-600' : 'text-gray-400'}`}
+                    title={s.status === 'done'
+                      ? `Thêm ${new Date(s.addedAt).toLocaleString('vi-VN')} → Hoàn thành ${s.completedAt ? new Date(s.completedAt).toLocaleString('vi-VN') : '—'}`
+                      : `Thêm ${new Date(s.addedAt).toLocaleString('vi-VN')} (đang chờ/làm)`}
+                  >⏱ {fmtDuration(s.addedAt, s.completedAt)}</span>
+                )}
+                {s.addedByPackage && <span className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded flex-shrink-0" title={`Từ gói ${s.addedByPackage}`}>📦</span>}
+                <button onClick={() => onOpen(s.serviceCode)} className="text-xs text-blue-600 flex-shrink-0">Mở →</button>
+                {!isClosed && (
+                  <button onClick={() => onDelete(s)} className="text-red-500 hover:text-red-700 text-base leading-none flex-shrink-0" aria-label="Xóa dịch vụ">×</button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Bill line items grouped by kind with per-group subtotal + VAT breakdown +
+// discount. The grand total lives in the BillRail footer (always visible).
+function BillBreakdown({ enc, isClosed, onDeleteBillItem, reload }) {
+  const KIND_ORDER = [
+    { kind: 'package', label: 'Gói khám', hint: 'không VAT',    cls: 'text-purple-700' },
+    { kind: 'service', label: 'Dịch vụ',  hint: 'không VAT',    cls: 'text-blue-700' },
+    { kind: 'kinh',    label: 'Kính',     hint: 'VAT 5%',       cls: 'text-emerald-700' },
+    { kind: 'thuoc',   label: 'Thuốc',    hint: 'VAT 5% / 8%',  cls: 'text-amber-700' },
+  ]
+  const grouped = { package: [], service: [], kinh: [], thuoc: [] }
+  for (const b of (enc.billItems || [])) (grouped[b.kind] || (grouped[b.kind] = [])).push(b)
+  const vatByRate = {}
+  const groupSubtotal = (items) => items.reduce((s, b) => s + (b.totalPrice || 0), 0)
+  for (const b of (enc.billItems || [])) {
+    const rate = b.vatRate || 0
+    if (rate > 0) vatByRate[rate] = (vatByRate[rate] || 0) + (b.totalPrice || 0) * rate / (100 + rate)
+  }
+  return (
+    <div className="space-y-2 text-sm">
+      {KIND_ORDER.map(g => {
+        const items = grouped[g.kind] || []
+        if (items.length === 0) return null
+        return (
+          <div key={g.kind} className="border border-gray-100 rounded-lg overflow-hidden">
+            <div className={`flex items-center justify-between px-2.5 py-1 bg-gray-50 text-[11px] font-semibold ${g.cls}`}>
+              <span>{g.label} <span className="font-normal text-gray-400">· {g.hint}</span></span>
+              <span className="font-mono">{fmtMoney(groupSubtotal(items))}</span>
+            </div>
+            <table className="w-full text-xs">
+              <tbody className="divide-y divide-gray-100">
+                {items.map((b, i) => (
+                  <tr key={b._id || `${g.kind}-${i}`} className="hover:bg-gray-50">
+                    <td className="py-1 px-2.5">{b.name}{g.kind === 'thuoc' && (b.vatRate || 0) > 0 && <span className="ml-1 text-[10px] text-gray-400">VAT {b.vatRate}%</span>}</td>
+                    <td className="py-1 text-right w-7 text-gray-500">{b.qty}</td>
+                    {/* đơn giá — only for multi-qty lines (where it differs from the line total) */}
+                    <td className="py-1 text-right font-mono w-16 text-[10px] text-gray-400" title={`Đơn giá ${fmtMoney(b.unitPrice)}đ`}>{b.qty > 1 ? fmtMoney(b.unitPrice) : ''}</td>
+                    <td className="py-1 text-right font-mono w-20">{fmtMoney(b.totalPrice)}</td>
+                    <td className="py-1 text-right w-6 pr-1.5">
+                      {!isClosed && <button onClick={() => onDeleteBillItem(b)} className="text-red-500 hover:text-red-700">×</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      })}
+      <div className="pt-1 space-y-1 border-t border-gray-200">
+        <div className="flex justify-between text-xs"><span className="text-gray-500">Tạm tính (gồm VAT)</span><span className="font-mono text-gray-700">{fmtMoney(enc.billTotal)}</span></div>
+        {Object.keys(vatByRate).sort((a, b) => Number(a) - Number(b)).map(rate => (
+          <div key={rate} className="flex justify-between text-[11px] text-gray-500 pl-2"><span>↳ VAT {rate}%</span><span className="font-mono">{fmtMoney(Math.round(vatByRate[rate]))}</span></div>
+        ))}
+        <div className="flex justify-between items-center text-xs"><span className="text-gray-500">Giảm giá</span><DiscountInput encounter={enc} disabled={isClosed} onSaved={reload} /></div>
+      </div>
+    </div>
+  )
+}
+
+// Separated, collapsible bill — the orders & money zone. The optician/pharmacy/
+// reception add Kính/Thuốc/Dịch vụ here AFTER the doctor finishes; "Kết thúc
+// khám" is the soft sign-off and does NOT gate payment.
+function BillRail({ enc, isClosed, open, setOpen, onAddPackage, onAddItem, onDeletePackage, onDeleteBillItem, onConclude, onReopen, reload }) {
+  const total = grandTotal(enc)
+  const packages = enc.packages || []
+  const billItems = enc.billItems || []
+  const concluded = enc.status === 'reported' || enc.status === 'verified'
+
+  if (!open) {
+    return (
+      <div className="xl:w-[64px] xl:flex-shrink-0">
+        <button onClick={() => setOpen(true)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 xl:sticky xl:top-0 xl:flex-col xl:gap-1 xl:py-3">
+          <span className="text-sm font-semibold text-gray-700">💵</span>
+          <span className="font-mono text-blue-700 font-bold text-xs xl:[writing-mode:vertical-rl] xl:rotate-180">{fmtMoney(total)}đ</span>
+          <span className="text-gray-400">▸</span>
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="xl:w-[340px] xl:flex-shrink-0">
+      <div className="rounded-xl border border-gray-200 bg-white xl:sticky xl:top-0 xl:max-h-[calc(100vh-170px)] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+          <span className="text-sm font-semibold text-gray-700">💵 Bill</span>
+          <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-700 text-sm px-1" title="Thu gọn">▾ thu gọn</button>
+        </div>
+        <div className="p-3 space-y-3 overflow-y-auto flex-1">
+          {!isClosed && (
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={onAddPackage} className="px-2 py-1 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700">📦 Gói</button>
+              <button onClick={() => onAddItem('service')} className="px-2 py-1 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">+ Dịch vụ</button>
+              <button onClick={() => onAddItem('kinh')} className="px-2 py-1 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">+ Kính</button>
+              <button onClick={() => onAddItem('thuoc')} className="px-2 py-1 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700">+ Thuốc</button>
+            </div>
+          )}
+          {packages.length > 0 && (
+            <div className="space-y-1.5">
+              {packages.map(p => (
+                <div key={p.code} className="bg-purple-50 border border-purple-200 rounded-lg px-2.5 py-1.5 text-sm flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-purple-900 text-xs">{p.name}{p.tier && <span className="font-normal text-purple-700"> — {p.tier}</span>}</div>
+                  </div>
+                  {!isClosed && <button onClick={() => onDeletePackage(p)} className="text-purple-600 hover:text-purple-900 text-base leading-none flex-shrink-0" aria-label="Bỏ gói">×</button>}
+                </div>
+              ))}
+            </div>
+          )}
+          {billItems.length === 0
+            ? <div className="text-xs text-gray-400 italic">Chưa có mục nào trên bill. Dùng nút trên để thêm gói / dịch vụ / kính / thuốc.</div>
+            : <BillBreakdown enc={enc} isClosed={isClosed} onDeleteBillItem={onDeleteBillItem} reload={reload} />}
+        </div>
+        <div className="border-t border-gray-200 p-3 flex-shrink-0 bg-white space-y-2">
+          <div className="flex justify-between items-baseline font-bold">
+            <span className="text-gray-700">Tổng cộng</span>
+            <span className="font-mono text-blue-700 text-base">{fmtMoney(total)}đ</span>
+          </div>
+          {!isClosed && (concluded ? (
+            <button onClick={onReopen} className="w-full text-sm px-3 py-2 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-1">↩ Mở lại khám</button>
+          ) : (
+            <button onClick={onConclude} className="w-full text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold flex items-center justify-center gap-1">✓ Kết thúc khám</button>
+          ))}
+          {concluded && <div className="text-[11px] text-blue-700 text-center">BS đã kết luận{enc.radiologistName ? ` · ${enc.radiologistName}` : ''}</div>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }) {
   const navigate = useNavigate()
   const [enc, setEnc] = useState(null)
@@ -672,7 +935,9 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
   const [openServiceCode, setOpenServiceCode] = useState(null)
   const [showAddItem, setShowAddItem] = useState(null) // 'service' | 'kinh' | 'thuoc'
   const [showAssignPackage, setShowAssignPackage] = useState(false)
-  const [notesOpen, setNotesOpen] = useState(false)
+  const [notes1Open, setNotes1Open] = useState(false)   // ① bệnh sử free-text
+  const [notes4Open, setNotes4Open] = useState(false)   // ④ kết luận free-text
+  const [billOpen, setBillOpen] = useState(true)        // right-rail bill collapse
   const [svcCatalog, setSvcCatalog] = useState([])
   const [syncSignal, setSyncSignal] = useState(0)   // bumped when a station result is saved → dx re-syncs
 
@@ -729,7 +994,22 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
     const reason = (session?.complaint?.text || '').trim()
     if (reason && !(enc.clinicalInfo || '').trim()) body.clinicalInfo = reason
     if (Object.keys(body).length) {
-      try { await api.put(`/encounters/${enc._id}/clinical-notes`, body); reload() } catch {}
+      try {
+        await api.put(`/encounters/${enc._id}/clinical-notes`, body)
+        // Auto-open the note groups so the doctor SEES what the dx flow just wrote
+        // (otherwise it lands inside collapsed accordions).
+        if (body.diagnosis || body.conclusion) setNotes4Open(true)
+        if (body.clinicalInfo) setNotes1Open(true)
+        reload()
+      } catch (e) {
+        // Don't silently swallow — a closed encounter rejects the writeback (409),
+        // which would otherwise lose the confirmed diagnosis with no warning.
+        if (e.response?.status === 409) {
+          alert('Lượt khám đã đóng — chẩn đoán/điều trị KHÔNG ghi được vào hồ sơ. Hãy mở lại khám rồi lưu lại.')
+        } else {
+          alert('Không ghi được kết luận vào hồ sơ: ' + (e.response?.data?.error || e.message))
+        }
+      }
     }
   }
 
@@ -752,6 +1032,141 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
       } catch (e) { alert(e.response?.data?.error || 'Lỗi thêm dịch vụ') }
     },
     onAddCustom: () => setShowAddItem('service'),
+  }
+
+  // Free-text record fields, split across cells ① (bệnh sử) and ④ (kết luận) —
+  // the old "Hồ sơ bệnh án" block dissolved into the grid. Self-saving escape
+  // hatch; the dx flow auto-fills clinicalInfo/diagnosis/conclusion. The printout
+  // (.docx / Phiếu Khám) still reads these same fields.
+  const NOTE_FIELDS_1 = [
+    { field: 'clinicalInfo',   label: 'Lý do đến khám',     rows: 2, placeholder: 'Triệu chứng chính khi đến khám…' },
+    { field: 'presentIllness', label: 'Quá trình bệnh lý',  rows: 3, placeholder: 'Diễn biến, thời gian khởi phát, yếu tố tăng/giảm…' },
+    { field: 'pastHistory',    label: 'Tiền sử người bệnh', rows: 2, placeholder: 'Bệnh đã mắc, phẫu thuật, dị ứng, gia đình, thuốc…' },
+  ]
+  const NOTE_FIELDS_4 = [
+    { field: 'diagnosis',  label: 'Chẩn đoán', rows: 2, placeholder: 'Chẩn đoán xác định / sơ bộ…' },
+    { field: 'conclusion', label: 'Kết luận',  rows: 2, placeholder: 'Hướng xử trí, đơn thuốc, hẹn tái khám…' },
+  ]
+  // Running test cost shown in cell ③ (the doctor's "tests $ so far").
+  const serviceTotal = (enc.billItems || []).filter(b => b.kind === 'service').reduce((s, b) => s + (b.totalPrice || 0), 0)
+
+  const onDeletePackage = async (p) => {
+    if (!confirm(`Bỏ gói "${p.name}"? Các dịch vụ thuộc gói này sẽ bị xóa.`)) return
+    try { await api.delete(`/encounters/${enc._id}/packages/${encodeURIComponent(p.code)}`); reload() }
+    catch (e) { alert(e.response?.data?.error || 'Lỗi bỏ gói') }
+  }
+  const onDeleteBillItem = async (b) => {
+    if (!confirm(`Xóa "${b.name}" khỏi bill?`)) return
+    try { await api.delete(`/encounters/${enc._id}/bill-items/${b._id || enc.billItems.indexOf(b)}`); reload() }
+    catch (e) { alert(e.response?.data?.error || 'Lỗi xóa mục bill') }
+  }
+  const onDeleteService = async (s) => {
+    if (!confirm(`Xóa dịch vụ "${s.serviceName}"?`)) return
+    try { await api.delete(`/encounters/${enc._id}/services/${encodeURIComponent(s.serviceCode)}`); reload() }
+    catch (e) { alert(e.response?.data?.error || 'Lỗi xóa dịch vụ') }
+  }
+  const onConclude = async () => {
+    try { await concludeEncounter(enc._id); reload() }
+    catch (e) { alert(e.response?.data?.error || 'Lỗi kết thúc khám') }
+  }
+  const onReopen = async () => {
+    if (!confirm(`Mở lại lượt khám của ${enc.patientName} để chỉnh sửa?`)) return
+    try { await reopenEncounter(enc._id); reload() }
+    catch (e) { alert(e.response?.data?.error || 'Lỗi mở lại khám') }
+  }
+  const goRebook = () => {
+    const params = new URLSearchParams({ newAppt: '1', patientId: enc.patientId || '', patientName: enc.patientName || '' })
+    if (enc.site) params.set('site', enc.site)
+    navigate(`/lich-hen?${params.toString()}`)
+  }
+
+  // The reworked encounter body: a pinned red-flag banner, the 2×2 clinical grid
+  // (① bệnh sử+lịch sử · ② chẩn đoán phân biệt · ③ cận lâm sàng+dịch vụ · ④ kết
+  // luận), attachments, and the separated collapsible bill rail. Passed to the
+  // dx assistant as `renderLayout(slots)` so it owns the session while we lay out
+  // its panels alongside the encounter's orders & bill.
+  const renderGrid = (slots) => {
+    const concluded = enc.status === 'reported' || enc.status === 'verified'
+    return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Two columns at xl (matches the 2-col grid) so the bill rail never floats
+          beside a single-column grid in the 1024–1279px band. No items-start so the
+          rail column stretches → its sticky inner div has travel room. */}
+      <div className="p-4 flex flex-col xl:flex-row gap-4">
+        <div className="flex-1 min-w-0">
+          {/* Sticky safety banner: closed-notice + errors + red flags. Pinned to the
+              scroll container so an active emergency red flag stays visible while the
+              doctor scrolls the grid below. */}
+          {(isClosed || slots.errorBox || slots.redFlags) && (
+            <div className="sticky top-0 z-20 -mt-4 pt-4 pb-2 mb-3 space-y-2 bg-gray-50/95 backdrop-blur">
+              {isClosed && (
+                <div className="text-xs px-2.5 py-1.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+                  🔒 Lượt khám đã đóng ({enc.status === 'paid' ? 'đã thanh toán' : 'đã hủy'}) — chỉ xem, không chỉ định/sửa dịch vụ.
+                </div>
+              )}
+              {slots.errorBox}
+              {slots.redFlags}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2 mb-3">
+            {slots.langToggle}
+            {slots.resetBtn}
+          </div>
+          {/* Routine asymptomatic check-up: one reassuring "sẵn sàng" panel instead
+              of three empty cells. */}
+          {slots.isBlank && <div className="mb-4">{slots.readyState}</div>}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <GridCell n="①" title="Bệnh sử & triệu chứng">
+              {slots.complaint}
+              {slots.examSync}
+              <NotesGroup encounterId={enc._id} enc={enc} fields={NOTE_FIELDS_1} isClosed={isClosed}
+                onSaved={reload} open={notes1Open} setOpen={setNotes1Open} title="Ghi chú bệnh sử (tự do)" />
+              <PatientHistoryList history={history} open={historyOpen} setOpen={setHistoryOpen} onOpenOther={onOpenOther} />
+            </GridCell>
+
+            <GridCell n="②" title="Chẩn đoán phân biệt">
+              {slots.differential || <EmptyHint>Nhập triệu chứng hoặc kết quả khám để trợ lý xếp hạng chẩn đoán.</EmptyHint>}
+            </GridCell>
+
+            <GridCell n="③" title="Cận lâm sàng" extra={serviceTotal > 0 ? `Σ ${fmtMoney(serviceTotal)}đ` : null}>
+              {slots.tests || <EmptyHint>Chưa có chỉ định. Trợ lý đề xuất cận lâm sàng theo triệu chứng & kết quả khám.</EmptyHint>}
+              <AssignedServicesList enc={enc} isClosed={isClosed} hideServiceCodes={slots.suggestedServiceCodes}
+                onOpen={(code) => setOpenServiceCode(code)} onDelete={onDeleteService} />
+            </GridCell>
+
+            <GridCell n="④" title="Kết luận & điều trị">
+              {slots.outcome || <EmptyHint>Xác nhận một chẩn đoán ở ② để kết luận & kê điều trị.</EmptyHint>}
+              <NotesGroup encounterId={enc._id} enc={enc} fields={NOTE_FIELDS_4} isClosed={isClosed}
+                onSaved={reload} open={notes4Open} setOpen={setNotes4Open} title="Ghi chú kết luận (tự do)" icon="🩺" />
+              <button onClick={goRebook}
+                className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-1"
+                title="Mở Lịch hẹn và đặt lịch tái khám cho bệnh nhân này">📅 Đặt lịch hẹn tái khám</button>
+              {/* "Kết thúc khám" soft sign-off lives here (always visible — not gated
+                  behind the collapsible bill rail) AND mirrored in the bill footer. */}
+              {!isClosed && (concluded ? (
+                <button onClick={onReopen}
+                  className="w-full text-sm font-semibold px-2.5 py-2 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center justify-center gap-1">↩ Mở lại khám</button>
+              ) : (
+                <button onClick={onConclude}
+                  className="w-full text-sm font-semibold px-2.5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-1">✓ Kết thúc khám</button>
+              ))}
+              {concluded && <div className="text-[11px] text-blue-700 text-center">BS đã kết luận{enc.radiologistName ? ` · ${enc.radiologistName}` : ''}</div>}
+            </GridCell>
+          </div>
+
+          <div className="mt-4">
+            <EncounterAttachments encounterId={enc._id} canEdit={!isClosed} />
+          </div>
+          {slots.footer}
+        </div>
+
+        <BillRail enc={enc} isClosed={isClosed} open={billOpen} setOpen={setBillOpen}
+          onAddPackage={() => setShowAssignPackage(true)} onAddItem={(kind) => setShowAddItem(kind)}
+          onDeletePackage={onDeletePackage} onDeleteBillItem={onDeleteBillItem}
+          onConclude={onConclude} onReopen={onReopen} reload={reload} />
+      </div>
+    </div>
+    )
   }
 
   return (
@@ -782,31 +1197,11 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
           <button onClick={onClose} className="sm:hidden text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0" aria-label="Đóng">×</button>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-          {!isClosed && (enc.billItems || []).length > 0 && (
-            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded hidden md:inline">Tổng bill: <b className="text-blue-700 font-mono">{fmtMoney(grandTotal(enc))} đ</b> · chuyển <b>Thu ngân</b></span>
+          {(enc.billItems || []).length > 0 && (
+            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded hidden md:inline">Tổng: <b className="text-blue-700 font-mono">{fmtMoney(grandTotal(enc))}đ</b></span>
           )}
-          {/* BS sign-off (soft signal): toggles status reported ↔ in_progress.
-              Doesn't block Thu ngân — Thu ngân can still collect payment at
-              any status. See encounters.js POST /:id/conclude and /:id/reopen. */}
-          {!isClosed && enc.status !== 'reported' && enc.status !== 'verified' && (
-            <button
-              onClick={async () => {
-                try { await concludeEncounter(enc._id); reload() }
-                catch (e) { alert(e.response?.data?.error || 'Lỗi hoàn tất khám') }
-              }}
-              className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1 whitespace-nowrap"
-              title="BS hoàn tất khám — chuyển trạng thái sang Đã kết luận"><span>✓</span> Hoàn tất khám</button>
-          )}
-          {(enc.status === 'reported' || enc.status === 'verified') && enc.status !== 'paid' && enc.status !== 'cancelled' && (
-            <button
-              onClick={async () => {
-                if (!confirm(`Mở lại lượt khám của ${enc.patientName} để chỉnh sửa?`)) return
-                try { await reopenEncounter(enc._id); reload() }
-                catch (e) { alert(e.response?.data?.error || 'Lỗi mở lại khám') }
-              }}
-              className="text-xs px-2 py-1 rounded border border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1 whitespace-nowrap"
-              title="Mở lại lượt khám đã kết luận"><span>↩</span> Mở lại khám</button>
-          )}
+          {/* "Kết thúc khám" (soft sign-off, doesn't gate payment) lives in the
+              Bill rail footer now — see BillRail. */}
           <button
             onClick={() => printVisitReport(enc)}
             className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
@@ -857,310 +1252,19 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
         </div>
       </div>
 
-      {/* Sticky action toolbar — promotes the most-used actions */}
-      {!isClosed && (
-        <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center gap-2 flex-wrap flex-shrink-0">
-          <button onClick={() => setShowAssignPackage(true)}
-            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-1">
-            <span>📦</span> Thêm gói
-          </button>
-          <div className="w-px h-6 bg-gray-300" />
-          <button onClick={() => setShowAddItem('service')}
-            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1">
-            <span>+</span> Dịch vụ
-          </button>
-          <button onClick={() => setShowAddItem('kinh')}
-            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1">
-            <span>+</span> Kính
-          </button>
-          <button onClick={() => setShowAddItem('thuoc')}
-            className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 flex items-center gap-1">
-            <span>+</span> Thuốc
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
-
-        {/* Diagnostic-driven workflow — the spine of the encounter (always open):
-            Lý do → triệu chứng → tiền sử → cận lâm sàng (đề xuất ↔ dịch vụ, BS có thể
-            tự thêm) → chẩn đoán phân biệt → kết luận. Auto-pulls station results and
-            writes the diagnosis/kết luận back to Hồ sơ bệnh án below. */}
-        <section className="border border-gray-200 rounded-xl p-3 bg-gray-50/40">
-          {isClosed && (
-            <div className="mb-2 text-xs px-2.5 py-1.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
-              🔒 Lượt khám đã đóng ({enc.status === 'paid' ? 'đã thanh toán' : 'đã hủy'}) — chỉ xem, không chỉ định/sửa dịch vụ.
-            </div>
-          )}
-          {/* On a settled encounter, drop serviceMode so no order/fill buttons render
-              (server also rejects the mutations). Differential stays viewable. */}
-          <DiagnosticAssistant embedded initialPatientId={enc.patientId} initialEncounterId={enc._id}
-            onConfirmed={dxWriteBack} serviceMode={isClosed ? null : serviceMode} syncSignal={syncSignal} />
-        </section>
-
-        {/* Hồ sơ bệnh án — top-level collapsible section wrapping 5 also-
-            collapsible self-saving textareas. Each child persists on blur
-            via PUT /encounters/:id/clinical-notes with only its own field.
-            Section starts closed; header counter shows how many fields
-            already have content so the doctor can scan without expanding. */}
-        {(() => {
-          const NOTE_FIELDS = [
-            { field: 'clinicalInfo',   label: 'Lý do đến khám',     rows: 2, placeholder: 'Triệu chứng chính khi đến khám…' },
-            { field: 'presentIllness', label: 'Quá trình bệnh lý',  rows: 3, placeholder: 'Diễn biến triệu chứng, thời gian khởi phát, các yếu tố tăng/giảm…' },
-            { field: 'pastHistory',    label: 'Tiền sử người bệnh', rows: 2, placeholder: 'Bệnh đã mắc, phẫu thuật, dị ứng, gia đình, dùng thuốc…' },
-            { field: 'diagnosis',      label: 'Chẩn đoán',          rows: 2, placeholder: 'Chẩn đoán xác định / sơ bộ…' },
-            { field: 'conclusion',     label: 'Kết luận',           rows: 2, placeholder: 'Hướng xử trí, đơn thuốc, hẹn tái khám…' },
-          ]
-          const filledCount = NOTE_FIELDS.filter(cfg => (enc[cfg.field] || '').trim()).length
-          return (
-        <section>
-          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setNotesOpen(o => !o)}
-              className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
-            >
-              <span className="text-xs text-gray-400">{notesOpen ? '▾' : '▸'}</span>
-              <span>📝</span>
-              <span>Hồ sơ bệnh án</span>
-              <span className={`text-xs font-normal px-1.5 py-0.5 rounded ${filledCount === 0 ? 'bg-gray-100 text-gray-500' : filledCount === NOTE_FIELDS.length ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                {filledCount}/{NOTE_FIELDS.length} đã ghi
-              </span>
-            </button>
-            <button
-              onClick={() => {
-                const params = new URLSearchParams({
-                  newAppt: '1',
-                  patientId: enc.patientId || '',
-                  patientName: enc.patientName || '',
-                })
-                if (enc.site) params.set('site', enc.site)
-                navigate(`/lich-hen?${params.toString()}`)
-              }}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 flex items-center gap-1 whitespace-nowrap"
-              title="Mở Lịch hẹn và đặt lịch tái khám cho bệnh nhân này"
-            >📅 Đặt lịch hẹn tái khám</button>
-          </div>
-          {notesOpen && <div className="space-y-2">
-            {NOTE_FIELDS.map(cfg => (
-              <ClinicalNoteInput
-                key={cfg.field}
-                encounterId={enc._id}
-                field={cfg.field}
-                label={cfg.label}
-                value={enc[cfg.field] || ''}
-                rows={cfg.rows}
-                placeholder={cfg.placeholder}
-                disabled={isClosed}
-                onSaved={reload}
-              />
-            ))}
-          </div>}
-        </section>
-          )
-        })()}
-
-
-        {/* Patient history */}
-        <section>
-          <button onClick={() => setHistoryOpen(o => !o)} className="w-full text-left flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900">
-            <span className="text-xs">{historyOpen ? '▾' : '▸'}</span>
-            <span>Lịch sử khám</span>
-            <span className="text-xs text-gray-400 font-normal">({history.length} lượt trước)</span>
-          </button>
-          {historyOpen && (
-            history.length === 0 ? (
-              <div className="mt-2 text-xs text-gray-400 italic px-2">Bệnh nhân này chưa có lượt khám nào trước đó.</div>
-            ) : (
-              <div className="mt-2 border border-gray-200 rounded-lg divide-y max-h-64 overflow-y-auto">
-                {history.map(h => (
-                  <button key={h._id} onClick={() => onOpenOther && onOpenOther(h._id)}
-                    className="w-full text-left px-3 py-2 hover:bg-blue-50 flex items-center gap-2 text-sm">
-                    <span className="text-xs text-gray-500 font-mono w-24 flex-shrink-0">{formatDate(h.createdAt) || '—'}</span>
-                    <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{h.site || '—'}</span>
-                    <span className="flex-1 truncate">
-                      {(h.packages || []).length === 0
-                        ? <span className="text-gray-400">— chưa gán gói —</span>
-                        : (h.packages || []).map(p => p.name).join(' + ')}
-                      {h.assignedServices?.length > 0 && <span className="text-xs text-gray-500 ml-1">({h.assignedServices.length} DV)</span>}
-                    </span>
-                    <span className="font-mono text-blue-700 text-xs flex-shrink-0">{fmtMoney(h.billTotal)}đ</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${h.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {h.status === 'paid' ? 'Đã trả' : h.status === 'cancelled' ? 'Hủy' : 'Mở'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )
-          )}
-        </section>
-
-        {/* Packages — multiple allowed, each removable */}
-        <section>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Gói khám ({(enc.packages || []).length})</h3>
-          {(enc.packages || []).length === 0 ? (
-            <div className="text-xs text-gray-400 italic">Chưa gán gói. Bấm "Thêm gói" để chọn.</div>
-          ) : (
-            <div className="space-y-1.5">
-              {enc.packages.map(p => (
-                <div key={p.code} className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-purple-900">
-                      {p.name} {p.tier && <span className="text-xs font-normal text-purple-700">— {p.tier}</span>}
-                    </div>
-                    <div className="text-xs text-purple-700 mt-0.5 font-mono">{p.code}</div>
-                  </div>
-                  {!isClosed && (
-                    <button
-                      onClick={async () => {
-                        if (!confirm(`Bỏ gói "${p.name}"? Các dịch vụ thuộc gói này sẽ bị xóa.`)) return
-                        await api.delete(`/encounters/${enc._id}/packages/${encodeURIComponent(p.code)}`)
-                        reload()
-                      }}
-                      className="text-purple-600 hover:text-purple-900 text-base leading-none flex-shrink-0"
-                      aria-label="Bỏ gói">×</button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Services list */}
-        <section>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Dịch vụ ({(enc.assignedServices || []).length})</h3>
-          {(enc.assignedServices || []).length === 0 ? (
-            <div className="text-xs text-gray-400 italic">Chưa có dịch vụ nào. Thêm gói khám hoặc bấm "+ Dịch vụ" để thêm dịch vụ rời.</div>
-          ) : (
-            <div className="space-y-1.5">
-              {enc.assignedServices.map(s => {
-                const badge = STATUS_BADGE[s.status] || STATUS_BADGE.pending
-                return (
-                  <div key={s.serviceCode} className="border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.cls} flex-shrink-0`}>{badge.label}</span>
-                    <button onClick={() => setOpenServiceCode(s.serviceCode)} className="text-sm flex-1 text-left truncate cursor-pointer hover:text-blue-700">
-                      {s.serviceName}
-                      {s.assignedToName && (
-                        <span className="ml-1.5 text-[10px] text-gray-500 font-normal">· {s.assignedToName}</span>
-                      )}
-                    </button>
-                    <span className="font-mono text-[10px] text-gray-400 flex-shrink-0">{s.serviceCode}</span>
-                    {s.addedAt && (
-                      <span
-                        className={`text-[10px] flex-shrink-0 tabular-nums ${s.status === 'done' ? 'text-emerald-600' : 'text-gray-400'}`}
-                        title={s.status === 'done'
-                          ? `Thêm ${new Date(s.addedAt).toLocaleString('vi-VN')} → Hoàn thành ${s.completedAt ? new Date(s.completedAt).toLocaleString('vi-VN') : '—'}`
-                          : `Thêm ${new Date(s.addedAt).toLocaleString('vi-VN')} (đang chờ/làm)`}
-                      >⏱ {fmtDuration(s.addedAt, s.completedAt)}</span>
-                    )}
-                    {s.addedByPackage && <span className="text-[9px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded flex-shrink-0" title={`Từ gói ${s.addedByPackage}`}>📦</span>}
-                    <button onClick={() => setOpenServiceCode(s.serviceCode)} className="text-xs text-blue-600 flex-shrink-0">Mở →</button>
-                    {!isClosed && (
-                      <button
-                        onClick={async () => {
-                          if (!confirm(`Xóa dịch vụ "${s.serviceName}"?`)) return
-                          await api.delete(`/encounters/${enc._id}/services/${encodeURIComponent(s.serviceCode)}`)
-                          reload()
-                        }}
-                        className="text-red-500 hover:text-red-700 text-base leading-none flex-shrink-0"
-                        aria-label="Xóa dịch vụ">×</button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
-        <EncounterAttachments encounterId={enc._id} canEdit={!isClosed} />
-
-        {/* Bill — grouped by kind (Gói khám / Dịch vụ / Kính / Thuốc), each
-            group with its own subtotal. VAT is extracted from gross prices
-            (prices in catalog are VAT-inclusive). Footer breakdown shows the
-            embedded VAT per rate so reporting is transparent — but the
-            grand total math is unchanged: gross subtotal − discount. */}
-        <section>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Bill ({(enc.billItems || []).length} mục)</h3>
-          {(enc.billItems || []).length === 0 ? (
-            <div className="text-xs text-gray-400 italic">Chưa có mục nào trên bill.</div>
-          ) : (() => {
-            const KIND_ORDER = [
-              { kind: 'package', label: 'Gói khám',   hint: 'không VAT',   cls: 'text-purple-700' },
-              { kind: 'service', label: 'Dịch vụ',    hint: 'không VAT',   cls: 'text-blue-700' },
-              { kind: 'kinh',    label: 'Kính',       hint: 'VAT 5%',      cls: 'text-emerald-700' },
-              { kind: 'thuoc',   label: 'Thuốc',      hint: 'VAT 5% / 8%', cls: 'text-amber-700' },
-            ]
-            const grouped = { package: [], service: [], kinh: [], thuoc: [] }
-            for (const b of enc.billItems) (grouped[b.kind] || (grouped[b.kind] = [])).push(b)
-            // VAT breakdown from gross: vat = total * rate / (100 + rate)
-            const vatByRate = {}  // { 5: total_vat, 8: total_vat }
-            let groupSubtotal = (items) => items.reduce((s, b) => s + (b.totalPrice || 0), 0)
-            for (const b of enc.billItems) {
-              const rate = b.vatRate || 0
-              if (rate > 0) {
-                vatByRate[rate] = (vatByRate[rate] || 0) + (b.totalPrice || 0) * rate / (100 + rate)
-              }
-            }
-            return (
-            <div className="space-y-3 text-sm">
-              {KIND_ORDER.map(g => {
-                const items = grouped[g.kind] || []
-                if (items.length === 0) return null
-                return (
-                  <div key={g.kind} className="border border-gray-100 rounded-lg overflow-hidden">
-                    <div className={`flex items-center justify-between px-3 py-1.5 bg-gray-50 text-xs font-semibold ${g.cls}`}>
-                      <span>{g.label} <span className="font-normal text-gray-400">· {g.hint}</span></span>
-                      <span className="font-mono">{fmtMoney(groupSubtotal(items))} đ</span>
-                    </div>
-                    <table className="w-full">
-                      <tbody className="divide-y divide-gray-100">
-                        {items.map((b, i) => (
-                          <tr key={b._id || `${g.kind}-${i}`} className="hover:bg-gray-50">
-                            <td className="py-1.5 px-3">
-                              {b.name}
-                              {/* For Thuốc, show per-item VAT badge since rate varies */}
-                              {g.kind === 'thuoc' && (b.vatRate || 0) > 0 && (
-                                <span className="ml-1.5 text-[10px] text-gray-400">VAT {b.vatRate}%</span>
-                              )}
-                            </td>
-                            <td className="py-1.5 text-right w-12">{b.qty}</td>
-                            <td className="py-1.5 text-right font-mono text-xs w-24 text-gray-600">{fmtMoney(b.unitPrice)}</td>
-                            <td className="py-1.5 text-right font-mono w-28">{fmtMoney(b.totalPrice)}</td>
-                            <td className="py-1.5 text-right w-8 pr-2">
-                              {!isClosed && (
-                                <button onClick={async () => {
-                                  if (!confirm(`Xóa "${b.name}" khỏi bill?`)) return
-                                  await api.delete(`/encounters/${enc._id}/bill-items/${b._id || enc.billItems.indexOf(b)}`)
-                                  reload()
-                                }} className="text-red-500 hover:text-red-700 text-xs">×</button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )
-              })}
-              <div className="pt-2 space-y-1 border-t-2 border-gray-200">
-                <div className="flex justify-between"><span className="text-gray-500">Tạm tính (gồm VAT)</span><span className="font-mono text-gray-700">{fmtMoney(enc.billTotal)}</span></div>
-                {Object.keys(vatByRate).sort((a, b) => Number(a) - Number(b)).map(rate => (
-                  <div key={rate} className="flex justify-between text-xs text-gray-500 pl-3">
-                    <span>↳ trong đó VAT {rate}%</span>
-                    <span className="font-mono">{fmtMoney(Math.round(vatByRate[rate]))}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center"><span className="text-gray-500">Giảm giá</span><DiscountInput encounter={enc} disabled={isClosed} onSaved={reload} /></div>
-                <div className="flex justify-between items-baseline pt-1.5 border-t border-gray-200 font-bold">
-                  <span>Tổng cộng</span>
-                  <span className="font-mono text-blue-700 text-base">{fmtMoney(grandTotal(enc))}</span>
-                </div>
-              </div>
-            </div>
-            )
-          })()}
-        </section>
-      </div>
+      {/* Reworked body: pinned red-flag banner + 2×2 clinical grid + separated
+          collapsible bill rail. The dx assistant owns the session and renders its
+          panels into our grid via renderLayout(slots). On a settled encounter
+          serviceMode is dropped (view-only; the server also rejects mutations). */}
+      <DiagnosticAssistant
+        embedded
+        initialPatientId={enc.patientId}
+        initialEncounterId={enc._id}
+        onConfirmed={dxWriteBack}
+        serviceMode={isClosed ? null : serviceMode}
+        syncSignal={syncSignal}
+        renderLayout={renderGrid}
+      />
 
       {showAssignPackage && <AssignPackageModal encounterId={enc._id} onDone={async () => { setShowAssignPackage(false); await reload() }} onClose={() => setShowAssignPackage(false)} />}
       {openServiceCode && <ServiceFormModal encounterId={enc._id} serviceCode={openServiceCode} onDone={async () => { setOpenServiceCode(null); await reload(); setSyncSignal(s => s + 1) }} onClose={() => setOpenServiceCode(null)} />}

@@ -146,7 +146,7 @@ export default function Diagnostic() {
 // from props and calls `onConfirmed(session)` when the session is closed so the
 // host can write the diagnosis/treatment back to the encounter.
 // ─────────────────────────────────────────────────────────────────
-export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId = '', embedded = false, onConfirmed, serviceMode = null, syncSignal = 0 }) {
+export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId = '', embedded = false, onConfirmed, serviceMode = null, syncSignal = 0, renderLayout = null }) {
   const [patient, setPatient]     = useState(null)   // {patientId, name, dob, gender}
   const [encounterId, setEncId]   = useState(initialEncounterId)
   const [session, setSession]     = useState(null)   // engine response, or null before first run
@@ -188,8 +188,8 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
     } finally { setBusy(false) }
   }
 
-  // Embedded in Khám: auto-pull exam findings once when the assistant opens, if no
-  // session exists yet. (The section only mounts when the clinician expands it.)
+  // Embedded in Khám: auto-pull exam findings once on mount, if no session exists
+  // yet. (The assistant is always-open in the consolidated encounter pane.)
   useEffect(() => {
     if (!embedded || !initialEncounterId || session || autoSyncedRef.current) return
     autoSyncedRef.current = true
@@ -198,9 +198,11 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
   }, [embedded, initialEncounterId])
 
   // Re-sync when the host (Khám) signals a station result was just saved, so the
-  // engine immediately reflects the new exam value.
+  // engine immediately reflects the new exam value. No `!session` guard: a save
+  // can land before the auto-sync round-trip commits the session, and syncExam()
+  // create-or-reuses the session itself — so the bump is never dropped.
   useEffect(() => {
-    if (!syncSignal || !session || !encounterId || session.clinicianOutcome?.closedAt) return
+    if (!syncSignal || !encounterId || session?.clinicianOutcome?.closedAt) return
     syncExam()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncSignal])
@@ -276,6 +278,88 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
     && (session.redFlags || []).length === 0
     && liveObsCount === 0
 
+  const grid = !!renderLayout
+  const closed = !!session?.clinicianOutcome?.closedAt
+  const hasSession = !!session
+  const hasOutcome = hasSession && (!!session.clinicianOutcome?.confirmedDiseaseId || closed)
+
+  // Service codes the engine currently suggests — so the host grid can avoid
+  // double-listing a suggested test that's already shown as an orderable row.
+  const suggestedServiceCodes = useMemo(() => {
+    const s = new Set()
+    if (!serviceMode) return s
+    for (const t of (session?.recommendedNextTests || [])) {
+      // Only count tests actually rendered as an orderable service ROW (in-clinic).
+      // Referral tests render as bedside finding-cards, not service rows, so a
+      // host de-dupe must not hide an ordered service that has no row to re-open.
+      if (t.availableInClinic === false) continue
+      const code = serviceForTest(t.testId)
+      if (code) s.add(code)
+    }
+    return s
+  }, [serviceMode, session])
+
+  // Pre-built panel pieces. The standalone page stacks them vertically (below);
+  // an embedding host (Khám) passes `renderLayout(slots)` to place them into its
+  // own layout (e.g. the 2×2 exam grid + bill rail) while session state + all
+  // handlers stay owned here.
+  const slots = {
+    hasSession, isBlank, closed, hasOutcome, busy, error, embedded, encounterId,
+    session, suggestedServiceCodes,
+    langToggle: <LangToggle />,
+    resetBtn: hasSession
+      ? <button onClick={handleReset} className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg whitespace-nowrap">{tr('+ Phiên mới')}</button>
+      : null,
+    errorBox: error
+      ? <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800"><strong>{tr('Lỗi:')}</strong> {error}</div>
+      : null,
+    complaint: <ComplaintForm key={formKey} onSubmit={handleComplaint} busy={busy} hasSession={hasSession} />,
+    examSync: (embedded && encounterId) ? <ExamSyncBar busy={busy} syncedExam={syncedExam} onSync={syncExam} /> : null,
+    redFlags: hasSession
+      ? <RedFlagPanel redFlags={session.redFlags || []} onExclude={handleExcludeRedFlag} outcomeClosed={closed} />
+      : null,
+    readyState: (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm">
+        <div className="font-medium text-emerald-800 mb-1">{tr('🟢 Trợ lý sẵn sàng')}</div>
+        <p className="text-emerald-700">
+          {tr('Chưa có triệu chứng hay dấu hiệu bất thường — với khám định kỳ thì đây là bình thường, không có gì để cảnh báo. Thêm triệu chứng ở khung trên khi có; khi khám phát hiện dấu hiệu bất thường (vd. nhãn áp cao, tổn thương đáy mắt) trợ lý sẽ tự đưa ra gợi ý chẩn đoán.')}
+        </p>
+      </div>
+    ),
+    tests: hasSession
+      ? <NextTestsPanel
+          tests={session.recommendedNextTests || []}
+          observations={session.observations || []}
+          onAddObservation={handleAddObservation}
+          serviceMode={serviceMode}
+          busy={busy}
+          isBlank={isBlank}
+          hideTitle={grid}
+        />
+      : null,
+    differential: hasSession
+      ? <DifferentialPanel
+          sessionId={session._id}
+          differential={session.differential || []}
+          outcome={session.clinicianOutcome}
+          onConfirm={handleConfirmOutcome}
+          busy={busy}
+          hideTitle={grid}
+        />
+      : null,
+    outcome: hasOutcome
+      ? <OutcomePanel session={session} onConfirm={handleConfirmOutcome} busy={busy} hideTitle={grid} />
+      : null,
+    footer: (
+      <footer className="text-xs text-gray-500 italic pt-4 border-t border-gray-200">
+        ⚙ {tr(DISCLAIMER_VI)}
+      </footer>
+    ),
+  }
+
+  if (renderLayout) return renderLayout(slots)
+
+  // Standalone vertical layout — unchanged behaviour.
   return (
     <div className="space-y-4">
       <Header
@@ -287,75 +371,19 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
         onReset={handleReset}
         embedded={embedded}
       />
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800">
-          <strong>{tr('Lỗi:')}</strong> {error}
-        </div>
-      )}
-
+      {slots.errorBox}
       {/* Complaint form is persistent — stays editable alongside results so new
           symptoms found during the exam can be added without losing the session. */}
-      <ComplaintForm key={formKey} onSubmit={handleComplaint} busy={busy} hasSession={!!session} />
-
-      {/* Embedded in Khám: pull this encounter's recorded exam values into the engine
-          (auto on open; re-sync after entering more results). */}
-      {embedded && encounterId && (
-        <div className="flex items-center flex-wrap gap-2 text-xs">
-          <button onClick={syncExam} disabled={busy}
-            className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 disabled:opacity-50">
-            {tr('🔄 Lấy kết quả khám vào trợ lý')}
-          </button>
-          {syncedExam && (syncedExam.length
-            ? <span className="text-gray-500">{tr('Đã lấy:')} {syncedExam.map(s => s.label).join(', ')}</span>
-            : <span className="text-gray-400 italic">{tr('Chưa có kết quả khám dạng số để lấy.')}</span>
-          )}
-        </div>
-      )}
-
-      {session && (
+      {slots.complaint}
+      {slots.examSync}
+      {hasSession && (
         <>
-          <RedFlagPanel
-            redFlags={session.redFlags || []}
-            onExclude={handleExcludeRedFlag}
-            outcomeClosed={!!session.clinicianOutcome?.closedAt}
-          />
-          {isBlank ? (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm">
-              <div className="font-medium text-emerald-800 mb-1">{tr('🟢 Trợ lý sẵn sàng')}</div>
-              <p className="text-emerald-700">
-                {tr('Chưa có triệu chứng hay dấu hiệu bất thường — với khám định kỳ thì đây là bình thường, không có gì để cảnh báo. Thêm triệu chứng ở khung trên khi có; khi khám phát hiện dấu hiệu bất thường (vd. nhãn áp cao, tổn thương đáy mắt) trợ lý sẽ tự đưa ra gợi ý chẩn đoán.')}
-              </p>
-            </div>
-          ) : (
-            <>
-              <NextTestsPanel
-                tests={session.recommendedNextTests || []}
-                observations={session.observations || []}
-                onAddObservation={handleAddObservation}
-                serviceMode={serviceMode}
-                busy={busy}
-              />
-              <DifferentialPanel
-                sessionId={session._id}
-                differential={session.differential || []}
-                outcome={session.clinicianOutcome}
-                onConfirm={handleConfirmOutcome}
-                busy={busy}
-              />
-            </>
-          )}
-          <OutcomePanel
-            session={session}
-            onConfirm={handleConfirmOutcome}
-            busy={busy}
-          />
+          {slots.redFlags}
+          {isBlank ? slots.readyState : (<>{slots.tests}{slots.differential}</>)}
+          {slots.outcome}
         </>
       )}
-
-      <footer className="text-xs text-gray-500 italic pt-4 border-t border-gray-200">
-        ⚙ {tr(DISCLAIMER_VI)}
-      </footer>
+      {slots.footer}
     </div>
   )
 }
@@ -363,8 +391,43 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
 // ─────────────────────────────────────────────────────────────────
 // Header: patient picker + encounter id + session id
 // ─────────────────────────────────────────────────────────────────
+// EN / VN language toggle (dx assistant only). Standalone shows it in the page
+// header; embedded (Khám grid) the host places it in the pane header.
+function LangToggle() {
+  const { lang, setLang } = useLanguage()
+  return (
+    <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+      {['vi', 'en'].map(l => (
+        <button key={l} onClick={() => setLang(l)}
+          className={`px-2.5 py-1.5 ${lang === l ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+          {l === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Embedded-in-Khám control: pull the encounter's recorded exam values into the
+// engine. Auto-runs once on open; this button lets the clinician re-sync after
+// entering more station results.
+function ExamSyncBar({ busy, syncedExam, onSync }) {
+  const { t: tr } = useLanguage()
+  return (
+    <div className="flex items-center flex-wrap gap-2 text-xs">
+      <button onClick={onSync} disabled={busy}
+        className="px-2.5 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 disabled:opacity-50">
+        {tr('🔄 Lấy kết quả khám vào trợ lý')}
+      </button>
+      {syncedExam && (syncedExam.length
+        ? <span className="text-gray-500">{tr('Đã lấy:')} {syncedExam.map(s => s.label).join(', ')}</span>
+        : <span className="text-gray-400 italic">{tr('Chưa có kết quả khám dạng số để lấy.')}</span>
+      )}
+    </div>
+  )
+}
+
 function Header({ patient, setPatient, encounterId, setEncId, session, onReset, embedded = false }) {
-  const { t: tr, lang, setLang } = useLanguage()
+  const { t: tr } = useLanguage()
   return (
     <div className={`bg-white rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-3 ${embedded ? '' : 'sticky top-0 z-10'}`}>
       <div className="font-semibold text-lg text-gray-800">{tr('Hỗ trợ chẩn đoán')}</div>
@@ -393,14 +456,7 @@ function Header({ patient, setPatient, encounterId, setEncId, session, onReset, 
       )}
       {embedded && <div className="flex-1" />}
       {/* EN / VN language toggle (dx assistant only) */}
-      <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
-        {['vi', 'en'].map(l => (
-          <button key={l} onClick={() => setLang(l)}
-            className={`px-2.5 py-1.5 ${lang === l ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-            {l === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
-          </button>
-        ))}
-      </div>
+      <LangToggle />
       {session && (
         <>
           <span className="text-xs text-gray-500 font-mono">{session._id}</span>
@@ -795,7 +851,7 @@ function RedFlagPanel({ redFlags, onExclude, outcomeClosed }) {
 // ─────────────────────────────────────────────────────────────────
 // Differential panel
 // ─────────────────────────────────────────────────────────────────
-function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy }) {
+function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy, hideTitle = false }) {
   const { t: tr, lang } = useLanguage()
   const [expanded, setExp] = useState(new Set())
   const [aiExplain, setAiExplain] = useState({})   // diseaseId -> { lang, loading, error, data }
@@ -829,7 +885,7 @@ function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy }
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4">
-      <h2 className="text-base font-semibold text-gray-800 mb-3">{tr('Chẩn đoán phân biệt')}</h2>
+      {!hideTitle && <h2 className="text-base font-semibold text-gray-800 mb-3">{tr('Chẩn đoán phân biệt')}</h2>}
       {urgentTopUnflagged && (
         <div className={`mb-3 rounded-lg border p-2.5 text-sm ${top.urgency === 'emergency' ? 'bg-red-50 border-red-300 text-red-800' : 'bg-orange-50 border-orange-300 text-orange-800'}`}>
           <strong>{top.urgency === 'emergency' ? tr('⚠ Cấp cứu tiềm tàng') : tr('⚠ Cần khẩn')}:</strong>{' '}
@@ -908,7 +964,7 @@ function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy }
 // ─────────────────────────────────────────────────────────────────
 // Next tests panel — per-eye observation entry
 // ─────────────────────────────────────────────────────────────────
-function NextTestsPanel({ tests, observations, onAddObservation, serviceMode = null, busy }) {
+function NextTestsPanel({ tests, observations, onAddObservation, serviceMode = null, busy, isBlank = false, hideTitle = false }) {
   const { t: tr } = useLanguage()
   // Superseded rows (a re-entered measurement) are kept for audit but excluded here.
   const liveObs = useMemo(() => observations.filter(o => !o.amended && !o.supersededBy), [observations])
@@ -934,12 +990,20 @@ function NextTestsPanel({ tests, observations, onAddObservation, serviceMode = n
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500">
-      <div className="flex items-baseline justify-between mb-2">
-        <h2 className="text-base font-semibold text-gray-800">{tr('🎯 Bước tiếp theo')}</h2>
-        <span className="text-xs text-gray-500">{tr('Nhập kết quả → danh sách chẩn đoán cập nhật tự động')}</span>
-      </div>
+      {hideTitle ? (
+        <div className="text-xs text-gray-500 mb-2">{tr('Nhập kết quả → danh sách chẩn đoán cập nhật tự động')}</div>
+      ) : (
+        <div className="flex items-baseline justify-between mb-2">
+          <h2 className="text-base font-semibold text-gray-800">{tr('🎯 Bước tiếp theo')}</h2>
+          <span className="text-xs text-gray-500">{tr('Nhập kết quả → danh sách chẩn đoán cập nhật tự động')}</span>
+        </div>
+      )}
       {tests.length === 0 ? (
-        <div className="text-sm text-gray-500 italic py-2">{tr('Đã có đủ thông tin — không cần thêm xét nghiệm. Chuyển sang xác nhận chẩn đoán.')}</div>
+        <div className="text-sm text-gray-500 italic py-2">
+          {isBlank
+            ? tr('Chưa có chỉ định cận lâm sàng. Nhập kết quả khám hoặc thêm dịch vụ bên dưới khi cần.')
+            : tr('Đã có đủ thông tin — không cần thêm xét nghiệm. Chuyển sang xác nhận chẩn đoán.')}
+        </div>
       ) : (
         <>
           {serviceMode ? (
@@ -980,13 +1044,14 @@ function NextTestsPanel({ tests, observations, onAddObservation, serviceMode = n
               </div>
             </div>
           )}
-          {serviceMode && (
-            <button onClick={serviceMode.onAddCustom} disabled={busy}
-              className="mt-3 w-full text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-blue-300 text-blue-700 hover:bg-blue-50">
-              {tr('+ Thêm dịch vụ / xét nghiệm khác (BS tự chỉ định)')}
-            </button>
-          )}
         </>
+      )}
+
+      {serviceMode && (
+        <button onClick={serviceMode.onAddCustom} disabled={busy}
+          className="mt-3 w-full text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-blue-300 text-blue-700 hover:bg-blue-50">
+          {tr('+ Thêm dịch vụ / xét nghiệm khác (BS tự chỉ định)')}
+        </button>
       )}
 
       {liveObs.length > 0 && (
@@ -1280,7 +1345,7 @@ function groupTreatments(tokens, vocab, lang) {
   return Object.entries(g).sort((a, b) => (TREATMENT_CATEGORY[a[0]]?.order || 99) - (TREATMENT_CATEGORY[b[0]]?.order || 99))
 }
 
-function OutcomePanel({ session, onConfirm, busy }) {
+function OutcomePanel({ session, onConfirm, busy, hideTitle = false }) {
   const { t: tr, lang } = useLanguage()
   const outcome = session.clinicianOutcome || {}
   const closed = !!outcome.closedAt
@@ -1319,7 +1384,7 @@ function OutcomePanel({ session, onConfirm, busy }) {
 
   return (
     <div className={`rounded-xl shadow-sm p-4 ${closed ? 'bg-green-50 border border-green-200' : 'bg-white'}`}>
-      <h2 className="text-base font-semibold text-gray-800 mb-3">{tr('Kết luận & điều trị')}</h2>
+      {!hideTitle && <h2 className="text-base font-semibold text-gray-800 mb-3">{tr('Kết luận & điều trị')}</h2>}
       {outcome.confirmedDiseaseName && (
         <div className="text-sm mb-3">
           <strong>{tr('✓ Chẩn đoán xác nhận:')}</strong> {outcome.confirmedDiseaseName}
