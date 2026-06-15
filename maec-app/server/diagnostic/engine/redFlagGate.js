@@ -50,12 +50,18 @@ function matchPatientContext(ctx, rule) {
       if (ctxValue === undefined || ctxValue === null) continue
       if (ctxValue !== expected) return false
     } else if (key === 'ageMaxYears') {
+      // Age gate is a HARD requirement (unlike the permissive *OrUnknown* checks):
+      // a missing age must NOT pass it, else an age-restricted emergency rule (e.g.
+      // leukocoria ≤8, GCA/NAION ≥50) fires for the wrong age — a false "start IV
+      // steroids" in a young patient. Missing age → fail the gate. (The Khám flow
+      // backfills age from the encounter dob; standalone should enter age. Non-age-
+      // gated emergency rules — e.g. rf-rao — still catch age-unknown emergencies.)
       const age = ctx?.ageYears
-      if (age === undefined || age === null) continue
+      if (age === undefined || age === null) return false
       if (age > expected) return false
     } else if (key === 'ageMinYears') {
       const age = ctx?.ageYears
-      if (age === undefined || age === null) continue
+      if (age === undefined || age === null) return false
       if (age < expected) return false
     } else {
       const ctxValue = ctx?.[key]

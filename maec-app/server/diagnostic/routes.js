@@ -357,6 +357,7 @@ router.post('/sessions/:id/outcome', requireAuth, async (req, res) => {
   const body = req.body || {}
   const session = await DxSession.findById(req.params.id)
   if (!session) return res.status(404).json({ error: 'session not found' })
+  if (session.clinicianOutcome?.closedAt) return res.status(409).json({ error: 'session already closed' })
   const prev = session.clinicianOutcome || {}
   session.clinicianOutcome = {
     confirmedDiseaseId: body.confirmedDiseaseId,

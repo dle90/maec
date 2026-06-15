@@ -20,6 +20,12 @@ const now = () => new Date().toISOString()
 const todayISO = () => localDate()  // HCM-local YYYY-MM-DD; was UTC slice
 const sumBill = (items) => (items || []).reduce((s, i) => s + (i.totalPrice || 0), 0)
 
+// A settled encounter (bill collected = paid, or voided = cancelled) is immutable:
+// no service/package/bill/clinical-note edits. Other statuses (in_progress /
+// reported / verified) stay editable — Thu ngân still collects, BS may reopen.
+const isSettled = (enc) => enc.status === 'paid' || enc.status === 'cancelled'
+const SETTLED_ERR = 'Lượt khám đã đóng (đã thanh toán / đã hủy) — không thể chỉnh sửa.'
+
 // POST /encounters — create new clinical encounter (Lễ tân workflow).
 // Minimal: just patientId + site. Package / services / bill items added via
 // subsequent endpoints (assign-package, services, bill-items).
@@ -179,6 +185,7 @@ router.post('/:id/assign-package', requireAuth, async (req, res) => {
     const { packageCode, tierCode } = req.body
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
     const pkg = await Package.findOne({ code: packageCode }).lean()
     if (!pkg) return res.status(400).json({ error: `Không có gói ${packageCode}` })
 
@@ -291,6 +298,7 @@ router.delete('/:id/packages/:code', requireAuth, async (req, res) => {
     const code = req.params.code
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
     if (!(enc.packages || []).some(p => p.code === code)) {
       return res.status(404).json({ error: `Gói ${code} không có trong lượt khám này` })
     }
@@ -312,6 +320,7 @@ router.delete('/:id/services/:serviceCode', requireAuth, async (req, res) => {
     const code = req.params.serviceCode
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
     enc.assignedServices = (enc.assignedServices || []).filter(s => s.serviceCode !== code)
     enc.billItems = (enc.billItems || []).filter(b => !(b.kind === 'service' && b.code === code))
     enc.billTotal = sumBill(enc.billItems)
@@ -415,6 +424,7 @@ router.put('/:id/clinical-notes', requireAuth, async (req, res) => {
   try {
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
     let touched = false
     for (const f of CLINICAL_NOTE_FIELDS) {
       if (Object.prototype.hasOwnProperty.call(req.body, f)) {
@@ -485,6 +495,7 @@ router.put('/:id/services/:serviceCode', requireAuth, async (req, res) => {
   try {
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
     const svc = (enc.assignedServices || []).find(s => s.serviceCode === req.params.serviceCode)
     if (!svc) return res.status(404).json({ error: `Service ${req.params.serviceCode} chưa được gán cho lượt khám này` })
 
@@ -521,6 +532,7 @@ router.post('/:id/services', requireAuth, async (req, res) => {
     const { serviceCode } = req.body
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
     if ((enc.assignedServices || []).some(s => s.serviceCode === serviceCode)) {
       return res.status(400).json({ error: 'Service đã được gán' })
     }
@@ -562,6 +574,7 @@ router.post('/:id/bill-items', requireAuth, async (req, res) => {
 
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
 
     // VAT rate by kind (server-stamped, not client-provided): kính is a flat
     // 5%, thuốc varies per SKU (5/8 — looked up from Thuoc.vatRate when a
@@ -889,6 +902,7 @@ router.delete('/:id/bill-items/:billItemId', requireAuth, async (req, res) => {
   try {
     const enc = await Encounter.findById(req.params.id)
     if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
 
     const param = req.params.billItemId
     let removed = false

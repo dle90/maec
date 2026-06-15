@@ -887,8 +887,15 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
             tự thêm) → chẩn đoán phân biệt → kết luận. Auto-pulls station results and
             writes the diagnosis/kết luận back to Hồ sơ bệnh án below. */}
         <section className="border border-gray-200 rounded-xl p-3 bg-gray-50/40">
+          {isClosed && (
+            <div className="mb-2 text-xs px-2.5 py-1.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+              🔒 Lượt khám đã đóng ({enc.status === 'paid' ? 'đã thanh toán' : 'đã hủy'}) — chỉ xem, không chỉ định/sửa dịch vụ.
+            </div>
+          )}
+          {/* On a settled encounter, drop serviceMode so no order/fill buttons render
+              (server also rejects the mutations). Differential stays viewable. */}
           <DiagnosticAssistant embedded initialPatientId={enc.patientId} initialEncounterId={enc._id}
-            onConfirmed={dxWriteBack} serviceMode={serviceMode} syncSignal={syncSignal} />
+            onConfirmed={dxWriteBack} serviceMode={isClosed ? null : serviceMode} syncSignal={syncSignal} />
         </section>
 
         {/* Hồ sơ bệnh án — top-level collapsible section wrapping 5 also-
