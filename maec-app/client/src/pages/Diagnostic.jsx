@@ -306,6 +306,9 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
   const slots = {
     hasSession, isBlank, closed, hasOutcome, busy, error, embedded, encounterId,
     session, suggestedServiceCodes,
+    // Real red-flag content (RedFlagPanel renders null when empty, so the host
+    // must NOT render the banner wrapper just because the element exists).
+    hasRedFlags: (session?.redFlags || []).length > 0,
     langToggle: <LangToggle />,
     resetBtn: hasSession
       ? <button onClick={handleReset} className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg whitespace-nowrap">{tr('+ Phiên mới')}</button>

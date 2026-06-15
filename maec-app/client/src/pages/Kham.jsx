@@ -692,14 +692,25 @@ function CreateEncounterModal({ onClose, onCreated }) {
 // on wide screens (xl) so the grid frame stays put (cockpit feel), and grows
 // naturally when the grid collapses to a single column on tablet/phone.
 function GridCell({ n, title, extra, children }) {
+  // Default: capped at ~half the viewport (xl) with internal scroll, so the 2×2
+  // stays a cockpit. The ⤢ toggle lifts the cap for THIS cell so it grows to fit
+  // all its content (page scrolls); cells size independently (grid items-start),
+  // so expanding one never balloons its row-mate.
+  const [expanded, setExpanded] = useState(false)
   return (
-    <section className="rounded-xl border border-gray-200 bg-white flex flex-col overflow-hidden xl:max-h-[46vh]">
+    <section className={`rounded-xl border border-gray-200 bg-white flex flex-col overflow-hidden ${expanded ? '' : 'xl:max-h-[46vh]'}`}>
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50/70 flex-shrink-0">
         <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 min-w-0">
           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[11px] flex-shrink-0">{n}</span>
           <span className="truncate">{title}</span>
         </h3>
-        {extra != null && <span className="text-xs font-mono text-gray-500 flex-shrink-0">{extra}</span>}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {extra != null && <span className="text-xs font-mono text-gray-500">{extra}</span>}
+          <button onClick={() => setExpanded(e => !e)}
+            className="hidden xl:inline-flex text-gray-400 hover:text-gray-700 leading-none px-1"
+            title={expanded ? 'Thu về chiều cao chuẩn' : 'Mở rộng ô theo chiều dọc'}
+            aria-label={expanded ? 'Thu gọn ô' : 'Mở rộng ô'}>{expanded ? '⤡' : '⤢'}</button>
+        </div>
       </div>
       <div className="p-3 space-y-3 overflow-y-auto flex-1">{children}</div>
     </section>
@@ -1170,7 +1181,7 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
           {/* Sticky safety banner: closed-notice + errors + red flags. Pinned to the
               scroll container so an active emergency red flag stays visible while the
               doctor scrolls the grid below. */}
-          {(isClosed || slots.errorBox || slots.redFlags) && (
+          {(isClosed || slots.errorBox || slots.hasRedFlags) && (
             <div className="sticky top-0 z-20 -mt-4 pt-4 pb-2 mb-3 space-y-2 bg-gray-50/95 backdrop-blur">
               {isClosed && (
                 <div className="text-xs px-2.5 py-1.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
@@ -1178,13 +1189,13 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
                 </div>
               )}
               {slots.errorBox}
-              {slots.redFlags}
+              {slots.hasRedFlags && slots.redFlags}
             </div>
           )}
           {/* Routine asymptomatic check-up: one reassuring "sẵn sàng" panel instead
               of three empty cells. */}
           {slots.isBlank && <div className="mb-4">{slots.readyState}</div>}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 xl:items-start gap-4">
             <GridCell n="①" title="Bệnh sử & triệu chứng">
               {slots.complaint}
               {slots.examSync}
