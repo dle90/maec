@@ -602,4 +602,23 @@ Multi-agent adversarial review of the consolidated Khám flow (clinical / UX / t
 
 **Review backlog (not yet done), by severity:** medium — scan the WHOLE differential for any emergency (banner currently only checks #1); clinicianOutcome audit trail (single object, overwrites); pachymetry-corrected IOP (CCT measured but unused); concurrent-order race → duplicate service. low — VA parser drops counting-fingers/hand-motion (no `va_severe_loss` for worst VA); empty "Đã lấy:" on no-data re-sync; EN/VI toggle shows when embedded; emergency red-flag disclaimer can scroll off-screen. Full list in the review output. Verification scripts: tmp-playwright/verify-review-fixes.mjs, verify-cyclo.mjs.
 
-**Prod test data to clean up:** `_TEST_`/`_TESTFE_`/`_ADVR_` patients + encounters accumulated during sims/reviews — hard-delete via `railway ssh` running a name-prefix deleteMany (see tmp-playwright/cleanup-testfe.js pattern).
+**Prod test data to clean up:** `_TEST_`/`_TESTFE_`/`_ADVR_`/`_TESTUI_` patients + encounters accumulated during sims/reviews — hard-delete via `railway ssh` running a name-prefix deleteMany (see tmp-playwright/cleanup-testfe.js pattern).
+
+### Khám — encounter pane reworked into a 2×2 clinical cockpit + bill rail (2026-06-15, `ecaf3fa`)
+
+Replaced the long single-scroll `EncounterPane` with a **2×2 grid** (clinician-requested "cockpit"): ① Bệnh sử & triệu chứng (+ lịch sử folded in) · ② Chẩn đoán phân biệt · ③ Cận lâm sàng (+ ordered dịch vụ + running Σ) · ④ Kết luận & điều trị — plus a **separated, collapsible Bill rail** (gói/dịch vụ/kính/thuốc + grouped bill + total). Z-order matches the diagnostic arc. Responsive: 2-col grid + side rail at **xl**; single-column stack + rail-below under xl.
+
+Architecture: `DiagnosticAssistant` (Diagnostic.jsx) now takes a **`renderLayout(slots)` render-prop** — it still owns all session state/handlers but exposes its panels as `slots` (complaint, redFlags, differential, tests, outcome, readyState, langToggle, footer, + flags `isBlank`/`hasOutcome`/`suggestedServiceCodes`). Standalone `/diagnostic` passes no renderLayout → unchanged vertical layout. Kham's `renderGrid` places the slots into the grid cells alongside the encounter's bill/history/attachments. New panel props: `hideTitle` (DifferentialPanel/OutcomePanel/NextTestsPanel — cell header supplies the title), `isBlank` (NextTestsPanel).
+
+Key behavior changes:
+- **"Hồ sơ bệnh án" 5-textarea block dissolved** into cell ① (clinicalInfo/presentIllness/pastHistory) + cell ④ (diagnosis/conclusion) as collapsible `NotesGroup` escape hatches; printout (.docx / Phiếu Khám) reads the same fields.
+- **"Kết thúc khám" replaces "chuyển Thu ngân"** — soft sign-off (status→reported), in cell ④ (always visible) + bill-rail footer; does NOT gate payment (optician still adds Kính). conclude/reopen moved out of the header.
+
+Built + adversarially reviewed (5 reviewers → per-finding verify, 13 confirmed) + **fixed in the same commit**, verified live on prod (Playwright `verify-rework-prod.mjs`, 0 console errors, xl + 1100px shots):
+- Red-flag banner now **sticky** (was scrolling out of view) — pinned inside the clinical column so it never overlaps the bill rail.
+- Bill rail gated to **xl** (was `lg` while grid was xl-only → clinical column squished to a sliver in the 1024–1279px band); dropped `items-start` so the sticky rail has travel room.
+- Restored regressions: blank-checkup green readyState; **đơn giá** column (multi-qty lines) + **⏱ turnaround badge** in the bill/service list.
+- `dxWriteBack` now **surfaces the 409** on a settled encounter (was silently dropping the confirmed diagnosis) + auto-opens the note group so the doctor sees the auto-filled text.
+- Cell ③ double-header fixed (`NextTestsPanel hideTitle`); referral-test de-dupe guard (`suggestedServiceCodes` skips `availableInClinic:false`); first-save re-sync race fixed (dropped `!session` guard on the syncSignal effect).
+
+**Deferred (review finding #6, low):** ② (differential) and ③ (cận lâm sàng) are diagonal corners, so a result entered in ③ re-ranks ② across a diagonal glance. Not reordered — that would break the clinician-chosen ①②③④ Z-order. Optional future polish: flash/scroll-into-view the changed differential rows on `syncSignal`.
