@@ -110,6 +110,17 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'))
 })
 
+// Safety net: a thrown/rejected error in a single request (e.g. a Mongoose
+// validation error in an async route that forgot its try/catch) must NEVER crash
+// the whole server. Node exits by default on these — override to log + keep
+// serving. A malformed request should fail that request, not cause an outage.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err)
+})
+
 app.listen(PORT, () => {
   console.log(`MAEC server running on http://localhost:${PORT}`)
 })

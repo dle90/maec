@@ -113,26 +113,35 @@ function applyMeasurementRows(session, testId, rows, at) {
 // POST /api/diagnostic/sessions
 // Body: { patientId?, encounterId?, complaint }
 router.post('/sessions', requireAuth, async (req, res) => {
-  const { patientId, encounterId, complaint } = req.body || {}
-  if (!complaint || typeof complaint !== 'object') {
-    return res.status(400).json({ error: 'complaint is required' })
+  try {
+    const { patientId, encounterId, complaint } = req.body || {}
+    if (!complaint || typeof complaint !== 'object') {
+      return res.status(400).json({ error: 'complaint is required' })
+    }
+    const result = await runDiagnostic(complaint, [])
+    const session = await DxSession.create({
+      _id: sessionId(),
+      patientId,
+      encounterId,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+      complaint,
+      observations: [],
+      redFlags: result.redFlags,
+      differential: result.differential,
+      recommendedNextTests: result.recommendedNextTests,
+      kbVersion: nowIso().slice(0, 10),
+      disclaimer: result.disclaimer,
+    })
+    res.json(session)
+  } catch (err) {
+    // A bad complaint (e.g. an out-of-enum field) is a 400, not a server crash.
+    const isValidation = err?.name === 'ValidationError'
+    res.status(isValidation ? 400 : 500).json({
+      error: err?.message || 'session creation failed',
+      code: isValidation ? 'INVALID_COMPLAINT' : 'SESSION_FAILED',
+    })
   }
-  const result = await runDiagnostic(complaint, [])
-  const session = await DxSession.create({
-    _id: sessionId(),
-    patientId,
-    encounterId,
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-    complaint,
-    observations: [],
-    redFlags: result.redFlags,
-    differential: result.differential,
-    recommendedNextTests: result.recommendedNextTests,
-    kbVersion: nowIso().slice(0, 10),
-    disclaimer: result.disclaimer,
-  })
-  res.json(session)
 })
 
 // GET /api/diagnostic/sessions/:id
