@@ -582,3 +582,13 @@ Playwright sweep of all 24 admin pages + simulated visits on prod. 23/24 pages c
 - **Migraine-with-aura over-surfaced** — the generic `binocular` laterality qualifier was an evoking edge (migraine es 0.4) and rows default to OU, so migraine appeared on any bilateral complaint. Removed migraine's `binocular` edge; capped d-fuchs-dystrophy + d-allergic-conjunctivitis `binocular` to 0.1. Verified absent on prod; all 4 validation batches unchanged, smoke 60/60.
 
 QA harness (gitignored `tmp-playwright/`): `qa-sweep.js` (all-pages console/network/screenshot capture), `dx-flow.js` (simulated dx runs), `verify-fixes.js`.
+
+### Khám — encounter consolidated into one dx-driven workflow (2026-06-15, efd8b3a)
+
+Merged Hồ sơ bệnh án + Hỗ trợ chẩn đoán + gói/dịch vụ into a single flow shaped like the standalone dx assistant (lý do → triệu chứng → tiền sử → cận lâm sàng ↔ dịch vụ → chẩn đoán phân biệt → kết luận):
+- Embedded `DiagnosticAssistant` is now the always-open spine of `EncounterPane` (was a collapsed section); `Hồ sơ bệnh án` demoted to a collapsed auto-filled escape hatch (still backs the printout/reports — `dxWriteBack` now also fills `clinicalInfo`).
+- New `client/src/pages/dxTestService.js` maps each dx test → clinic service. In encounter mode `NextTestsPanel` renders each suggested in-clinic test as its dịch vụ: **"Chỉ định & nhập"** (POST /:id/services → bills it → opens the station form) or **"Nhập KQ"** if already assigned; bedside/external tests stay in the referral lane. Saving a station result bumps a `syncSignal` → the embedded assistant re-pulls the exam (`/sync-exam`) and the differential updates live.
+- Doctor can **manually add any service/test** not AI-suggested ("+ Thêm dịch vụ / xét nghiệm khác" → existing `AddItemModal` service picker).
+- Billing (POST /:id/services + bill items) + patient printout unchanged. Client-only change (no KB/server). Verified on prod via Playwright: intake/tests-as-services/manual-add/differential/Hồ sơ/exam-sync all render, zero console errors.
+
+**Deferred / known:** the standalone "Gói khám" + "Dịch vụ" detail sections still render below the spine (kept for billing visibility) — could be folded/collapsed further once the new flow is trusted. The embedded assistant still shows a redundant patient-search box in its header (pre-existing). The dx test→service map (`dxTestService.js`) is hand-authored — review when services change.
