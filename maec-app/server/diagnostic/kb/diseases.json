@@ -1067,7 +1067,7 @@
   {
     "_id": "d-csr",
     "name": "Central serous retinopathy",
-    "nameVi": "Bệnh thấm thấu huyết tương dưới loạn",
+    "nameVi": "Bệnh hắc võng mạc trung tâm thanh dịch (CSC)",
     "services": [
       "sensor"
     ],
@@ -1193,7 +1193,7 @@
   {
     "_id": "d-exposure-keratopathy",
     "name": "Exposure keratopathy",
-    "nameVi": "Bệnh giác mạc do tiếp xúc (khô do bất toàn đóng mi)",
+    "nameVi": "Bệnh giác mạc do hở mi (không đóng kín được mi mắt)",
     "services": [
       "surface"
     ],
