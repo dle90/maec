@@ -1204,18 +1204,18 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
               <PatientHistoryList history={history} open={historyOpen} setOpen={setHistoryOpen} onOpenOther={onOpenOther} />
             </GridCell>
 
-            <GridCell n="②" title="Chẩn đoán phân biệt">
-              {slots.differential || <EmptyHint>Nhập triệu chứng hoặc kết quả khám để trợ lý xếp hạng chẩn đoán.</EmptyHint>}
-            </GridCell>
-
-            <GridCell n="③" title="Cận lâm sàng" extra={serviceTotal > 0 ? `Σ ${fmtMoney(serviceTotal)}đ` : null}>
+            <GridCell n="②" title="Cận lâm sàng" extra={serviceTotal > 0 ? `Σ ${fmtMoney(serviceTotal)}đ` : null}>
               {slots.tests || <EmptyHint>Chưa có chỉ định. Trợ lý đề xuất cận lâm sàng theo triệu chứng & kết quả khám.</EmptyHint>}
               <AssignedServicesList enc={enc} isClosed={isClosed} hideServiceCodes={slots.suggestedServiceCodes}
                 onOpen={(code) => setOpenServiceCode(code)} onDelete={onDeleteService} />
             </GridCell>
 
+            <GridCell n="③" title="Chẩn đoán phân biệt">
+              {slots.differential || <EmptyHint>Nhập triệu chứng hoặc kết quả khám để trợ lý xếp hạng chẩn đoán.</EmptyHint>}
+            </GridCell>
+
             <GridCell n="④" title="Kết luận & điều trị">
-              {slots.outcome || <EmptyHint>Xác nhận một chẩn đoán ở ② để kết luận & kê điều trị.</EmptyHint>}
+              {slots.outcome || <EmptyHint>Xác nhận một chẩn đoán ở ③ để kết luận & kê điều trị.</EmptyHint>}
               <NotesGroup encounterId={enc._id} enc={enc} fields={NOTE_FIELDS_4} isClosed={isClosed}
                 onSaved={reload} open={notes4Open} setOpen={setNotes4Open} title="Ghi chú kết luận (tự do)" icon="🩺" />
               <button onClick={goRebook}
