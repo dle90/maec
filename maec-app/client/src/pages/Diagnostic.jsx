@@ -664,28 +664,34 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
         ) : (
           <div className="space-y-1.5">
             {rows.map(r => (
-              <div key={r.key} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5 flex-wrap">
-                <span className="text-sm font-medium text-gray-800 w-32 shrink-0">{tr(r.label)}</span>
-                <span className="text-xs text-gray-500">{tr('Mắt:')}</span>
-                {EYE_TOGGLE.map(e => (
-                  <button key={e} onClick={() => updateRow(r.key, { eye: e })}
-                    className={`text-xs px-2 py-0.5 rounded ${r.eye === e ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{e}</button>
-                ))}
-                <span className="text-xs text-gray-500 ml-2">{tr('Khởi phát:')}</span>
-                {ONSET_ROW.map(([v, l]) => (
-                  <button key={v} onClick={() => updateRow(r.key, { onset: r.onset === v ? 'unknown' : v })}
-                    className={`text-xs px-2 py-0.5 rounded ${r.onset === v ? 'bg-indigo-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{tr(l)}</button>
-                ))}
+              <div key={r.key} className="flex items-center gap-x-3 gap-y-1.5 bg-gray-50 rounded-lg px-3 py-1.5 flex-wrap">
+                <span className="text-sm font-medium text-gray-800 shrink-0">{tr(r.label)}</span>
+                {/* Each labeled pill-set is a nowrap unit, so a narrow cell wraps
+                    BETWEEN groups (Mắt / Khởi phát / Mức độ) — never mid-group. */}
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                  <span className="text-xs text-gray-500">{tr('Mắt:')}</span>
+                  {EYE_TOGGLE.map(e => (
+                    <button key={e} onClick={() => updateRow(r.key, { eye: e })}
+                      className={`text-xs px-2 py-0.5 rounded ${r.eye === e ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{e}</button>
+                  ))}
+                </span>
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                  <span className="text-xs text-gray-500">{tr('Khởi phát:')}</span>
+                  {ONSET_ROW.map(([v, l]) => (
+                    <button key={v} onClick={() => updateRow(r.key, { onset: r.onset === v ? 'unknown' : v })}
+                      className={`text-xs px-2 py-0.5 rounded ${r.onset === v ? 'bg-indigo-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{tr(l)}</button>
+                  ))}
+                </span>
                 {r.graded && (
-                  <>
-                    <span className="text-xs text-gray-500 ml-2">{tr('Mức độ:')}</span>
+                  <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                    <span className="text-xs text-gray-500">{tr('Mức độ:')}</span>
                     {SEVERITY[r.graded].map(([v, l]) => (
                       <button key={v} onClick={() => updateRow(r.key, { severity: v })}
                         className={`text-xs px-2 py-0.5 rounded ${r.severity === v ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}>{tr(l)}</button>
                     ))}
-                  </>
+                  </span>
                 )}
-                <button onClick={() => removeRow(r.key)} className="ml-auto text-gray-400 hover:text-red-500" title={tr('Bỏ')}>✕</button>
+                <button onClick={() => removeRow(r.key)} className="ml-auto shrink-0 text-gray-400 hover:text-red-500" title={tr('Bỏ')}>✕</button>
               </div>
             ))}
           </div>
@@ -694,18 +700,21 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">{tr('3. Tiền sử / bối cảnh')}</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 items-center mb-3">
+        {/* Compact inputs — small, wrap by actual width. */}
+        <div className="flex flex-wrap gap-2 mb-3">
           <input type="number" value={age} onChange={e => setAge(e.target.value)}
-            placeholder={tr('Tuổi')} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm" />
+            placeholder={tr('Tuổi')} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-20" />
           <SelectField value={sex} onChange={setSex} opts={[['unknown', '— Giới —'], ['M', 'Nam'], ['F', 'Nữ']]} />
           <div className="flex items-center gap-1">
             <input type="number" value={durVal} onChange={e => setDurVal(e.target.value)}
               placeholder={tr('Thời gian bị')} className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-24" />
             <SelectField value={durUnit} onChange={setDurUnit} opts={DURATION_UNITS} />
           </div>
-          <TristateChip label="Đeo kính tiếp xúc" value={cl} onChange={setCL} />
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 mb-3">
+        {/* Yes/no context — flex-wrap (container-based) packs 1–2 per row by the
+            cell's real width instead of cramming into viewport-based columns. */}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 mb-3">
+          <TristateChip label="Đeo kính tiếp xúc" value={cl} onChange={setCL} />
           <TristateChip label="Chấn thương gần đây" value={trauma} onChange={setTrauma} />
           <TristateChip label="Mổ/tiêm nội nhãn gần đây" value={postOp} onChange={setPostOp} />
           <TristateChip label="Hút thuốc" value={smoker} onChange={setSmoker} />
@@ -772,20 +781,26 @@ function SelectField({ value, onChange, opts }) {
 }
 
 function TristateChip({ label, value, onChange }) {
-  // null = unknown, true = yes, false = no
+  // null = unknown, true = yes, false = no.
+  // Self-contained labeled control: label left (truncates, never wraps over the
+  // pills), the yes/?/no pills stay on one line (flex-shrink-0). `flex-1 min-w`
+  // lets the parent flex-wrap pack 1–N per row by ACTUAL width (container-based),
+  // so it stays readable in the narrow Khám grid cell AND the wide standalone page.
   const { t: tr } = useLanguage()
   return (
-    <div className="flex items-center gap-1 text-xs">
-      <span className="text-gray-600">{tr(label)}:</span>
-      {[
-        [null, '?', value === null],
-        [true, tr('Có'), value === true],
-        [false, tr('Không'), value === false],
-      ].map(([v, l, active]) => (
-        <button key={String(v)} onClick={() => onChange(v)}
-          className={`px-2 py-0.5 rounded ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-        >{l}</button>
-      ))}
+    <div className="flex items-center justify-between gap-2 text-xs flex-1 min-w-[150px]">
+      <span className="text-gray-600 truncate" title={tr(label)}>{tr(label)}</span>
+      <div className="flex gap-1 flex-shrink-0">
+        {[
+          [null, '?', value === null],
+          [true, tr('Có'), value === true],
+          [false, tr('Không'), value === false],
+        ].map(([v, l, active]) => (
+          <button key={String(v)} onClick={() => onChange(v)}
+            className={`px-2 py-0.5 rounded ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >{l}</button>
+        ))}
+      </div>
     </div>
   )
 }
