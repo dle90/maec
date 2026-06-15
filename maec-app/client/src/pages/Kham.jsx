@@ -949,6 +949,32 @@ function BillRail({ enc, isClosed, open, setOpen, onAddPackage, onAddItem, onDel
   )
 }
 
+// Compact overflow "⋯" menu for the occasional encounter actions (print, đổi
+// cơ sở, hủy) so the pane header stays a single slim line.
+function HeaderMenu({ items }) {
+  const [open, setOpen] = useState(false)
+  const list = items.filter(Boolean)
+  if (!list.length) return null
+  return (
+    <div className="relative flex-shrink-0">
+      <button onClick={() => setOpen(o => !o)} className="px-2 py-1 rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 text-lg leading-none" title="Thêm thao tác" aria-label="Thêm thao tác">⋯</button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div className="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-30 py-1">
+            {list.map((it, i) => (
+              <button key={i} onClick={() => { setOpen(false); it.onClick() }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${it.danger ? 'text-red-600' : 'text-gray-700'}`}>
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }) {
   const navigate = useNavigate()
   const [enc, setEnc] = useState(null)
@@ -1102,6 +1128,30 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
     if (enc.site) params.set('site', enc.site)
     navigate(`/lich-hen?${params.toString()}`)
   }
+  const doPrintResult = async () => {
+    try { await downloadEncounterPrintout(enc._id, enc.patientName) }
+    catch (e) { alert('Không xuất được phiếu kết quả: ' + (e.response?.data?.error || e.message)) }
+  }
+  const doChangeSite = async () => {
+    // Q7 — site swap before checkout. Pick the OTHER site so a single click flips
+    // Trung Kính ↔ Kim Giang; prompt for a custom value as fallback.
+    const SITES = ['Trung Kính', 'Kim Giang']
+    let next = SITES.find(s => s !== enc.site) || ''
+    if (!next) {
+      const v = prompt(`Đổi cơ sở của ${enc.patientName}?\nNhập tên cơ sở mới:`, enc.site)
+      if (v === null || !v.trim()) return
+      next = v.trim()
+    }
+    if (!confirm(`Chuyển ${enc.patientName} từ "${enc.site || '—'}" sang "${next}"?`)) return
+    try { await api.put(`/encounters/${enc._id}/site`, { site: next }); reload() }
+    catch (e) { alert(e.response?.data?.error || 'Lỗi đổi cơ sở') }
+  }
+  const doCancel = async () => {
+    const reason = prompt(`Hủy lượt khám của ${enc.patientName}?\nLý do (tùy chọn):`)
+    if (reason === null) return
+    try { await api.post(`/encounters/${enc._id}/cancel`, { reason }); reload() }
+    catch (e) { alert(e.response?.data?.error || 'Lỗi hủy lượt khám') }
+  }
 
   // The reworked encounter body: a pinned red-flag banner, the 2×2 clinical grid
   // (① bệnh sử+lịch sử · ② chẩn đoán phân biệt · ③ cận lâm sàng+dịch vụ · ④ kết
@@ -1131,10 +1181,6 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
               {slots.redFlags}
             </div>
           )}
-          <div className="flex items-center justify-end gap-2 mb-3">
-            {slots.langToggle}
-            {slots.resetBtn}
-          </div>
           {/* Routine asymptomatic check-up: one reassuring "sẵn sàng" panel instead
               of three empty cells. */}
           {slots.isBlank && <div className="mb-4">{slots.readyState}</div>}
@@ -1194,85 +1240,25 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header — name + BN code on its own row (BN code stays on one line),
-          actions stack below on mobile so the BN code never breaks into 3
-          vertical chunks at 375px. ≥sm keeps everything on one row. */}
-      <div className="px-3 sm:px-5 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-start sm:justify-between flex-shrink-0 gap-2 sm:gap-3">
-        <div className="flex items-start gap-2 min-w-0">
-          <div className="flex-1 min-w-0">
-            <div className="text-base font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
-              <span className="truncate">{enc.patientName}</span>
-              <span className="font-mono text-xs text-gray-400 whitespace-nowrap">{enc.patientId}</span>
-              {enc.status === 'paid' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700">Đã thanh toán</span>}
-              {enc.status === 'cancelled' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700">Đã hủy</span>}
-              {(enc.status === 'reported' || enc.status === 'verified') && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">BS đã kết luận</span>
-              )}
-            </div>
-            <div className="text-xs text-gray-500 mt-0.5 truncate">{enc.site || '—'} · {enc._id}</div>
-            {enc.status === 'paid' && enc.paidByName && (
-              <div className="text-xs text-green-700 mt-0.5">Thu ngân: {enc.paidByName} · {enc.paidAt && new Date(enc.paidAt).toLocaleString('vi-VN')}</div>
-            )}
-            {(enc.status === 'reported' || enc.status === 'verified') && enc.reportedAt && (
-              <div className="text-xs text-blue-700 mt-0.5">Kết luận: {enc.radiologistName || enc.radiologist || '—'} · {new Date(enc.reportedAt).toLocaleString('vi-VN')}</div>
-            )}
-          </div>
-          <button onClick={onClose} className="sm:hidden text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0" aria-label="Đóng">×</button>
+      {/* Compact one-line header: identity (left) + occasional actions tucked in a
+          ⋯ menu + close — keeps vertical chrome minimal so the 2×2 gets the height.
+          enc id → name tooltip; paid/concluded detail lives in the bill rail. */}
+      <div className="px-3 sm:px-4 py-2 border-b border-gray-200 flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1" title={`${enc.site || '—'} · ${enc._id}`}>
+          <span className="font-semibold text-gray-900 truncate">{enc.patientName}</span>
+          <span className="font-mono text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{enc.patientId}</span>
+          {enc.site && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 whitespace-nowrap flex-shrink-0 hidden sm:inline">{enc.site}</span>}
+          {enc.status === 'paid' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 flex-shrink-0">Đã thanh toán</span>}
+          {enc.status === 'cancelled' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 flex-shrink-0">Đã hủy</span>}
+          {(enc.status === 'reported' || enc.status === 'verified') && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 flex-shrink-0">BS đã kết luận</span>}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-          {(enc.billItems || []).length > 0 && (
-            <span className="text-xs text-gray-500 px-2 py-1 bg-gray-100 rounded hidden md:inline">Tổng: <b className="text-blue-700 font-mono">{fmtMoney(grandTotal(enc))}đ</b></span>
-          )}
-          {/* "Kết thúc khám" (soft sign-off, doesn't gate payment) lives in the
-              Bill rail footer now — see BillRail. */}
-          <button
-            onClick={() => printVisitReport(enc)}
-            className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
-            title="In phiếu khám (chỉ thông tin lâm sàng)"><span>🖨</span> In Phiếu Khám</button>
-          <button
-            onClick={async () => {
-              try { await downloadEncounterPrintout(enc._id, enc.patientName) }
-              catch (e) { alert('Không xuất được phiếu kết quả: ' + (e.response?.data?.error || e.message)) }
-            }}
-            className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1 whitespace-nowrap"
-            title="Xuất Phiếu kết quả (.docx) — bản dành cho người bệnh"><span>📄</span> Phiếu kết quả (.docx)</button>
-          {!isClosed && (
-            <button
-              onClick={async () => {
-                // Q7 — site swap before checkout. Pick the OTHER site so a
-                // single click flips between Trung Kính ↔ Kim Giang. Prompt
-                // for any custom site value as fallback.
-                const SITES = ['Trung Kính', 'Kim Giang']
-                let next = SITES.find(s => s !== enc.site) || ''
-                if (!next) {
-                  const v = prompt(`Đổi cơ sở của ${enc.patientName}?\nNhập tên cơ sở mới:`, enc.site)
-                  if (v === null || !v.trim()) return
-                  next = v.trim()
-                }
-                if (!confirm(`Chuyển ${enc.patientName} từ "${enc.site || '—'}" sang "${next}"?`)) return
-                try {
-                  await api.put(`/encounters/${enc._id}/site`, { site: next })
-                  reload()
-                } catch (e) {
-                  alert(e.response?.data?.error || 'Lỗi đổi cơ sở')
-                }
-              }}
-              className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 whitespace-nowrap"
-              title="Đổi cơ sở thực hiện lượt khám">📍 Đổi cơ sở</button>
-          )}
-          {!isClosed && (
-            <button
-              onClick={async () => {
-                const reason = prompt(`Hủy lượt khám của ${enc.patientName}?\nLý do (tùy chọn):`)
-                if (reason === null) return
-                await api.post(`/encounters/${enc._id}/cancel`, { reason })
-                reload()
-              }}
-              className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-200 rounded hover:bg-red-50 whitespace-nowrap"
-              title="Hủy lượt khám">Hủy</button>
-          )}
-          <button onClick={onClose} className="hidden sm:inline-block text-gray-400 hover:text-gray-700 text-2xl leading-none" aria-label="Đóng">×</button>
-        </div>
+        <HeaderMenu items={[
+          { label: '🖨 In Phiếu Khám', onClick: () => printVisitReport(enc) },
+          { label: '📄 Phiếu kết quả (.docx)', onClick: doPrintResult },
+          !isClosed && { label: '📍 Đổi cơ sở', onClick: doChangeSite },
+          !isClosed && { label: '✕ Hủy lượt khám', onClick: doCancel, danger: true },
+        ]} />
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none flex-shrink-0" aria-label="Đóng">×</button>
       </div>
 
       {/* Reworked body: pinned red-flag banner + 2×2 clinical grid + separated
