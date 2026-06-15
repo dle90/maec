@@ -26,6 +26,7 @@ import api, {
 } from '../api'
 import { useLanguage } from '../context/LanguageContext'
 import { pickLang } from './diagnostic.i18n'
+import { serviceForTest } from './dxTestService'
 
 // ── Symptom catalog ──
 // Each symptom is added as a ROW that carries its own eye (OD/OS/OU) and, if
@@ -145,7 +146,7 @@ export default function Diagnostic() {
 // from props and calls `onConfirmed(session)` when the session is closed so the
 // host can write the diagnosis/treatment back to the encounter.
 // ─────────────────────────────────────────────────────────────────
-export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId = '', embedded = false, onConfirmed }) {
+export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId = '', embedded = false, onConfirmed, serviceMode = null, syncSignal = 0 }) {
   const [patient, setPatient]     = useState(null)   // {patientId, name, dob, gender}
   const [encounterId, setEncId]   = useState(initialEncounterId)
   const [session, setSession]     = useState(null)   // engine response, or null before first run
@@ -195,6 +196,14 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
     syncExam()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [embedded, initialEncounterId])
+
+  // Re-sync when the host (Khám) signals a station result was just saved, so the
+  // engine immediately reflects the new exam value.
+  useEffect(() => {
+    if (!syncSignal || !session || !encounterId || session.clinicianOutcome?.closedAt) return
+    syncExam()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syncSignal])
 
   // Single submit path: create the session on first run, then update the open
   // session's complaint on subsequent runs (so the form stays editable and the
@@ -324,6 +333,7 @@ export function DiagnosticAssistant({ initialPatientId = '', initialEncounterId 
                 tests={session.recommendedNextTests || []}
                 observations={session.observations || []}
                 onAddObservation={handleAddObservation}
+                serviceMode={serviceMode}
                 busy={busy}
               />
               <DifferentialPanel
@@ -898,7 +908,7 @@ function DifferentialPanel({ sessionId, differential, outcome, onConfirm, busy }
 // ─────────────────────────────────────────────────────────────────
 // Next tests panel — per-eye observation entry
 // ─────────────────────────────────────────────────────────────────
-function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
+function NextTestsPanel({ tests, observations, onAddObservation, serviceMode = null, busy }) {
   const { t: tr } = useLanguage()
   // Superseded rows (a re-entered measurement) are kept for audit but excluded here.
   const liveObs = useMemo(() => observations.filter(o => !o.amended && !o.supersededBy), [observations])
@@ -907,6 +917,20 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
   const referral = tests.filter(t => t.availableInClinic === false)
   const hero = inClinic[0]
   const rest = inClinic.slice(1)
+
+  // Encounter mode: a suggested test renders as its clinic service (orderable +
+  // billable; result entered via the station form, which re-syncs the engine) when
+  // it maps to one; otherwise it falls back to the bedside finding-entry card.
+  const svcByCode = useMemo(() => Object.fromEntries((serviceMode?.catalog || []).map(s => [s.code, s])), [serviceMode])
+  const assignedByCode = useMemo(() => Object.fromEntries((serviceMode?.assigned || []).map(s => [s.serviceCode, s])), [serviceMode])
+  const renderInClinic = (t, isHero) => {
+    const svcCode = serviceMode && serviceForTest(t.testId)
+    if (svcCode) return (
+      <ServiceTestRow key={t.testId} t={t} svcCode={svcCode} service={svcByCode[svcCode]}
+        assigned={assignedByCode[svcCode]} serviceMode={serviceMode} busy={busy} />
+    )
+    return <TestCard key={t.testId} t={t} isHero={isHero} observedFindings={observedFindings} onAddObservation={onAddObservation} busy={busy} />
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500">
@@ -918,29 +942,24 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
         <div className="text-sm text-gray-500 italic py-2">{tr('Đã có đủ thông tin — không cần thêm xét nghiệm. Chuyển sang xác nhận chẩn đoán.')}</div>
       ) : (
         <>
-          {/* Hero card for the highest-utility test */}
-          {hero && (
-            <TestCard
-              t={hero}
-              isHero={true}
-              observedFindings={observedFindings}
-              onAddObservation={onAddObservation}
-              busy={busy}
-            />
-          )}
-          {rest.length > 0 && (
-            <div className="space-y-1.5 mt-2">
-              {rest.map(t => (
-                <TestCard
-                  key={t.testId}
-                  t={t}
-                  isHero={false}
-                  observedFindings={observedFindings}
-                  onAddObservation={onAddObservation}
-                  busy={busy}
-                />
-              ))}
+          {serviceMode ? (
+            <div className="space-y-1.5">
+              {inClinic.map(t => renderInClinic(t, false))}
             </div>
+          ) : (
+            <>
+              {/* Hero card for the highest-utility test */}
+              {hero && (
+                <TestCard t={hero} isHero={true} observedFindings={observedFindings} onAddObservation={onAddObservation} busy={busy} />
+              )}
+              {rest.length > 0 && (
+                <div className="space-y-1.5 mt-2">
+                  {rest.map(t => (
+                    <TestCard key={t.testId} t={t} isHero={false} observedFindings={observedFindings} onAddObservation={onAddObservation} busy={busy} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
           {/* Gold-standard tests not done in-clinic — order or refer; result can
               still be entered when it comes back. */}
@@ -960,6 +979,12 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
                 ))}
               </div>
             </div>
+          )}
+          {serviceMode && (
+            <button onClick={serviceMode.onAddCustom} disabled={busy}
+              className="mt-3 w-full text-xs px-2.5 py-1.5 rounded-lg border border-dashed border-blue-300 text-blue-700 hover:bg-blue-50">
+              {tr('+ Thêm dịch vụ / xét nghiệm khác (BS tự chỉ định)')}
+            </button>
           )}
         </>
       )}
@@ -982,6 +1007,41 @@ function NextTestsPanel({ tests, observations, onAddObservation, busy }) {
             ))}
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+// Encounter mode: a suggested test shown as its clinic service. Order it (creates
+// the billable dịch vụ) or, if already assigned, enter its result via the station
+// form — saving re-syncs the engine from the entered value.
+function ServiceTestRow({ t, svcCode, service, assigned, serviceMode, busy }) {
+  const { t: tr, lang } = useLanguage()
+  const name = service?.name || pickLang(t, lang)
+  const price = service?.basePrice ?? service?.price
+  const hasResult = !!assigned && (assigned.status === 'done' ||
+    (assigned.output && Object.values(assigned.output).some(v => v != null && v !== '')))
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-2.5 flex items-center gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-sm font-medium text-gray-800">{name}</span>
+          <span className="text-[10px] font-mono text-gray-400">{svcCode}</span>
+          {price != null && price !== '' && <span className="text-xs text-gray-500">{Number(price).toLocaleString('vi-VN')}đ</span>}
+        </div>
+        {t.rationale && <div className="text-xs text-gray-500 mt-0.5">{t.rationale}</div>}
+      </div>
+      {assigned ? (
+        <>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${hasResult ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+            {hasResult ? tr('đã có KQ') : tr('chưa nhập')}
+          </span>
+          <button onClick={() => serviceMode.onEnter(svcCode)} disabled={busy}
+            className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 whitespace-nowrap">{tr('Nhập KQ')}</button>
+        </>
+      ) : (
+        <button onClick={() => serviceMode.onOrder(svcCode)} disabled={busy}
+          className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">{tr('Chỉ định & nhập')}</button>
       )}
     </div>
   )

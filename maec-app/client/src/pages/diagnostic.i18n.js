@@ -98,6 +98,11 @@ export const EN = {
   'Nếu lâm sàng phù hợp, xử trí khẩn; kiểm tra lại khởi phát & mức độ để bật cảnh báo đầy đủ.':
     'If clinically consistent, manage urgently; re-check onset & severity to raise the full alert.',
 
+  // next-tests panel (service mode)
+  'đã có KQ': 'has result', 'chưa nhập': 'not entered',
+  'Nhập KQ': 'Enter result', 'Chỉ định & nhập': 'Order & enter',
+  '+ Thêm dịch vụ / xét nghiệm khác (BS tự chỉ định)': '+ Add another service / test (doctor-ordered)',
+
   // next-tests panel
   '🎯 Bước tiếp theo': '🎯 Next step',
   'Nhập kết quả → danh sách chẩn đoán cập nhật tự động': 'Enter results → the differential updates automatically',

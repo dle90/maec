@@ -673,7 +673,8 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
   const [showAddItem, setShowAddItem] = useState(null) // 'service' | 'kinh' | 'thuoc'
   const [showAssignPackage, setShowAssignPackage] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
-  const [dxOpen, setDxOpen] = useState(false)
+  const [svcCatalog, setSvcCatalog] = useState([])
+  const [syncSignal, setSyncSignal] = useState(0)   // bumped when a station result is saved → dx re-syncs
 
   // `silent` skips the loading state so post-save reloads don't blank the
   // whole pane back to "Đang tải..." while the GET roundtrips. The initial
@@ -691,6 +692,9 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
     } finally { if (!silent) setLoading(false) }
   }
   useEffect(() => { load() }, [id])
+  // Service catalog (names/prices) so the dx workflow can show suggested tests as
+  // orderable dịch vụ.
+  useEffect(() => { api.get('/catalogs/services').then(r => setSvcCatalog(Array.isArray(r.data) ? r.data : [])).catch(() => {}) }, [])
 
   // Notify parent when underlying data changes so the rail can refresh too.
   // Silent so the pane stays in place — the user just saw their save succeed,
@@ -720,6 +724,10 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
     const append = (prev, add) => add ? (prev?.trim() ? `${prev}\n${add}` : add) : prev
     if (dx) body.diagnosis = append(enc.diagnosis, dx)
     if (conclusionAdd) body.conclusion = append(enc.conclusion, conclusionAdd)
+    // Auto-fill the chief-complaint record field from the dx intake (escape hatch +
+    // printout) — only if the doctor hasn't typed their own.
+    const reason = (session?.complaint?.text || '').trim()
+    if (reason && !(enc.clinicalInfo || '').trim()) body.clinicalInfo = reason
     if (Object.keys(body).length) {
       try { await api.put(`/encounters/${enc._id}/clinical-notes`, body); reload() } catch {}
     }
@@ -730,6 +738,21 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
   }
 
   const isClosed = enc.status === 'paid' || enc.status === 'cancelled'
+
+  // Wiring for the dx workflow's "suggested tests ↔ dịch vụ" step: order a service
+  // (bills it), enter its result via the station form, or add any service manually.
+  const serviceMode = {
+    catalog: svcCatalog,
+    assigned: enc.assignedServices || [],
+    onEnter: (svcCode) => setOpenServiceCode(svcCode),
+    onOrder: async (svcCode) => {
+      try {
+        await api.post(`/encounters/${enc._id}/services`, { serviceCode: svcCode })
+        await reload(); setSyncSignal(s => s + 1); setOpenServiceCode(svcCode)
+      } catch (e) { alert(e.response?.data?.error || 'Lỗi thêm dịch vụ') }
+    },
+    onAddCustom: () => setShowAddItem('service'),
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -859,6 +882,15 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
 
+        {/* Diagnostic-driven workflow — the spine of the encounter (always open):
+            Lý do → triệu chứng → tiền sử → cận lâm sàng (đề xuất ↔ dịch vụ, BS có thể
+            tự thêm) → chẩn đoán phân biệt → kết luận. Auto-pulls station results and
+            writes the diagnosis/kết luận back to Hồ sơ bệnh án below. */}
+        <section className="border border-gray-200 rounded-xl p-3 bg-gray-50/40">
+          <DiagnosticAssistant embedded initialPatientId={enc.patientId} initialEncounterId={enc._id}
+            onConfirmed={dxWriteBack} serviceMode={serviceMode} syncSignal={syncSignal} />
+        </section>
+
         {/* Hồ sơ bệnh án — top-level collapsible section wrapping 5 also-
             collapsible self-saving textareas. Each child persists on blur
             via PUT /encounters/:id/clinical-notes with only its own field.
@@ -921,23 +953,6 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
           )
         })()}
 
-        {/* Hỗ trợ chẩn đoán — embedded diagnostic assistant, pre-loaded with this
-            patient/encounter. On final save it writes the diagnosis + treatment
-            back onto Chẩn đoán / Kết luận above. */}
-        <section>
-          <button onClick={() => setDxOpen(o => !o)}
-            className="w-full text-left flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900">
-            <span className="text-xs text-gray-400">{dxOpen ? '▾' : '▸'}</span>
-            <span>🧠</span>
-            <span>Hỗ trợ chẩn đoán</span>
-            <span className="text-xs text-gray-400 font-normal">— gợi ý chẩn đoán & điều trị</span>
-          </button>
-          {dxOpen && (
-            <div className="mt-2 border border-gray-200 rounded-xl p-3 bg-gray-50/50">
-              <DiagnosticAssistant embedded initialPatientId={enc.patientId} initialEncounterId={enc._id} onConfirmed={dxWriteBack} />
-            </div>
-          )}
-        </section>
 
         {/* Patient history */}
         <section>
@@ -1141,7 +1156,7 @@ function EncounterPane({ id, onClose, onOpenOther, onMutated, embedded = false }
       </div>
 
       {showAssignPackage && <AssignPackageModal encounterId={enc._id} onDone={async () => { setShowAssignPackage(false); await reload() }} onClose={() => setShowAssignPackage(false)} />}
-      {openServiceCode && <ServiceFormModal encounterId={enc._id} serviceCode={openServiceCode} onDone={async () => { setOpenServiceCode(null); await reload() }} onClose={() => setOpenServiceCode(null)} />}
+      {openServiceCode && <ServiceFormModal encounterId={enc._id} serviceCode={openServiceCode} onDone={async () => { setOpenServiceCode(null); await reload(); setSyncSignal(s => s + 1) }} onClose={() => setOpenServiceCode(null)} />}
       {showAddItem && <AddItemModal encounterId={enc._id} kind={showAddItem} onDone={async () => { setShowAddItem(null); await reload() }} onClose={() => setShowAddItem(null)} />}
     </div>
   )
