@@ -36,23 +36,86 @@ import { serviceForTest } from './dxTestService'
 //   pain    → pain qualifier + symptom tag (mild=pain, moderate=pain_severe_or_moderate, severe=pain_severe)
 //   redness → redness qualifier only (the KB has no generic redness *finding*)
 // `impliesOnset` / `impliesVision` auto-set those qualifiers from the symptom itself.
-const SYMPTOMS = [
-  { id: 'pain',                graded: 'pain',    label: 'Đau' },
-  { id: 'redness',             graded: 'redness', label: 'Đỏ' },
-  { id: 'vision_blur_gradual', impliesOnset: 'gradual',                       label: 'Mờ tăng dần' },
-  { id: 'vision_loss_sudden',  impliesOnset: 'sudden', impliesVision: 'lost', label: 'Mất TL đột ngột' },
-  { id: 'photophobia',         label: 'Sợ ánh sáng' },
-  { id: 'halos',               label: 'Quầng sáng' },
-  { id: 'flashes',             label: 'Chớp sáng' },
-  { id: 'floaters_new',        label: 'Ruồi bay mới' },
-  { id: 'curtain',             label: 'Màn che' },
-  { id: 'diplopia_binocular',  label: 'Nhìn đôi' },
-  { id: 'gritty_burning',      label: 'Cộm rát' },
-  { id: 'itching',             label: 'Ngứa' },
-  { id: 'discharge',           label: 'Tiết dịch' },
-  { id: 'headache',            label: 'Đau đầu' },
-  { id: 'nausea_vomiting',     label: 'Buồn nôn' },
+// Grouped so the "+ Thêm triệu chứng" picker can show a searchable, categorised
+// dropdown instead of a wall of inline chips. Each symptom: { id (a finding _id),
+// label (short VN), graded?, impliesOnset?, impliesVision? }. The flat SYMPTOMS /
+// SYMPTOM_BY_ID below are derived so the rest of the form is unchanged.
+// NOTE: catalog content is being expanded to cover all patient-reportable
+// findings (see symptom-catalog audit) — groups/labels may grow.
+const SYMPTOM_GROUPS = [
+  { key: 'pain_discomfort', label: 'Đau & khó chịu', symptoms: [
+    { id: 'pain',                      graded: 'pain', label: 'Đau' },
+    { id: 'pain_on_eye_movement',      label: 'Đau khi liếc mắt' },
+    { id: 'pain_deep_boring',          label: 'Đau sâu kiểu khoan' },
+    { id: 'pain_out_of_proportion',    label: 'Đau mất tỉ lệ với khám' },
+    { id: 'eye_pain_morning_subsides', label: 'Đau sáng, đỡ trong ngày' },
+    { id: 'redness',                   graded: 'redness', label: 'Đỏ' },
+    { id: 'photophobia',               label: 'Sợ ánh sáng' },
+    { id: 'gritty_burning',            label: 'Cộm rát' },
+    { id: 'itching',                   label: 'Ngứa' },
+    { id: 'near_work_strain',          label: 'Mỏi mắt khi nhìn gần / máy tính' },
+  ] },
+  { key: 'surface_discharge', label: 'Bề mặt & tiết dịch', symptoms: [
+    { id: 'discharge',                 label: 'Tiết dịch' },
+    { id: 'discharge_purulent',        label: 'Tiết dịch mủ' },
+    { id: 'discharge_watery',          label: 'Tiết dịch nước' },
+    { id: 'mucoid_discharge',          label: 'Tiết dịch nhầy, sợi' },
+    { id: 'epiphora_constant_tearing', label: 'Chảy nước mắt liên tục' },
+    { id: 'tearing_paradoxical',       label: 'Chảy nước mắt do khô mắt' },
+    { id: 'blur_that_clears_with_blink', label: 'Mờ, đỡ khi chớp mắt' },
+    { id: 'dry_mouth',                 label: 'Khô miệng' },
+    { id: 'pterygium_visible',         label: 'Mộng thịt (thịt đỏ mọc vào mắt)' },
+  ] },
+  { key: 'vision', label: 'Thị lực', symptoms: [
+    { id: 'vision_drop',               label: 'Giảm thị lực' },
+    { id: 'vision_loss_sudden',        impliesOnset: 'sudden', impliesVision: 'lost', label: 'Mất TL đột ngột' },
+    { id: 'vision_loss_subacute',      impliesOnset: 'subacute', label: 'Mất TL bán cấp (giờ-ngày)' },
+    { id: 'vision_blur_gradual',       impliesOnset: 'gradual', label: 'Mờ tăng dần' },
+    { id: 'near_only_blur',            impliesOnset: 'gradual', label: 'Mờ khi đọc gần' },
+    { id: 'distance_only_blur',        impliesOnset: 'gradual', label: 'Mờ khi nhìn xa' },
+    { id: 'morning_blur_improves_through_day', label: 'Mờ sáng, tự đỡ trong ngày' },
+    { id: 'night_glare_no_blur',       label: 'Loá chói ban đêm' },
+    { id: 'vision_fluctuates_with_blood_sugar', label: 'TL thay đổi theo đường huyết' },
+    { id: 'night_blindness',           label: 'Quáng gà' },
+    { id: 'transient_visual_obscurations', label: 'Mờ thoáng qua' },
+  ] },
+  { key: 'image_distortion', label: 'Hình ảnh & méo', symptoms: [
+    { id: 'metamorphopsia',  label: 'Méo hình' },
+    { id: 'micropsia',       label: 'Vật nhìn bé hơn' },
+    { id: 'central_scotoma', label: 'Ám điểm trung tâm' },
+    { id: 'halos',           label: 'Quầng sáng quanh đèn' },
+  ] },
+  { key: 'field_flash_floaters', label: 'Thị trường / chớp / ruồi bay', symptoms: [
+    { id: 'flashes',                 label: 'Chớp sáng' },
+    { id: 'floaters_new',            label: 'Ruồi bay mới' },
+    { id: 'floaters_chronic_stable', label: 'Ruồi bay mạn tính, ổn định' },
+    { id: 'curtain',                 label: 'Màn che / bóng đen' },
+    { id: 'field_loss',              label: 'Mất thị trường' },
+    { id: 'field_loss_altitudinal',  label: 'Mất thị trường nửa trên/dưới' },
+    { id: 'tunnel_vision',           label: 'Thị trường hình ống' },
+  ] },
+  { key: 'diplopia', label: 'Song thị', symptoms: [
+    { id: 'diplopia_binocular',  label: 'Nhìn đôi (mất khi che 1 mắt)' },
+    { id: 'diplopia_monocular',  label: 'Nhìn đôi 1 mắt' },
+    { id: 'diplopia_vertical',   label: 'Song thị dọc / xoáy' },
+    { id: 'diplopia_horizontal', label: 'Song thị ngang' },
+  ] },
+  { key: 'eyelid', label: 'Mí mắt', symptoms: [
+    { id: 'lid_lump_painful',  label: 'Cục sưng đỏ đau ở mí (lẹo)' },
+    { id: 'lid_lump_painless', label: 'Cục cứng không đau ở mí (chắp)' },
+    { id: 'eyelid_twitch',     label: 'Co giật mí mắt' },
+  ] },
+  { key: 'systemic_neuro', label: 'Toàn thân & thần kinh', symptoms: [
+    { id: 'headache',              label: 'Đau đầu' },
+    { id: 'nausea_vomiting',       label: 'Buồn nôn / nôn' },
+    { id: 'jaw_claudication',      label: 'Đau cơ hàm khi nhai' },
+    { id: 'scalp_tenderness',      label: 'Đau da đầu' },
+    { id: 'neck_pain',             label: 'Đau cổ' },
+    { id: 'morning_back_stiffness', label: 'Cứng lưng buổi sáng' },
+    { id: 'visual_aura_zigzag',    label: 'Hào quang zigzag (15-60 phút)' },
+  ] },
 ]
+const SYMPTOMS = SYMPTOM_GROUPS.flatMap(g => g.symptoms)
 const SYMPTOM_BY_ID = Object.fromEntries(SYMPTOMS.map(s => [s.id, s]))
 
 // Severity ladders per graded axis (value → label).
@@ -518,6 +581,56 @@ function InlinePatientPicker({ onPick }) {
   )
 }
 
+// "+ Thêm triệu chứng" → searchable, grouped dropdown. Picking adds a symptom
+// row (stays open for multi-add). Scales as the catalog grows, vs a wall of chips.
+function SymptomPicker({ onPick, countOf }) {
+  const { t: tr } = useLanguage()
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const ql = q.trim().toLowerCase()
+  const groups = SYMPTOM_GROUPS
+    .map(g => ({ ...g, items: g.symptoms.filter(s => !ql || tr(s.label).toLowerCase().includes(ql) || s.id.includes(ql)) }))
+    .filter(g => g.items.length)
+  const close = () => { setOpen(false); setQ('') }
+  return (
+    <div className="relative inline-block">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="px-3 py-1.5 rounded-lg text-sm border border-dashed border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1">
+        <span className="text-base leading-none">+</span> {tr('Thêm triệu chứng')}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={close} aria-hidden="true" />
+          <div className="absolute left-0 top-full mt-1 w-72 max-h-80 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-30">
+            <div className="p-2 sticky top-0 bg-white border-b border-gray-100">
+              <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={tr('Tìm triệu chứng…')}
+                onKeyDown={e => { if (e.key === 'Escape') close() }}
+                className="w-full border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-400" />
+            </div>
+            {groups.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-gray-400 italic">{tr('Không tìm thấy triệu chứng.')}</div>
+            ) : groups.map(g => (
+              <div key={g.key} className="py-1">
+                <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{tr(g.label)}</div>
+                {g.items.map(s => {
+                  const n = countOf?.(s.id) || 0
+                  return (
+                    <button key={s.id} type="button" onMouseDown={() => onPick(s.id)}
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 flex items-center justify-between gap-2">
+                      <span>{tr(s.label)}</span>
+                      {n > 0 && <span className="text-[10px] text-blue-700 bg-blue-50 rounded-full px-1.5">{n}</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Complaint form — free text + per-symptom rows (eye + onset + severity) + LLM.
 // Persistent: stays editable after a session exists so the doctor can add a
@@ -610,10 +723,21 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
   function submit() {
     const complaint = buildComplaintFromRows(rows, text.trim(), buildContext())
     if (durVal && Number(durVal) > 0) complaint.durationDays = Number(durVal) * DURATION_TO_DAYS[durUnit]
+    lastRunSig.current = inputSig   // mark current inputs as "run"
     onSubmit(complaint)
   }
 
   const canRun = rows.length > 0 || text.trim().length > 5
+
+  // "Pending changes" cue: do the form's inputs differ from what produced the
+  // current differential? Drives a highlight on the run button so a stale/blank
+  // differential doesn't look broken — the doctor sees they need to click Cập nhật.
+  const inputSig = JSON.stringify({
+    rows: rows.map(r => ({ id: r.id, eye: r.eye, onset: r.onset, severity: r.severity })),
+    text: text.trim(), age, sex, cl, trauma, postOp, pregnant, smoker, systemic, meds, family, durVal, durUnit,
+  })
+  const lastRunSig = useRef(inputSig)   // first render (empty form) == the auto-synced blank session
+  const dirty = hasSession && canRun && inputSig !== lastRunSig.current
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
@@ -646,21 +770,10 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {tr('2. Triệu chứng')} <span className="text-xs font-normal text-gray-500">{tr('— bấm để thêm (có thể thêm cùng triệu chứng cho 2 mắt); ghi rõ mắt, khởi phát & mức độ từng dòng')}</span>
+          {tr('2. Triệu chứng')} <span className="text-xs font-normal text-gray-500">{tr('— thêm từng triệu chứng (có thể thêm cùng triệu chứng cho 2 mắt); ghi rõ mắt, khởi phát & mức độ từng dòng')}</span>
         </label>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {SYMPTOMS.map(s => {
-            const n = countOf(s.id)
-            return (
-              <button
-                key={s.id}
-                onClick={() => addRow(s.id)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                  n > 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300'
-                }`}
-              >+ {tr(s.label)}{n > 0 && <span className="ml-1 opacity-80">({n})</span>}</button>
-            )
-          })}
+        <div className="mb-3">
+          <SymptomPicker onPick={addRow} countOf={countOf} />
         </div>
         {rows.length === 0 ? (
           <div className="text-xs text-gray-400 italic">{tr('Chưa chọn triệu chứng nào.')}</div>
@@ -730,16 +843,21 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
         </div>
       </div>
 
-      <div className="pt-2 border-t border-gray-100 flex items-center gap-3">
+      <div className="pt-2 border-t border-gray-100 flex items-center gap-3 flex-wrap">
         <button
           onClick={submit}
           disabled={busy || !canRun}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium px-5 py-2 rounded-lg text-sm"
+          className={`bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium px-5 py-2 rounded-lg text-sm ${dirty ? 'ring-2 ring-blue-300 ring-offset-1' : ''}`}
         >
           {busy ? tr('⏳ Đang chạy...') : hasSession ? tr('↻ Cập nhật triệu chứng') : tr('Chạy phân tích chẩn đoán →')}
         </button>
-        {!canRun && <span className="text-xs text-gray-500">{tr('Cần chọn ít nhất 1 triệu chứng hoặc nhập mô tả tự do.')}</span>}
-        {hasSession && canRun && <span className="text-xs text-gray-500">{tr('Thêm/bớt triệu chứng rồi cập nhật — kết quả khám phía dưới được giữ nguyên.')}</span>}
+        {dirty
+          ? <span className="text-xs font-medium text-blue-700">{tr('🔵 Có thay đổi chưa cập nhật — bấm để chạy lại')}</span>
+          : !canRun
+            ? <span className="text-xs text-gray-500">{tr('Cần chọn ít nhất 1 triệu chứng hoặc nhập mô tả tự do.')}</span>
+            : hasSession
+              ? <span className="text-xs text-gray-500">{tr('Thêm/bớt triệu chứng rồi cập nhật — kết quả khám phía dưới được giữ nguyên.')}</span>
+              : null}
       </div>
     </div>
   )
