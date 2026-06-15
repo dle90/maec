@@ -622,3 +622,9 @@ Built + adversarially reviewed (5 reviewers → per-finding verify, 13 confirmed
 - Cell ③ double-header fixed (`NextTestsPanel hideTitle`); referral-test de-dupe guard (`suggestedServiceCodes` skips `availableInClinic:false`); first-save re-sync race fixed (dropped `!session` guard on the syncSignal effect).
 
 **Deferred (review finding #6, low):** ② (differential) and ③ (cận lâm sàng) are diagonal corners, so a result entered in ③ re-ranks ② across a diagonal glance. Not reordered — that would break the clinician-chosen ①②③④ Z-order. Optional future polish: flash/scroll-into-view the changed differential rows on `syncSignal`.
+
+**Space-reclaim iteration (2026-06-15, `b… + DXxI09Ii build`):** clinician feedback "the 2×2 is too small" — root cause was the grid going 2-col on viewport width while the global sidebar (224px) + the 360px Lượt khám list rail ate ~580px, squeezing each cell to ~233px. Fixes:
+- **Lượt khám list rail collapsible** on lg (Kham.jsx `railOpen`, localStorage `maec_kham_rail`): ‹ Thu gọn ↔ a thin › "Danh sách · N" strip. Collapsing hands the pane the rail's width.
+- **Sidebar collapse persists** (Layout.jsx, localStorage `maec_sidebar`) — the hamburger already toggled it on desktop; now it survives reloads (mobile still defaults closed).
+- **Khám filter toolbar moved into the global top header** via a new `PageHeader` portal (`components/PageHeader.jsx` + `PageHeaderSlotContext` in Layout.jsx) — one top bar instead of header + a separate page toolbar. Layout compacts the brand title to "MAEC" while a `<PageHeader>` is mounted so the filters don't crowd it; other pages keep the full "Phòng khám Mắt Minh Anh".
+- Verified on prod (`verify-rework2-prod.mjs`): cell ② 233px → 365px (rail collapsed) → 477px (sidebar also collapsed); filters sit at header y≈14; 0 console errors. `PageHeader` is reusable for other dense pages' toolbars.
