@@ -4,6 +4,7 @@ import api, { downloadEncounterPrintout, concludeEncounter, reopenEncounter, dxG
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { formatDate } from '../lib/date'
 import EncounterAttachments from '../components/EncounterAttachments'
+import PageHeader from '../components/PageHeader'
 import { DiagnosticAssistant } from './Diagnostic'
 
 const fmtMoney = (v) => v == null ? '0' : Number(v).toLocaleString('vi-VN')
@@ -279,6 +280,10 @@ export default function Kham() {
   // work queue, not a dump of every encounter ever. Switch to "Hoàn thành"
   // for paid history, "Đã hủy" for cancellations, "Tất cả" for everything.
   const [statusGroup, setStatusGroup] = useState(searchParams.get('status') || 'active')
+  // Lượt khám list rail — collapsible (lg+) so the open encounter's 2×2 cockpit
+  // can take the full width. Persisted so it stays parked across reloads.
+  const [railOpen, setRailOpen] = useState(() => { try { return localStorage.getItem('maec_kham_rail') !== 'closed' } catch { return true } })
+  useEffect(() => { try { localStorage.setItem('maec_kham_rail', railOpen ? 'open' : 'closed') } catch {} }, [railOpen])
   // Patient filter — when set, server returns full lifetime history for that
   // patient and ignores from/to. Cleared by clicking the "× BN" pill.
   const [patientFilter, setPatientFilter] = useState(() => {
@@ -348,12 +353,11 @@ export default function Kham() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] -m-2 sm:-m-4 bg-gray-50 p-2 sm:p-4 gap-2">
-      {/* Single compact toolbar: title + filter dropdowns + patient search + actions */}
-      <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
-        <h1 className="text-lg font-bold text-gray-800 mr-2"
-          title="Hàng đợi lượt khám đang hoạt động — gán gói, thực hiện dịch vụ, thêm kính/thuốc vào bill.">
-          Khám
-        </h1>
+      {/* Filters render into the global top header (one top bar — no separate
+          page toolbar below it). */}
+      <PageHeader>
+        <span className="text-sm font-bold text-gray-800 flex-shrink-0 mr-1"
+          title="Hàng đợi lượt khám đang hoạt động — gán gói, thực hiện dịch vụ, thêm kính/thuốc vào bill.">Khám</span>
 
         <select value={statusGroup} onChange={e => setStatusGroup(e.target.value)} className={selectCls}>
           {Object.entries(STATUS_GROUPS).map(([k, g]) => (
@@ -396,11 +400,11 @@ export default function Kham() {
           <PatientLookup onPick={(p) => setPatientFilter({ patientId: p.patientId || p._id, name: p.name })} />
         )}
 
-        <div className="ml-auto flex gap-2">
-          <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">+ Tạo lượt khám</button>
+        <div className="ml-auto flex gap-2 flex-shrink-0">
+          <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap">+ Tạo lượt khám</button>
           <button onClick={load} className="px-2.5 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200" title="Làm mới">⟳</button>
         </div>
-      </div>
+      </PageHeader>
 
       {existingToast && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-sm text-amber-800 flex items-center gap-2 flex-shrink-0">
@@ -410,16 +414,35 @@ export default function Kham() {
         </div>
       )}
 
-      {/* Split layout: list rail (left) + encounter pane (right) on lg+;
-          on smaller screens the rail is full-width and the encounter
-          opens as a modal drawer (legacy behavior). */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-3 min-h-0">
-        <EncounterListRail
-          list={list}
-          loading={loading}
-          openId={openId}
-          onPick={setOpenId}
-        />
+      {/* Split layout: collapsible list rail (left) + encounter pane (right) on lg+;
+          on smaller screens the rail is full-width and the encounter opens as a
+          modal drawer (legacy behavior). Collapsing the rail hands the 2×2 cockpit
+          the full width. */}
+      <div className={`flex-1 grid grid-cols-1 ${railOpen ? 'lg:grid-cols-[300px_1fr]' : 'lg:grid-cols-[2.25rem_1fr]'} gap-3 min-h-0`}>
+        <div className="min-h-0 h-full">
+          {railOpen ? (
+            <div className="h-full flex flex-col gap-1">
+              <button onClick={() => setRailOpen(false)}
+                className="hidden lg:flex items-center gap-1 self-start text-xs text-gray-500 hover:text-gray-700 px-1.5 py-0.5 rounded hover:bg-gray-100 flex-shrink-0"
+                title="Thu gọn danh sách để mở rộng lượt khám">‹ Thu gọn</button>
+              <div className="flex-1 min-h-0">
+                <EncounterListRail list={list} loading={loading} openId={openId} onPick={setOpenId} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <button onClick={() => setRailOpen(true)}
+                className="hidden lg:flex flex-col items-center pt-2 gap-2 bg-white rounded-xl border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 h-full w-full"
+                title="Mở danh sách lượt khám">
+                <span className="text-base">›</span>
+                <span className="[writing-mode:vertical-rl] rotate-180 text-xs whitespace-nowrap">Danh sách · {list.length}</span>
+              </button>
+              <div className="lg:hidden h-full">
+                <EncounterListRail list={list} loading={loading} openId={openId} onPick={setOpenId} />
+              </div>
+            </>
+          )}
+        </div>
         <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden">
           {openId ? (
             <EncounterPane
@@ -454,7 +477,7 @@ export default function Kham() {
 // name + status pill on top; gói + bill total + time on bottom.
 function EncounterListRail({ list, loading, openId, onPick }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col min-h-0">
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col min-h-0 h-full">
       <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
         <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Lượt khám</span>
         <span className="text-xs text-gray-400">{loading ? '…' : `${list.length}`}</span>

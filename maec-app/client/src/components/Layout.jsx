@@ -7,6 +7,11 @@ import NotificationBell from './NotificationBell'
 import { CATALOG_GROUPS, CATALOG_TO_GROUP } from '../config/catalogGroups'
 import { REPORT_GROUPS, REPORT_TO_GROUP, TOP_LEVEL as REPORT_TOP_LEVEL } from '../config/reportGroups'
 
+// Pages can render controls into the global top header (so a page doesn't need
+// its own second toolbar bar) by wrapping them in <PageHeader> (see PageHeader.jsx),
+// which portals into the slot element exposed here.
+export const PageHeaderSlotContext = React.createContext(null)
+
 // Top-level shortcuts are 7 headerless items (Tổng quan / Đăng ký / Khám /
 // Thu ngân / Sản phẩm & Dịch vụ / Bệnh nhân / Kho); everything else lives
 // under the collapsible Khác. Sản phẩm & Dịch vụ lands on /catalogs/services
@@ -352,9 +357,19 @@ export default function Layout({ children }) {
   const isWorkflowUser = auth?.role && auth.role !== 'guest'
   // Sidebar default: open on desktop (≥lg, 1024px+), closed on mobile so it
   // doesn't eat 60% of a 375px viewport.
-  const [sidebarOpen, setSidebarOpen] = React.useState(() =>
-    typeof window === 'undefined' ? true : window.innerWidth >= 1024
-  )
+  const [sidebarOpen, setSidebarOpen] = React.useState(() => {
+    if (typeof window === 'undefined') return true
+    if (window.innerWidth < 1024) return false   // mobile: never auto-open
+    try { const s = localStorage.getItem('maec_sidebar'); if (s !== null) return s === 'open' } catch {}
+    return true
+  })
+  // Persist the desktop collapse choice so it survives reloads (the user can
+  // park the sidebar closed to give a page like Khám the full width).
+  React.useEffect(() => {
+    try { localStorage.setItem('maec_sidebar', sidebarOpen ? 'open' : 'closed') } catch {}
+  }, [sidebarOpen])
+  // Slot element for page-injected header controls (see PageHeaderSlotContext).
+  const [headerSlot, setHeaderSlot] = React.useState(null)
   const closeOnMobile = React.useCallback(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) setSidebarOpen(false)
   }, [])
@@ -486,6 +501,7 @@ export default function Layout({ children }) {
   }
 
   return (
+    <PageHeaderSlotContext.Provider value={headerSlot}>
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Mobile backdrop — only visible when drawer is open on <lg viewports.
           Tapping it dismisses the drawer. */}
@@ -537,8 +553,8 @@ export default function Layout({ children }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top header */}
-        <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex items-center justify-between gap-3 shadow-sm flex-shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+        <header className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 flex items-center gap-3 shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
             <button
               onClick={() => setSidebarOpen(prev => !prev)}
               className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors flex-shrink-0"
@@ -549,10 +565,13 @@ export default function Layout({ children }) {
               </svg>
             </button>
             <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate min-w-0">
-              <span className="hidden lg:inline">Phòng khám Mắt Minh Anh</span>
-              <span className="lg:hidden">MAEC</span>
+              <span className="hidden xl:inline">Phòng khám Mắt Minh Anh</span>
+              <span className="xl:hidden">MAEC</span>
             </h1>
           </div>
+          {/* Page-injected controls (e.g. Khám filters) live here so a page doesn't
+              need a second toolbar bar below the header. Empty on most pages. */}
+          <div ref={setHeaderSlot} className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto" />
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <button
               onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
@@ -581,5 +600,6 @@ export default function Layout({ children }) {
         </main>
       </div>
     </div>
+    </PageHeaderSlotContext.Provider>
   )
 }
