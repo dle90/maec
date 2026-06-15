@@ -621,7 +621,7 @@ Built + adversarially reviewed (5 reviewers → per-finding verify, 13 confirmed
 - `dxWriteBack` now **surfaces the 409** on a settled encounter (was silently dropping the confirmed diagnosis) + auto-opens the note group so the doctor sees the auto-filled text.
 - Cell ③ double-header fixed (`NextTestsPanel hideTitle`); referral-test de-dupe guard (`suggestedServiceCodes` skips `availableInClinic:false`); first-save re-sync race fixed (dropped `!session` guard on the syncSignal effect).
 
-**Deferred (review finding #6, low):** ② (differential) and ③ (cận lâm sàng) are diagonal corners, so a result entered in ③ re-ranks ② across a diagonal glance. Not reordered — that would break the clinician-chosen ①②③④ Z-order. Optional future polish: flash/scroll-into-view the changed differential rows on `syncSignal`.
+**Cell order (updated `index-Da8sOP23 build`):** ① Bệnh sử · ② **Cận lâm sàng** (top-right — tests are meatier, get the prominent slot) · ③ **Chẩn đoán phân biệt** (bottom-left) · ④ Kết luận. Review finding #6 (low) still applies: tests (②) and differential (③) are diagonal corners, so a result entered in ② re-ranks ③ across a diagonal glance. Optional future polish: flash/scroll-into-view the changed differential rows on `syncSignal`.
 
 **Space-reclaim iteration (2026-06-15, `b… + DXxI09Ii build`):** clinician feedback "the 2×2 is too small" — root cause was the grid going 2-col on viewport width while the global sidebar (224px) + the 360px Lượt khám list rail ate ~580px, squeezing each cell to ~233px. Fixes:
 - **Lượt khám list rail collapsible** on lg (Kham.jsx `railOpen`, localStorage `maec_kham_rail`): ‹ Thu gọn ↔ a thin › "Danh sách · N" strip. Collapsing hands the pane the rail's width.
