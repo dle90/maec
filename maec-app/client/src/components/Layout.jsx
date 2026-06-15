@@ -370,6 +370,14 @@ export default function Layout({ children }) {
   }, [sidebarOpen])
   // Slot element for page-injected header controls (see PageHeaderSlotContext).
   const [headerSlot, setHeaderSlot] = React.useState(null)
+  // Count of mounted <PageHeader>s so we can compact the brand title to make room
+  // for page filters (only when a page actually injects controls).
+  const [pageHeaderCount, setPageHeaderCount] = React.useState(0)
+  const registerPageHeader = React.useCallback(() => {
+    setPageHeaderCount(c => c + 1)
+    return () => setPageHeaderCount(c => c - 1)
+  }, [])
+  const headerCtx = React.useMemo(() => ({ slot: headerSlot, register: registerPageHeader }), [headerSlot, registerPageHeader])
   const closeOnMobile = React.useCallback(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) setSidebarOpen(false)
   }, [])
@@ -501,7 +509,7 @@ export default function Layout({ children }) {
   }
 
   return (
-    <PageHeaderSlotContext.Provider value={headerSlot}>
+    <PageHeaderSlotContext.Provider value={headerCtx}>
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Mobile backdrop — only visible when drawer is open on <lg viewports.
           Tapping it dismisses the drawer. */}
@@ -565,8 +573,14 @@ export default function Layout({ children }) {
               </svg>
             </button>
             <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate min-w-0">
-              <span className="hidden xl:inline">Phòng khám Mắt Minh Anh</span>
-              <span className="xl:hidden">MAEC</span>
+              {pageHeaderCount > 0 ? (
+                <span>MAEC</span>
+              ) : (
+                <>
+                  <span className="hidden lg:inline">Phòng khám Mắt Minh Anh</span>
+                  <span className="lg:hidden">MAEC</span>
+                </>
+              )}
             </h1>
           </div>
           {/* Page-injected controls (e.g. Khám filters) live here so a page doesn't
