@@ -1419,6 +1419,13 @@ function AssignPackageModal({ encounterId, onClose, onDone }) {
 
 // ── Service result form modal ─────────────────────────────
 
+// Cycloplegic wait (client mirror of the server guard, encounters.js) — minutes the
+// drug needs before the WET refraction is valid. Atropine is home-instilled (0 = no
+// in-visit wait). Measuring too early → residual accommodation → over-minus Rx.
+const CYCLO_WAIT_MIN = { 'Tropicamide 1%': 25, 'Cyclopentolate 1%': 40, 'Atropine 1%': 0 }
+const cycloWait = (drug) => (drug in CYCLO_WAIT_MIN ? CYCLO_WAIT_MIN[drug] : 40)
+const nowDatetimeLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16) }
+
 function ServiceFormModal({ encounterId, serviceCode, onClose, onDone }) {
   useEscapeKey(onClose)
   const [fields, setFields] = useState([])
@@ -1428,6 +1435,7 @@ function ServiceFormModal({ encounterId, serviceCode, onClose, onDone }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [nowMs, setNowMs] = useState(Date.now())   // ticking clock for the cyclo countdown
 
   useEffect(() => {
     let cancelled = false
@@ -1446,6 +1454,18 @@ function ServiceFormModal({ encounterId, serviceCode, onClose, onDone }) {
     return () => { cancelled = true }
   }, [encounterId, serviceCode])
 
+  // Tick the clock while a cycloplegic form is open so the countdown updates.
+  useEffect(() => {
+    if (serviceCode !== 'SVC-CYCLO') return
+    const t = setInterval(() => setNowMs(Date.now()), 15000)
+    return () => clearInterval(t)
+  }, [serviceCode])
+
+  const isCyclo = serviceCode === 'SVC-CYCLO'
+  const cycloMin = cycloWait(output.drug)
+  const cycloElapsed = (isCyclo && output.drops_at) ? (nowMs - new Date(output.drops_at).getTime()) / 60000 : null
+  const cycloBlocked = isCyclo && cycloMin > 0 && !!output.drops_at && cycloElapsed != null && cycloElapsed >= 0 && cycloElapsed < cycloMin
+
   const submit = async (newStatus) => {
     setSaving(true); setErr('')
     try {
@@ -1459,6 +1479,23 @@ function ServiceFormModal({ encounterId, serviceCode, onClose, onDone }) {
   return (
     <Modal onClose={onClose} title={serviceName} subtitle={serviceCode} wide>
       <div className="space-y-3">
+        {isCyclo && (
+          <div className={`rounded-lg border p-2.5 text-sm flex items-center gap-2 flex-wrap ${cycloBlocked ? 'bg-amber-50 border-amber-300 text-amber-800' : (output.drops_at && cycloMin > 0) ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+            {!output.drops_at ? (
+              <>
+                <span>⏱ Liệt điều tiết: ghi giờ nhỏ thuốc để bắt đầu đếm thời gian chờ.</span>
+                <button onClick={() => setOutput(o => ({ ...o, drops_at: nowDatetimeLocal() }))}
+                  className="ml-auto text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">💧 Nhỏ thuốc bây giờ</button>
+              </>
+            ) : cycloMin <= 0 ? (
+              <span>✓ {output.drug || 'Atropine'} — nhỏ tại nhà, không cần chờ tại phòng.</span>
+            ) : cycloBlocked ? (
+              <span>⏳ Cần chờ ~{cycloMin} phút sau khi nhỏ {output.drug || 'thuốc'} — còn <b>{Math.ceil(cycloMin - cycloElapsed)} phút</b>. Có thể làm trạm khác trước; bấm "Lưu (đang tiếp tục)" để giữ giờ nhỏ thuốc rồi đo lại sau.</span>
+            ) : (
+              <span>✓ Đã đủ thời gian liệt điều tiết ({Math.floor(cycloElapsed)} phút sau nhỏ {output.drug || 'thuốc'}) — đo khúc xạ sau liệt được.</span>
+            )}
+          </div>
+        )}
         {fields.length === 0 && <div className="text-xs text-gray-400 italic">Chưa định nghĩa output fields cho service này.</div>}
         <div className="grid grid-cols-2 gap-3">
           {fields.map(f => (
@@ -1470,7 +1507,9 @@ function ServiceFormModal({ encounterId, serviceCode, onClose, onDone }) {
         </div>
         {err && <div className="text-xs text-red-600">{err}</div>}
         <div className="flex gap-2 pt-3 border-t">
-          <button onClick={() => submit('done')} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50">✓ Lưu + Hoàn thành</button>
+          <button onClick={() => submit('done')} disabled={saving || cycloBlocked}
+            title={cycloBlocked ? `Chưa đủ thời gian liệt điều tiết — còn ${Math.ceil(cycloMin - cycloElapsed)} phút` : ''}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50">✓ Lưu + Hoàn thành</button>
           <button onClick={() => submit('in_progress')} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50">Lưu (đang tiếp tục)</button>
           <button onClick={() => submit('skipped')} disabled={saving} className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm">Bỏ qua</button>
           <button onClick={onClose} className="ml-auto text-sm text-gray-500 hover:text-gray-700 px-4">Đóng</button>

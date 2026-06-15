@@ -26,6 +26,16 @@ const sumBill = (items) => (items || []).reduce((s, i) => s + (i.totalPrice || 0
 const isSettled = (enc) => enc.status === 'paid' || enc.status === 'cancelled'
 const SETTLED_ERR = 'Lượt khám đã đóng (đã thanh toán / đã hủy) — không thể chỉnh sửa.'
 
+// Cycloplegic refraction must wait for full cycloplegia before the WET refraction is
+// valid — measuring too early leaves residual accommodation → over-minus Rx (harmful
+// in children). Minimum wait per agent (minutes); Atropine is home-instilled days
+// before, so no in-visit wait. Recording drops_at (status in_progress) is always
+// allowed; only FINALIZING the wet refraction (status done with wet values) is gated.
+const CYCLO_MIN_WAIT_MIN = { 'Tropicamide 1%': 25, 'Cyclopentolate 1%': 40, 'Atropine 1%': 0 }
+const CYCLO_DEFAULT_WAIT_MIN = 40
+const CYCLO_WET_FIELDS = ['od_wet_sphere', 'od_wet_cyl', 'od_wet_axis', 'os_wet_sphere', 'os_wet_cyl', 'os_wet_axis', 'retinoscopy_wet']
+const cycloWaitMin = (drug) => (drug in CYCLO_MIN_WAIT_MIN ? CYCLO_MIN_WAIT_MIN[drug] : CYCLO_DEFAULT_WAIT_MIN)
+
 // POST /encounters — create new clinical encounter (Lễ tân workflow).
 // Minimal: just patientId + site. Package / services / bill items added via
 // subsequent endpoints (assign-package, services, bill-items).
@@ -498,6 +508,23 @@ router.put('/:id/services/:serviceCode', requireAuth, async (req, res) => {
     if (isSettled(enc)) return res.status(409).json({ error: SETTLED_ERR })
     const svc = (enc.assignedServices || []).find(s => s.serviceCode === req.params.serviceCode)
     if (!svc) return res.status(404).json({ error: `Service ${req.params.serviceCode} chưa được gán cho lượt khám này` })
+
+    // Cycloplegic wait guard — block finalizing the WET refraction before the drug
+    // has worked. (Recording drops_at via in_progress is always allowed.)
+    if (req.params.serviceCode === 'SVC-CYCLO' && req.body.status === 'done') {
+      const out = req.body.output || svc.output || {}
+      const wait = cycloWaitMin(out.drug)
+      const hasWet = CYCLO_WET_FIELDS.some(k => out[k] != null && out[k] !== '')
+      if (wait > 0 && hasWet && out.drops_at) {
+        const elapsedMin = (Date.now() - new Date(out.drops_at).getTime()) / 60000
+        if (Number.isFinite(elapsedMin) && elapsedMin >= 0 && elapsedMin < wait) {
+          return res.status(409).json({
+            code: 'CYCLO_WAIT', remainingMin: Math.ceil(wait - elapsedMin),
+            error: `Chưa đủ thời gian liệt điều tiết — cần ~${wait} phút sau khi nhỏ ${out.drug || 'thuốc'} (mới ${Math.floor(elapsedMin)} phút). Bấm "Lưu (đang tiếp tục)" để lưu giờ nhỏ thuốc, đo lại sau.`,
+          })
+        }
+      }
+    }
 
     const { status, output, assignedTo, assignedToName } = req.body
     if (output !== undefined) svc.output = output
