@@ -18,12 +18,10 @@ verify on prod → review before next). Scope chosen: **Full (0–6)**.
   forced logout). Login returns `expiresAt`. `timingSafeEqual` on the HMAC compare.
 - **Account-status gate**: login blocks `employmentStatus` inactive/resigned.
 - Verified on prod: bcrypt login `200`, wrong pw `401`, lazy-upgrade persists.
-- **⚠️ Remaining Phase-0 item (deliberate, deferred):** move signing secret fully
-  to env + remove the committed `'maec-secret-2026'` fallback + rotate in Railway.
-  Code already prefers `SESSION_SECRET` (warns if unset). Rotating the secret
-  **invalidates all live tokens → everyone re-logs in once**, so it must be done
-  at an off-hours moment with the owner's go-ahead. Until then the known literal
-  is still a valid fallback signer.
+- **Signing secret — rotated 2026-06-16** (`59405f1`). `SESSION_SECRET` set to a
+  fresh 96-char value in Railway, committed `'maec-secret-2026'` literal removed
+  (now fail-fast if env unset). Done while no one was using the app, so the
+  one-time token invalidation was a non-event. Phase 0 complete.
 
 ## Sprint state (2026-05-02 EOD) — re-verified clean
 

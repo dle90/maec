@@ -24,7 +24,7 @@ hardening what already exists. Scope chosen: **Full (Phases 0–6)**, shipped
 ## Status
 | Phase | Title | Status |
 |---|---|---|
-| 0 | Security | ✅ done (secret rotation pending off-hours) |
+| 0 | Security | ✅ done |
 | 1 | Data safety (Mongo hardening) | ☐ todo |
 | 2 | API hygiene (validation/errors) | ☐ todo |
 | 3 | Observability & ops | ☐ todo |
@@ -46,7 +46,9 @@ Live holes, all in [auth.js](../maec-app/server/routes/auth.js).
 - [x] **Token expiry.** Add `iat`/`exp` to signed tokens (env TTL,
       `AUTH_TOKEN_TTL_SEC`, default 12h); `verify()` rejects expired, **grandfathers
       legacy tokens with no `exp`** (zero-downtime). Return `expiresAt` to client.
-- [ ] **Secret to env + rotate** ⚠️ *one-time logout, needs a Railway action — DEFERRED to off-hours.*
+- [x] **Secret to env + rotate** — `SESSION_SECRET` rotated to a fresh 96-char value
+      in Railway, committed literal removed, fail-fast if unset, `timingSafeEqual`
+      on compare. Done while no one was using the app (all prior tokens invalidated).
       Move signing secret to required env (`SESSION_SECRET`), remove the committed
       `'maec-secret-2026'` literal, fail-fast if unset, `timingSafeEqual` on compare.
       **Done as a deliberate off-hours step** (rotating the secret invalidates all
