@@ -21,6 +21,30 @@ const PREVALENCE_WEIGHT = {
 
 const RED_FLAG_FLOOR = 0.05
 
+// Pertinent-negative down-ranking. Only a finding that a disease USUALLY has
+// (frequency ≥ REFUTE_MIN_FREQ) counts as evidence-against when it's explicitly
+// absent; the penalty scales with that frequency.
+const REFUTE_MIN_FREQ = 0.6
+const REFUTE_WEIGHT = 0.7
+
+// Finding tags the complaint EXPLICITLY rules out (pertinent negatives). Derived
+// ONLY from explicit 'none' qualifiers — never from 'unknown'/missing, so an
+// incomplete intake is never penalised. Mirrors the qualifier→tag mapping the
+// orchestrator uses when these qualifiers are POSITIVE (pain→pain*, vision→loss).
+function negatedFindingTags(complaint) {
+  const neg = new Set()
+  if (complaint?.pain === 'none') {
+    neg.add('pain'); neg.add('pain_severe'); neg.add('pain_severe_or_moderate')
+  }
+  if (complaint?.visionChange === 'none') {
+    neg.add('vision_loss_sudden'); neg.add('vision_loss_subacute')
+    neg.add('vision_drop'); neg.add('vision_blur_gradual')
+  }
+  // redness is a qualifier with no finding edge in the KB, so it can't refute via
+  // the edge graph — it's consumed by the deterministic red-flag gate instead.
+  return neg
+}
+
 async function collectActiveFindings(complaint, observations) {
   // Includes everything the implies graph entails — e.g. observing pain_severe
   // also activates the parent `pain` tag, so generic-pain edges contribute.
@@ -57,6 +81,15 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
   const candidateIds = Object.keys(byDisease)
   if (!candidateIds.length) return []
 
+  // Pertinent negatives: pull edges keyed off the explicitly-absent findings so we
+  // know, per candidate, how usual each absent finding is for it.
+  const negated = negatedFindingTags(complaint)
+  const negByDisease = {}
+  if (negated.size) {
+    const negEdges = await DxEdge.find({ findingId: { $in: [...negated] } }).lean()
+    for (const e of negEdges) (negByDisease[e.diseaseId] ||= []).push(e)
+  }
+
   const diseases = await DxDisease.find({ _id: { $in: candidateIds } }).lean()
   const diseaseMap = Object.fromEntries(diseases.map(d => [d._id, d]))
 
@@ -91,6 +124,24 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
     let score = baseScore * prevalence * ageFactor
 
     const isRedFlagCandidate = redFlagDiseases.has(did)
+
+    // Down-rank a candidate when the patient EXPLICITLY lacks a finding this
+    // disease usually presents with (e.g. painless eye → angle-closure, which is
+    // severe-pain in 95% of cases). Skipped for red-flag candidates: a fired
+    // red-flag is positive emergency evidence we don't second-guess (and its
+    // hallmark can't be both present-for-the-flag and explicitly-absent).
+    const refuting = []
+    if (!isRedFlagCandidate && negByDisease[did]) {
+      let refuteFactor = 1
+      for (const e of negByDisease[did]) {
+        if ((e.frequency || 0) >= REFUTE_MIN_FREQ) {
+          refuteFactor *= 1 - (e.frequency || 0) * REFUTE_WEIGHT
+          refuting.push(e.findingId)
+        }
+      }
+      score *= refuteFactor
+    }
+
     if (isRedFlagCandidate && score < RED_FLAG_FLOOR) score = RED_FLAG_FLOOR
 
     // Drop very-low non-red-flag candidates — keeps the differential
@@ -106,7 +157,7 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
       urgency: d.urgency,
       isRedFlagCandidate,
       supportingFindings: supporting,
-      refutingFindings: [],
+      refutingFindings: refuting,
       summary: d.summary,
       treatments: d.treatments || [],   // surfaced for the post-confirmation treatment panel
     })
