@@ -56,6 +56,12 @@ async function collectActiveFindings(complaint, observations) {
 
 async function rankDifferential(complaint, observations, redFlags, limit = 10) {
   const activeFindings = await collectActiveFindings(complaint, observations)
+  // Findings backed by an OBSERVATION (entered during the exam) — these are
+  // objective and must NOT be down-ranked by a history pertinent-negative (a
+  // confirmatory sign like closed-angle gonioscopy outweighs "no pain reported").
+  const obsFindings = await expandFindings(
+    (observations || []).map(o => o.findingId).filter(Boolean)
+  )
 
   // Force-include any disease that a triggered red-flag points at.
   const redFlagDiseases = new Set()
@@ -100,10 +106,15 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
     const d = diseaseMap[did]
     if (!d) continue
 
-    let baseScore = 0
+    // Split evocation into symptom-derived (refutable by a pertinent negative)
+    // and observation-derived (objective; full weight).
+    let symScore = 0
+    let obsScore = 0
     const supporting = []
     for (const e of byDisease[did]) {
-      baseScore += (e.evokingStrength || 0) * (e.frequency || 0)
+      const w = (e.evokingStrength || 0) * (e.frequency || 0)
+      if (obsFindings.has(e.findingId)) obsScore += w
+      else symScore += w
       supporting.push(e.findingId)
     }
 
@@ -121,26 +132,28 @@ async function rankDifferential(complaint, observations, redFlags, limit = 10) {
       }
     }
 
-    let score = baseScore * prevalence * ageFactor
-
     const isRedFlagCandidate = redFlagDiseases.has(did)
 
     // Down-rank a candidate when the patient EXPLICITLY lacks a finding this
     // disease usually presents with (e.g. painless eye → angle-closure, which is
-    // severe-pain in 95% of cases). Skipped for red-flag candidates: a fired
-    // red-flag is positive emergency evidence we don't second-guess (and its
-    // hallmark can't be both present-for-the-flag and explicitly-absent).
+    // severe-pain in 95% of cases). The penalty applies ONLY to the symptom-derived
+    // suspicion — observation-derived evidence keeps full weight, so a confirmatory
+    // exam sign (e.g. closed-angle gonioscopy) is never overridden by a history
+    // negative. Skipped entirely for red-flag candidates (a fired red-flag is
+    // positive emergency evidence we don't second-guess).
     const refuting = []
+    let refuteFactor = 1
     if (!isRedFlagCandidate && negByDisease[did]) {
-      let refuteFactor = 1
       for (const e of negByDisease[did]) {
         if ((e.frequency || 0) >= REFUTE_MIN_FREQ) {
           refuteFactor *= 1 - (e.frequency || 0) * REFUTE_WEIGHT
           refuting.push(e.findingId)
         }
       }
-      score *= refuteFactor
     }
+
+    const baseScore = symScore * refuteFactor + obsScore
+    let score = baseScore * prevalence * ageFactor
 
     if (isRedFlagCandidate && score < RED_FLAG_FLOOR) score = RED_FLAG_FLOOR
 
