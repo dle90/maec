@@ -25,7 +25,7 @@ hardening what already exists. Scope chosen: **Full (Phases 0–6)**, shipped
 | Phase | Title | Status |
 |---|---|---|
 | 0 | Security | ✅ done |
-| 1 | Data safety (Mongo hardening) | ☐ todo |
+| 1 | Data safety (Mongo hardening) | ▶ in progress (Units 1–4 of 9 done) |
 | 2 | API hygiene (validation/errors) | ☐ todo |
 | 3 | Observability & ops | ☐ todo |
 | 4 | Testing & CI gate | ☐ todo |
@@ -62,29 +62,42 @@ plaintext password gets hashed after one login; inactive account is blocked.
 ---
 
 ## Phase 1 — Data safety (Mongo hardening) `[M]`
-The correctness core. Atlas is a replica set → transactions work.
+The correctness core. Atlas is a replica set → transactions work. Sequenced into
+9 independently-shippable units (mapped by a read-only audit workflow 2026-06-16).
+The dup-audit gate came back **CLEAN** (0 duplicate codes), so unique indexes
+built with no dedup migration.
 
-- [ ] **Atomic counters.** New `Counter` collection + `nextCode(name, {site, year})`
-      via `findOneAndUpdate($inc, {upsert})`. Replace the
-      `countDocuments()+1` invoice-number race in
-      [invoicing.js](../maec-app/server/routes/invoicing.js); use for BN/encounter/
-      invoice codes. (Mirrors his-core `sequence_counter`.)
-- [ ] **Transactions** (`session.withTransaction`) around multi-doc mutations:
-      billing write + FIFO inventory deduction; encounter settle/checkout.
-- [ ] **Unique + compound indexes** (invoice no., natural keys) — dup prevention
-      enforced by the engine, not app code.
-- [ ] **Schema tightening:** `enum`/`required`/`min` on hot models +
-      **`strict: 'throw'`** → rejects unknown/bad fields at the model layer
-      (the real fix for the bad-enum crash class).
-- [ ] **Audit plugin** (`createdBy`/`updatedBy`/`updatedAt`) — currently missing.
-- [ ] **Optimistic concurrency** (`__v` / conditional updates) on encounters
-      (settled-encounter immutability).
-- [ ] **Money as integer VND** (not float), like his-core `bigint`.
-- [ ] **`migrate-mongo`** for schema/data migrations.
+- [x] **Unit 1 — Counter primitive + dup-audit (inert prep)** (`40cddd9`).
+      `models/Counter.js` + `lib/counters.js` (atomic `nextSeq` via
+      `findOneAndUpdate $inc upsert`) + `scripts/audit-natural-key-dups.js` +
+      `scripts/smoke-counter.js`. Prod: 50 concurrent → 50 distinct; audit CLEAN.
+- [x] **Unit 2 — wire generators to the atomic counter** (`5abb209`).
+      invoice / inventory-tx / stocktake / patient(+booking+partner-admin) codes
+      now drawn atomically, exact formats preserved. Kills the count+1 /
+      `Math.random()` collision races at the source. Prod-verified.
+- [x] **Unit 3 — unique partial indexes** (`6aab9d8`). invoiceNumber,
+      transactionNumber, sessionNumber, patientId, Supply(productKind,productCode)
+      — unique partial `{$gt:''}`. Built on prod, re-audit CLEAN.
+- [x] **Unit 4 — `strict:'throw'` on the safe hot models** (`55584eb`).
+      Encounter/Invoice/Payment/InventoryTransaction/StocktakeSession/Patient
+      (+ explicit item subschemas). Verified no `...req.body` spread in their
+      write paths. In-memory + prod probe: valid OK, unknown fields rejected.
+- [ ] **Unit 5 — atomic lot decrement + optimistic concurrency** `[high risk]`
+      Conditional `$gte` FIFO decrement (no oversell) + `optimisticConcurrency`
+      on Encounter/Invoice/StocktakeSession (lost-update → 409).
+- [ ] **Unit 6 — multi-document transactions** `[high risk]` `withTxn` (topology-
+      aware) around checkout / confirm / stocktake-approve / refund.
+- [ ] **Unit 7 — audit plugin** (`createdBy`/`updatedBy`/`updatedAt` via
+      AsyncLocalStorage request context). Keep dates as ISO Strings.
+- [ ] **Unit 8 — integer-VND money setters** (`Math.round` setter on amount
+      fields only; leave percent/rate/step/conversion as floats).
+- [ ] **Unit 9 — `strict:'throw'` on catalog + inventory-master models** `[high risk]`
+      after a `req.body`-spread → schema-paths-whitelist cleanup (gated by a field audit).
 
-**Verify:** concurrent invoice creation never collides; a failed FIFO deduct rolls
-back the bill; bad enum → validation error, server survives; settled encounter
-can't be silently overwritten.
+**Open clinic question (does not block):** should invoice (HD-) / inventory
+(NK-/XK-) numbers be **per-site** (2 locations) rather than the current global
+per-day counter? VN accounting often wants per-site books. Shipped global-per-day;
+revisit on confirmation.
 
 ---
 

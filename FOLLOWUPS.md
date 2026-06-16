@@ -23,6 +23,27 @@ verify on prod → review before next). Scope chosen: **Full (0–6)**.
   (now fail-fast if env unset). Done while no one was using the app, so the
   one-time token invalidation was a non-event. Phase 0 complete.
 
+### Phase 1 — Data safety (Mongo hardening) — Units 1–4 of 9 shipped 2026-06-16
+Mapped by a read-only audit workflow into 9 units. Dup-audit gate **CLEAN**.
+- **Unit 1** (`40cddd9`) — `models/Counter.js` + `lib/counters.js` (atomic
+  `nextSeq`) + `scripts/audit-natural-key-dups.js` + `scripts/smoke-counter.js`.
+  Prod: 50 concurrent nextSeq → 50 distinct; audit 0 dups.
+- **Unit 2** (`5abb209`) — all human-facing code generators (invoice / inv-tx /
+  stocktake / patient, incl. booking + partner-admin) routed through the atomic
+  counter; exact formats preserved. `scripts/smoke-codes.js`.
+- **Unit 3** (`6aab9d8`) — unique **partial** (`{$gt:''}`) indexes on
+  invoiceNumber / transactionNumber / sessionNumber / patientId /
+  Supply(productKind,productCode). Built via `scripts/build-unique-indexes.js`;
+  re-audit CLEAN. (Patient's old non-unique patientId index replaced.)
+- **Unit 4** (`55584eb`) — `strict:'throw'` on the 6 hot models (verified no
+  `...req.body` spread in their write paths). `scripts/smoke-strict.js` (in-memory).
+- **Units 5–9 remaining** (next session checkpoint — Units 5/6/9 are HIGH risk,
+  touch live billing/checkout/transactions): atomic FIFO `$gte` decrement +
+  optimistic concurrency (5), multi-doc transactions `withTxn` (6), audit plugin
+  (7), integer-VND setters (8), strict on catalog/master after req.body-spread
+  cleanup (9). See [docs/prod-upgrade-plan.md](docs/prod-upgrade-plan.md).
+- **Open clinic Q:** per-site vs global invoice/inv numbering (shipped global-per-day).
+
 ## Sprint state (2026-05-02 EOD) — re-verified clean
 
 Four sprints shipped + audit-verified:
