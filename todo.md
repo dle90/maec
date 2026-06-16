@@ -7,11 +7,15 @@ Shipping one phase at a time (build → deploy → verify on prod → review bef
 - **Phase 0 — Security** ✅ done (prod-verified). bcrypt + lazy-upgrade (23/23
   hashed) + token iat/exp + account-status gate + timingSafeEqual + `SESSION_SECRET`
   rotated in Railway (literal removed, fail-fast).
-- **Phase 1 — Data safety** ▶ in progress (Units 1–4 of 9 done + prod-verified):
-  atomic Counter + wired generators + unique partial indexes + strict:'throw' on
-  6 hot models. **Next:** Unit 5 (atomic FIFO `$gte` decrement + optimistic
-  concurrency) → Unit 6 (multi-doc transactions) — both HIGH risk (live billing/
-  checkout). Then 7 (audit plugin), 8 (integer-VND), 9 (strict on catalog).
+- **Phase 1 — Data safety** ▶ in progress (Units 1–6 of 9 done + prod-verified):
+  atomic Counter + generators + unique indexes + strict on 7 hot models + atomic
+  FIFO (no oversell) + multi-doc transactions (payment/checkout/refund/inventory
+  confirm/stocktake-approve/ris auto-deduct). Regression suite green on prod.
+  **Next (resume here):** Unit 7 (audit plugin — createdBy/updatedBy via
+  AsyncLocalStorage), Unit 8 (integer-VND money setters), Unit 9 (strict on
+  catalog/inventory-master after a `...req.body`→schema-whitelist cleanup, HIGH risk).
+  **Fast-follows:** confirm billing.js live status before its txn-wrap; hoist
+  Date.now()/random IDs outside withTxn callbacks.
 - Phases 2–6: queued (see [docs/prod-upgrade-plan.md](docs/prod-upgrade-plan.md)).
 
 ## Recently completed

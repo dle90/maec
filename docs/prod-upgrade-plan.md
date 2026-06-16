@@ -25,7 +25,7 @@ hardening what already exists. Scope chosen: **Full (Phases 0–6)**, shipped
 | Phase | Title | Status |
 |---|---|---|
 | 0 | Security | ✅ done |
-| 1 | Data safety (Mongo hardening) | ▶ in progress (Units 1–4 of 9 done) |
+| 1 | Data safety (Mongo hardening) | ▶ in progress (Units 1–6 of 9 done) |
 | 2 | API hygiene (validation/errors) | ☐ todo |
 | 3 | Observability & ops | ☐ todo |
 | 4 | Testing & CI gate | ☐ todo |
@@ -82,11 +82,26 @@ built with no dedup migration.
       Encounter/Invoice/Payment/InventoryTransaction/StocktakeSession/Patient
       (+ explicit item subschemas). Verified no `...req.body` spread in their
       write paths. In-memory + prod probe: valid OK, unknown fields rejected.
-- [ ] **Unit 5 — atomic lot decrement + optimistic concurrency** `[high risk]`
-      Conditional `$gte` FIFO decrement (no oversell) + `optimisticConcurrency`
-      on Encounter/Invoice/StocktakeSession (lost-update → 409).
-- [ ] **Unit 6 — multi-document transactions** `[high risk]` `withTxn` (topology-
-      aware) around checkout / confirm / stocktake-approve / refund.
+- [x] **Unit 5 — atomic lot decrement + FIFO consolidation** (`f99f8aa`,
+      hotfix `2e04843`). Conditional `$gte` FIFO decrement (no oversell/negative
+      stock) + collapsed the 3 divergent fifoDeduct copies into one lib +
+      collision-safe auto-deduct phiếu numbers. Prod: 8 concurrent deducts on 5
+      stock → exactly 5 consumed. (Optimistic concurrency folded into Unit 6's
+      transactions instead — deduct-before-save made naive `__v` actively unsafe.)
+- [x] **Unit 6 — multi-document transactions** (`bd0502f`, foundation hotfix
+      `32db5fd`, `d86a840`). `withTxn` in db.js (topology-aware, degrades on
+      standalone, awaits connection, never double-runs).
+      - **6a** encounter payment / checkout / refund — re-read inside the txn,
+        closing the double-first-payment double-deduct race. Prod: rollback +
+        commit + concurrent-claim PASS.
+      - **6b** inventory `/transactions/:id/confirm` (+ paired transfer leg) and
+        `/stocktakes/:id/approve` (renamed clashing `session` var).
+      - **6c** ris `autoDeductConsumables` + the `consumablesDeductedAt` stamp.
+      - _Deferred:_ `billing.js` pay/refund txn-wrap (confirm it's still live vs
+        the `Encounter.payments[]` ledger first; no inventory involved, already
+        hardened by Unit 3/4). Fast-follow: hoist `Date.now()`/random ID gen
+        outside the txn callbacks for retry-determinism (non-blocking — rollback
+        is atomic, nothing orphaned commits today).
 - [ ] **Unit 7 — audit plugin** (`createdBy`/`updatedBy`/`updatedAt` via
       AsyncLocalStorage request context). Keep dates as ISO Strings.
 - [ ] **Unit 8 — integer-VND money setters** (`Math.round` setter on amount
