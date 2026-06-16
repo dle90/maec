@@ -15,8 +15,12 @@ const { withWarehouseScope, listAccessibleWarehouses, isSupervisor } = require('
 const { localDate } = require('../lib/dates')
 const { nextTxCode, nextStocktakeCode } = require('../lib/counters')
 const { fifoDeduct } = require('../lib/fifoDeduct')
+const { withTxn } = require('../db')
 
 const manageInventory = requirePermission('inventory.manage')
+// Tag a business error with an HTTP status so transaction-wrapped handlers can
+// throw it and have the outer catch send the right code.
+const httpError = (status, message) => Object.assign(new Error(message), { status })
 
 const now = () => new Date().toISOString()
 const today = () => localDate()  // HCM-local YYYY-MM-DD; was UTC slice
@@ -464,60 +468,31 @@ router.post('/transactions', requireAuth, async (req, res) => {
 // Confirm transaction → apply effects (create lots on import, FIFO-deduct on export, etc.)
 router.put('/transactions/:id/confirm', requireAuth, async (req, res) => {
   try {
-    const tx = await InventoryTransaction.findById(req.params.id)
-    if (!tx) return res.status(404).json({ error: 'Không tìm thấy phiếu' })
-    if (tx.status !== 'draft') return res.status(400).json({ error: 'Phiếu đã xác nhận hoặc đã hủy' })
+    // All lot writes + supply bumps + tx status (+ the paired transfer_in)
+    // commit atomically. Re-read inside so a transactional retry sees committed
+    // state; a concurrent double-confirm hits a write conflict and one retries
+    // to find status !== 'draft'.
+    const confirmed = await withTxn(async (session) => {
+      const tx = await InventoryTransaction.findById(req.params.id, null, { session })
+      if (!tx) throw httpError(404, 'Không tìm thấy phiếu')
+      if (tx.status !== 'draft') throw httpError(400, 'Phiếu đã xác nhận hoặc đã hủy')
 
-    // For transfer_out: capture the consumed-lot metadata per supply so we
-    // can propagate it to the paired transfer_in after the loop. Mongoose
-    // strict-mode would strip a _consumed field added directly on the subdoc.
-    const consumedBySupply = new Map()
+      // For transfer_out: capture the consumed-lot metadata per supply so we
+      // can propagate it to the paired transfer_in after the loop.
+      const consumedBySupply = new Map()
 
-    for (const item of tx.items) {
-      const supply = await Supply.findById(item.supplyId)
-      if (!supply) continue
+      for (const item of tx.items) {
+        const supply = await Supply.findById(item.supplyId, null, { session })
+        if (!supply) continue
 
-      if (tx.type === 'import' || tx.type === 'transfer_in') {
-        const lot = new InventoryLot({
-          _id: rid('LOT'),
-          supplyId: item.supplyId,
-          warehouseId: tx.warehouseId,
-          site: tx.site || '',
-          lotNumber: item.lotNumber || `L-${Date.now().toString().slice(-6)}`,
-          manufacturingDate: item.manufacturingDate || '',
-          expiryDate: item.expiryDate || '',
-          importTransactionId: tx._id,
-          importDate: today(),
-          initialQuantity: item.quantity,
-          currentQuantity: item.quantity,
-          unitPrice: item.unitPrice || 0,
-          status: 'available',
-          createdAt: now(),
-        })
-        await lot.save()
-        supply.currentStock += item.quantity
-      } else if (tx.type === 'export' || tx.type === 'auto_deduct' || tx.type === 'transfer_out') {
-        const result = await fifoDeduct({ warehouseId: tx.warehouseId, supplyId: item.supplyId, quantity: item.quantity })
-        if (result.consumed.length) item.lotId = result.consumed[0].lotId
-        supply.currentStock = Math.max(0, supply.currentStock - (item.quantity - (result.shortfall || 0)))
-        // For transfer_out: stash the consumed-lot metadata so the paired
-        // transfer_in (handled after this loop) can copy expiryDate /
-        // unitPrice / manufacturingDate onto its own items before its lots
-        // are created. Without this, the destination warehouse's transfer_in
-        // lot would be created with empty expiryDate → FEFO would treat it
-        // as never-expiring forever.
-        if (tx.type === 'transfer_out') {
-          consumedBySupply.set(item.supplyId, result.consumed)
-        }
-      } else if (tx.type === 'adjustment') {
-        // Positive variance → create a lot; negative → FIFO deduct
-        if (item.quantity > 0) {
+        if (tx.type === 'import' || tx.type === 'transfer_in') {
           const lot = new InventoryLot({
             _id: rid('LOT'),
             supplyId: item.supplyId,
             warehouseId: tx.warehouseId,
             site: tx.site || '',
-            lotNumber: item.lotNumber || `ADJ-${Date.now().toString().slice(-6)}`,
+            lotNumber: item.lotNumber || `L-${Date.now().toString().slice(-6)}`,
+            manufacturingDate: item.manufacturingDate || '',
             expiryDate: item.expiryDate || '',
             importTransactionId: tx._id,
             importDate: today(),
@@ -527,97 +502,110 @@ router.put('/transactions/:id/confirm', requireAuth, async (req, res) => {
             status: 'available',
             createdAt: now(),
           })
-          await lot.save()
+          await lot.save({ session })
           supply.currentStock += item.quantity
-        } else if (item.quantity < 0) {
-          await fifoDeduct({ warehouseId: tx.warehouseId, supplyId: item.supplyId, quantity: -item.quantity })
-          supply.currentStock = Math.max(0, supply.currentStock + item.quantity)
-        }
-      }
-      supply.updatedAt = now()
-      await supply.save()
-    }
-
-    tx.status = 'confirmed'
-    tx.confirmedBy = req.user.username
-    tx.confirmedAt = now()
-    tx.updatedAt = now()
-    await tx.save()
-
-    // Transfer pairing: when a transfer_out is confirmed, find the paired
-    // transfer_in (same transferId), copy each consumed lot's expiryDate +
-    // manufacturingDate + unitPrice onto its matching item, then auto-confirm
-    // it. Single confirm action moves stock from source to destination —
-    // without this, the transfer_in would sit `draft` forever and the
-    // destination warehouse would never see its stock arrive.
-    let pairedIn = null
-    if (tx.type === 'transfer_out' && tx.transferId) {
-      pairedIn = await InventoryTransaction.findOne({
-        transferId: tx.transferId, type: 'transfer_in', status: 'draft',
-      })
-      if (pairedIn) {
-        for (const inItem of pairedIn.items) {
-          const consumed = consumedBySupply.get(inItem.supplyId) || []
-          // For multi-lot deduction, prefer the soonest-expiring lot's expiry —
-          // it's the safer FEFO bound to track at the destination. unitPrice
-          // weighted-average across the consumed slices preserves cost basis.
-          if (consumed.length) {
-            const earliestExpiry = consumed
-              .map(c => c.expiryDate)
-              .filter(Boolean)
-              .sort()[0] || ''
-            const totalQty = consumed.reduce((s, c) => s + c.quantity, 0)
-            const wAvgPrice = totalQty > 0
-              ? Math.round(consumed.reduce((s, c) => s + c.unitPrice * c.quantity, 0) / totalQty)
-              : 0
-            const earliestMfg = consumed
-              .map(c => c.manufacturingDate)
-              .filter(Boolean)
-              .sort()[0] || ''
-            inItem.expiryDate = inItem.expiryDate || earliestExpiry
-            inItem.manufacturingDate = inItem.manufacturingDate || earliestMfg
-            inItem.unitPrice = inItem.unitPrice || wAvgPrice
-            inItem.amount = (inItem.unitPrice || 0) * (inItem.quantity || 0)
+        } else if (tx.type === 'export' || tx.type === 'auto_deduct' || tx.type === 'transfer_out') {
+          const result = await fifoDeduct({ warehouseId: tx.warehouseId, supplyId: item.supplyId, quantity: item.quantity }, { session })
+          if (result.consumed.length) item.lotId = result.consumed[0].lotId
+          supply.currentStock = Math.max(0, supply.currentStock - (item.quantity - (result.shortfall || 0)))
+          if (tx.type === 'transfer_out') {
+            consumedBySupply.set(item.supplyId, result.consumed)
+          }
+        } else if (tx.type === 'adjustment') {
+          if (item.quantity > 0) {
+            const lot = new InventoryLot({
+              _id: rid('LOT'),
+              supplyId: item.supplyId,
+              warehouseId: tx.warehouseId,
+              site: tx.site || '',
+              lotNumber: item.lotNumber || `ADJ-${Date.now().toString().slice(-6)}`,
+              expiryDate: item.expiryDate || '',
+              importTransactionId: tx._id,
+              importDate: today(),
+              initialQuantity: item.quantity,
+              currentQuantity: item.quantity,
+              unitPrice: item.unitPrice || 0,
+              status: 'available',
+              createdAt: now(),
+            })
+            await lot.save({ session })
+            supply.currentStock += item.quantity
+          } else if (item.quantity < 0) {
+            await fifoDeduct({ warehouseId: tx.warehouseId, supplyId: item.supplyId, quantity: -item.quantity }, { session })
+            supply.currentStock = Math.max(0, supply.currentStock + item.quantity)
           }
         }
-        pairedIn.totalAmount = pairedIn.items.reduce((s, it) => s + (it.amount || 0), 0)
-
-        // Inline confirm of pairedIn — same logic as the type==='import'
-        // branch above, but factored so it also writes its own lots.
-        for (const item of pairedIn.items) {
-          const supply = await Supply.findById(item.supplyId)
-          if (!supply) continue
-          const lot = new InventoryLot({
-            _id: rid('LOT'),
-            supplyId: item.supplyId,
-            warehouseId: pairedIn.warehouseId,
-            site: pairedIn.site || '',
-            lotNumber: item.lotNumber || `L-${Date.now().toString().slice(-6)}`,
-            manufacturingDate: item.manufacturingDate || '',
-            expiryDate: item.expiryDate || '',
-            importTransactionId: pairedIn._id,
-            importDate: today(),
-            initialQuantity: item.quantity,
-            currentQuantity: item.quantity,
-            unitPrice: item.unitPrice || 0,
-            status: 'available',
-            createdAt: now(),
-          })
-          await lot.save()
-          supply.currentStock += item.quantity
-          supply.updatedAt = now()
-          await supply.save()
-        }
-        pairedIn.status = 'confirmed'
-        pairedIn.confirmedBy = req.user.username
-        pairedIn.confirmedAt = now()
-        pairedIn.updatedAt = now()
-        await pairedIn.save()
+        supply.updatedAt = now()
+        await supply.save({ session })
       }
-    }
 
-    res.json({ ...tx.toObject(), pairedTransferIn: pairedIn ? pairedIn._id : null })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+      tx.status = 'confirmed'
+      tx.confirmedBy = req.user.username
+      tx.confirmedAt = now()
+      tx.updatedAt = now()
+      await tx.save({ session })
+
+      // Transfer pairing: confirming a transfer_out also auto-confirms its
+      // paired transfer_in (same transferId) — both legs move atomically.
+      let pairedIn = null
+      if (tx.type === 'transfer_out' && tx.transferId) {
+        pairedIn = await InventoryTransaction.findOne({
+          transferId: tx.transferId, type: 'transfer_in', status: 'draft',
+        }, null, { session })
+        if (pairedIn) {
+          for (const inItem of pairedIn.items) {
+            const consumed = consumedBySupply.get(inItem.supplyId) || []
+            if (consumed.length) {
+              const earliestExpiry = consumed.map(c => c.expiryDate).filter(Boolean).sort()[0] || ''
+              const totalQty = consumed.reduce((s, c) => s + c.quantity, 0)
+              const wAvgPrice = totalQty > 0
+                ? Math.round(consumed.reduce((s, c) => s + c.unitPrice * c.quantity, 0) / totalQty)
+                : 0
+              const earliestMfg = consumed.map(c => c.manufacturingDate).filter(Boolean).sort()[0] || ''
+              inItem.expiryDate = inItem.expiryDate || earliestExpiry
+              inItem.manufacturingDate = inItem.manufacturingDate || earliestMfg
+              inItem.unitPrice = inItem.unitPrice || wAvgPrice
+              inItem.amount = (inItem.unitPrice || 0) * (inItem.quantity || 0)
+            }
+          }
+          pairedIn.totalAmount = pairedIn.items.reduce((s, it) => s + (it.amount || 0), 0)
+
+          for (const item of pairedIn.items) {
+            const supply = await Supply.findById(item.supplyId, null, { session })
+            if (!supply) continue
+            const lot = new InventoryLot({
+              _id: rid('LOT'),
+              supplyId: item.supplyId,
+              warehouseId: pairedIn.warehouseId,
+              site: pairedIn.site || '',
+              lotNumber: item.lotNumber || `L-${Date.now().toString().slice(-6)}`,
+              manufacturingDate: item.manufacturingDate || '',
+              expiryDate: item.expiryDate || '',
+              importTransactionId: pairedIn._id,
+              importDate: today(),
+              initialQuantity: item.quantity,
+              currentQuantity: item.quantity,
+              unitPrice: item.unitPrice || 0,
+              status: 'available',
+              createdAt: now(),
+            })
+            await lot.save({ session })
+            supply.currentStock += item.quantity
+            supply.updatedAt = now()
+            await supply.save({ session })
+          }
+          pairedIn.status = 'confirmed'
+          pairedIn.confirmedBy = req.user.username
+          pairedIn.confirmedAt = now()
+          pairedIn.updatedAt = now()
+          await pairedIn.save({ session })
+        }
+      }
+
+      return { ...tx.toObject(), pairedTransferIn: pairedIn ? pairedIn._id : null }
+    })
+    res.json(confirmed)
+  } catch (err) { res.status(err.status || 500).json({ error: err.message }) }
 })
 
 router.put('/transactions/:id/cancel', requireAuth, async (req, res) => {
@@ -823,82 +811,88 @@ router.put('/stocktakes/:id/submit', requireAuth, async (req, res) => {
 // PUT /stocktakes/:id/approve — spawn adjustment transactions for each variance
 router.put('/stocktakes/:id/approve', manageInventory, async (req, res) => {
   try {
-    const session = await StocktakeSession.findById(req.params.id)
-    if (!session) return res.status(404).json({ error: 'Không tìm thấy phiên' })
-    if (session.status !== 'submitted') return res.status(400).json({ error: 'Chỉ duyệt được phiên đã nộp' })
+    // All adjustment txs + lots + supply bumps + the session status flip commit
+    // atomically. `stocktake` is the StocktakeSession doc; `session` is the
+    // Mongoose ClientSession.
+    const result = await withTxn(async (session) => {
+      const stocktake = await StocktakeSession.findById(req.params.id, null, { session })
+      if (!stocktake) throw httpError(404, 'Không tìm thấy phiên')
+      if (stocktake.status !== 'submitted') throw httpError(400, 'Chỉ duyệt được phiên đã nộp')
 
-    const wh = await Warehouse.findById(session.warehouseId).lean()
-    if (!wh) return res.status(404).json({ error: 'Không tìm thấy kho' })
+      const wh = await Warehouse.findById(stocktake.warehouseId, null, { session }).lean()
+      if (!wh) throw httpError(404, 'Không tìm thấy kho')
 
-    const txIds = []
-    for (const it of session.items) {
-      if (!it.variance) continue
-      const tx = new InventoryTransaction({
-        _id: rid('TX'),
-        transactionNumber: await nextTxNumber('adjustment'),
-        type: 'adjustment',
-        warehouseId: wh._id, warehouseName: wh.name, warehouseCode: wh.code, site: wh.site || '',
-        items: [{
-          supplyId: it.supplyId,
-          supplyName: it.supplyName,
-          supplyCode: it.supplyCode,
-          unit: it.unit,
-          quantity: it.variance,
-          amount: 0,
-        }],
-        reasonCode: it.reasonCode || 'stocktake',
-        reason: it.reasonText || `Kiểm kê ${session.sessionNumber}`,
-        stocktakeSessionId: session._id,
-        status: 'draft',
-        createdBy: req.user.username,
-        createdAt: now(), updatedAt: now(),
-      })
-      await tx.save()
-
-      // Auto-confirm the adjustment so stock reflects it immediately
-      const Supply_ = await Supply.findById(it.supplyId)
-      if (Supply_) {
-        if (it.variance > 0) {
-          const lot = new InventoryLot({
-            _id: rid('LOT'),
+      const txIds = []
+      for (const it of stocktake.items) {
+        if (!it.variance) continue
+        const tx = new InventoryTransaction({
+          _id: rid('TX'),
+          transactionNumber: await nextTxNumber('adjustment'),
+          type: 'adjustment',
+          warehouseId: wh._id, warehouseName: wh.name, warehouseCode: wh.code, site: wh.site || '',
+          items: [{
             supplyId: it.supplyId,
-            warehouseId: wh._id,
-            site: wh.site || '',
-            lotNumber: `KK-${session.sessionNumber}`,
-            expiryDate: '',
-            importTransactionId: tx._id,
-            importDate: today(),
-            initialQuantity: it.variance,
-            currentQuantity: it.variance,
-            unitPrice: 0,
-            status: 'available',
-            createdAt: now(),
-          })
-          await lot.save()
-          Supply_.currentStock += it.variance
-        } else {
-          await fifoDeduct({ warehouseId: wh._id, supplyId: it.supplyId, quantity: -it.variance })
-          Supply_.currentStock = Math.max(0, Supply_.currentStock + it.variance)
+            supplyName: it.supplyName,
+            supplyCode: it.supplyCode,
+            unit: it.unit,
+            quantity: it.variance,
+            amount: 0,
+          }],
+          reasonCode: it.reasonCode || 'stocktake',
+          reason: it.reasonText || `Kiểm kê ${stocktake.sessionNumber}`,
+          stocktakeSessionId: stocktake._id,
+          status: 'draft',
+          createdBy: req.user.username,
+          createdAt: now(), updatedAt: now(),
+        })
+        await tx.save({ session })
+
+        // Auto-confirm the adjustment so stock reflects it immediately
+        const Supply_ = await Supply.findById(it.supplyId, null, { session })
+        if (Supply_) {
+          if (it.variance > 0) {
+            const lot = new InventoryLot({
+              _id: rid('LOT'),
+              supplyId: it.supplyId,
+              warehouseId: wh._id,
+              site: wh.site || '',
+              lotNumber: `KK-${stocktake.sessionNumber}`,
+              expiryDate: '',
+              importTransactionId: tx._id,
+              importDate: today(),
+              initialQuantity: it.variance,
+              currentQuantity: it.variance,
+              unitPrice: 0,
+              status: 'available',
+              createdAt: now(),
+            })
+            await lot.save({ session })
+            Supply_.currentStock += it.variance
+          } else {
+            await fifoDeduct({ warehouseId: wh._id, supplyId: it.supplyId, quantity: -it.variance }, { session })
+            Supply_.currentStock = Math.max(0, Supply_.currentStock + it.variance)
+          }
+          Supply_.updatedAt = now()
+          await Supply_.save({ session })
         }
-        Supply_.updatedAt = now()
-        await Supply_.save()
+
+        tx.status = 'confirmed'
+        tx.confirmedBy = req.user.username
+        tx.confirmedAt = now()
+        await tx.save({ session })
+        txIds.push(tx._id)
       }
 
-      tx.status = 'confirmed'
-      tx.confirmedBy = req.user.username
-      tx.confirmedAt = now()
-      await tx.save()
-      txIds.push(tx._id)
-    }
-
-    session.status = 'applied'
-    session.approvedBy = req.user.username
-    session.approvedAt = now()
-    session.adjustmentTxIds = txIds
-    session.updatedAt = now()
-    await session.save()
-    res.json({ session, adjustmentCount: txIds.length })
-  } catch (err) { res.status(500).json({ error: err.message }) }
+      stocktake.status = 'applied'
+      stocktake.approvedBy = req.user.username
+      stocktake.approvedAt = now()
+      stocktake.adjustmentTxIds = txIds
+      stocktake.updatedAt = now()
+      await stocktake.save({ session })
+      return { session: stocktake, adjustmentCount: txIds.length }
+    })
+    res.json(result)
+  } catch (err) { res.status(err.status || 500).json({ error: err.message }) }
 })
 
 // ═══════════════════════════════════════════════════════════

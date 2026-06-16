@@ -3,6 +3,12 @@ const Counter = require('../models/Counter')
 // Atomic next-in-sequence for a scope key. findOneAndUpdate($inc) is atomic at
 // the document level, so N concurrent callers get N distinct values with zero
 // races (replaces countDocuments()+1 and Math.random() suffixes).
+//
+// IMPORTANT: this deliberately does NOT take/forward a Mongoose session, even
+// when called from inside a withTxn() callback. The counter must commit
+// independently so a rolled-back / retried transaction BURNS the number rather
+// than reusing it — reuse would collide on the unique transactionNumber/
+// invoiceNumber indexes on the next attempt. Do not add { session } here.
 async function nextSeq(key) {
   const doc = await Counter.findOneAndUpdate(
     { _id: key },

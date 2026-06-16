@@ -15,6 +15,7 @@ const { requireAuth, requirePermission } = require('../middleware/auth')
 const { fifoDeduct } = require('../lib/fifoDeduct')
 const { nextTxCode } = require('../lib/counters')
 const { localDate } = require('../lib/dates')
+const { withTxn } = require('../db')
 
 const ORTHANC_BASE = process.env.ORTHANC_URL || 'http://localhost:8042'
 // Public URL the browser uses to open the OHIF viewer
@@ -84,13 +85,13 @@ async function computeStandardConsumables(study) {
 // transaction still records the actual qty used, but flags shortfall in
 // reasonCode='variance' + per-item notes so nv_kho can see it on the landing.
 // Returns the transaction _id, or null if nothing to deduct or no warehouse.
-async function autoDeductConsumables(study, user) {
+async function autoDeductConsumables(study, user, session) {
   if (study.consumablesDeductedAt) return null
   const items = (study.consumables || []).filter(c => Number(c.actualQty) > 0)
   if (!items.length) return null
 
   const Warehouse = require('../models/Warehouse')
-  const wh = study.site ? await Warehouse.findOne({ site: study.site, status: 'active' }).lean() : null
+  const wh = study.site ? await Warehouse.findOne({ site: study.site, status: 'active' }, null, { session }).lean() : null
   if (!wh) {
     // No warehouse configured for this site — skip the deduct but don't block.
     return null
@@ -104,7 +105,7 @@ async function autoDeductConsumables(study, user) {
   for (const it of items) {
     const qty = Number(it.actualQty) || 0
     // Atomic FIFO deduct via the canonical lib (no oversell race).
-    const result = await fifoDeduct({ warehouseId: wh._id, supplyId: it.supplyId, quantity: qty })
+    const result = await fifoDeduct({ warehouseId: wh._id, supplyId: it.supplyId, quantity: qty }, { session })
     const shortfall = result.shortfall
     if (shortfall > 0) anyVariance = true
     mapped.push({
@@ -117,11 +118,11 @@ async function autoDeductConsumables(study, user) {
       notes: shortfall > 0 ? `Thiếu ${shortfall} ${it.unit || ''} so với yêu cầu (soft-fail)` : (it.notes || ''),
     })
 
-    const supply = await Supply.findById(it.supplyId)
+    const supply = await Supply.findById(it.supplyId, null, { session })
     if (supply) {
       supply.currentStock = Math.max(0, (supply.currentStock || 0) - (qty - shortfall))
       supply.updatedAt = nowIso
-      await supply.save()
+      await supply.save({ session })
     }
   }
 
@@ -148,7 +149,7 @@ async function autoDeductConsumables(study, user) {
     createdAt: nowIso,
     updatedAt: nowIso,
   })
-  await tx.save()
+  await tx.save({ session })
   return txId
 }
 
@@ -384,15 +385,26 @@ router.put('/studies/:id', requireAuth, async (req, res) => {
     )
 
     // When the scan is marked pending_read, deduct consumables from stock (once).
-    // Failure to deduct must not block the status transition — log and continue.
+    // The deduct + the consumablesDeductedAt stamp commit atomically (so a retry
+    // re-reads committed state and can't double-deduct). Failure must not block
+    // the status transition (already committed above) — log and continue.
     if (updated.status === 'pending_read' && !updated.consumablesDeductedAt) {
       try {
-        const txId = await autoDeductConsumables(updated, req.user)
-        if (txId) {
-          updated.consumablesDeductedAt = new Date().toISOString()
-          updated.consumablesTransactionId = txId
-          updated.updatedAt = updated.consumablesDeductedAt
-          await updated.save()
+        const stamp = await withTxn(async (session) => {
+          const study = await Encounter.findById(req.params.id, null, { session })
+          if (!study || study.consumablesDeductedAt) return null // already done — idempotent
+          const txId = await autoDeductConsumables(study, req.user, session)
+          if (!txId) return null
+          study.consumablesDeductedAt = new Date().toISOString()
+          study.consumablesTransactionId = txId
+          study.updatedAt = study.consumablesDeductedAt
+          await study.save({ session })
+          return { consumablesDeductedAt: study.consumablesDeductedAt, consumablesTransactionId: txId, updatedAt: study.updatedAt }
+        })
+        if (stamp) {
+          updated.consumablesDeductedAt = stamp.consumablesDeductedAt
+          updated.consumablesTransactionId = stamp.consumablesTransactionId
+          updated.updatedAt = stamp.updatedAt
         }
       } catch (e) {
         console.error('auto-deduct consumables failed:', e)
