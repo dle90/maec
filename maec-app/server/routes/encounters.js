@@ -12,6 +12,7 @@ const InventoryTransaction = require('../models/InventoryTransaction')
 const InventoryLot = require('../models/InventoryLot')
 const { requireAuth } = require('../middleware/auth')
 const { fifoDeduct, stockCheck } = require('../lib/fifoDeduct')
+const { nextTxCode } = require('../lib/counters')
 const SERVICE_OUTPUT_FIELDS = require('../config/serviceOutputFields')
 const { localDate, localDayStartUtcZ, localDayEndUtcZ } = require('../lib/dates')
 const { renderPrintout } = require('../lib/patientPrintout')
@@ -712,7 +713,7 @@ async function deductStockForFirstPayment(enc, user) {
 
   const txId = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`
   await new InventoryTransaction({
-    _id: txId, transactionNumber: txId, type: 'auto_deduct',
+    _id: txId, transactionNumber: await nextTxCode('AU', localDate().replace(/-/g, '')), type: 'auto_deduct',
     warehouseId: wh._id, warehouseName: wh.name, warehouseCode: wh.code, site: wh.site,
     items: txItems,
     totalAmount: txItems.reduce((s, i) => s + (i.amount || 0), 0),

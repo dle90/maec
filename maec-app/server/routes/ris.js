@@ -10,9 +10,11 @@ const Appointment = require('../models/Appointment')
 const Invoice = require('../models/Invoice')
 const Supply = require('../models/Supply')
 const SupplyServiceMapping = require('../models/SupplyServiceMapping')
-const InventoryLot = require('../models/InventoryLot')
 const InventoryTransaction = require('../models/InventoryTransaction')
 const { requireAuth, requirePermission } = require('../middleware/auth')
+const { fifoDeduct } = require('../lib/fifoDeduct')
+const { nextTxCode } = require('../lib/counters')
+const { localDate } = require('../lib/dates')
 
 const ORTHANC_BASE = process.env.ORTHANC_URL || 'http://localhost:8042'
 // Public URL the browser uses to open the OHIF viewer
@@ -101,31 +103,16 @@ async function autoDeductConsumables(study, user) {
   let anyVariance = false
   for (const it of items) {
     const qty = Number(it.actualQty) || 0
-    let remaining = qty
-    const lots = await InventoryLot.find({
-      warehouseId: wh._id,
-      supplyId: it.supplyId,
-      status: 'available',
-      currentQuantity: { $gt: 0 },
-    }).sort({ expiryDate: 1, createdAt: 1 })
-    let firstLotId = ''
-    for (const lot of lots) {
-      if (remaining <= 0) break
-      const take = Math.min(lot.currentQuantity, remaining)
-      lot.currentQuantity -= take
-      if (lot.currentQuantity <= 0) lot.status = 'depleted'
-      await lot.save()
-      remaining -= take
-      if (!firstLotId) firstLotId = lot._id
-    }
-    const shortfall = Math.max(0, remaining)
+    // Atomic FIFO deduct via the canonical lib (no oversell race).
+    const result = await fifoDeduct({ warehouseId: wh._id, supplyId: it.supplyId, quantity: qty })
+    const shortfall = result.shortfall
     if (shortfall > 0) anyVariance = true
     mapped.push({
       supplyId: it.supplyId,
       supplyCode: it.supplyCode,
       supplyName: it.supplyName,
       unit: it.unit,
-      lotId: firstLotId,
+      lotId: result.consumed[0]?.lotId || '',
       quantity: qty,
       notes: shortfall > 0 ? `Thiếu ${shortfall} ${it.unit || ''} so với yêu cầu (soft-fail)` : (it.notes || ''),
     })
@@ -140,7 +127,7 @@ async function autoDeductConsumables(study, user) {
 
   const tx = new InventoryTransaction({
     _id: txId,
-    transactionNumber: `AD-${Date.now().toString().slice(-8)}`,
+    transactionNumber: await nextTxCode('AU', localDate().replace(/-/g, '')),
     type: 'auto_deduct',
     warehouseId: wh._id,
     warehouseName: wh.name,

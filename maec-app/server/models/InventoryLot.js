@@ -19,7 +19,7 @@ const inventoryLotSchema = new mongoose.Schema({
   unitPrice: { type: Number, default: 0 },
   status: { type: String, enum: ['available', 'expired', 'depleted'], default: 'available' },
   createdAt: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 inventoryLotSchema.index({ supplyId: 1, warehouseId: 1 })
 inventoryLotSchema.index({ warehouseId: 1, expiryDate: 1, status: 1 })

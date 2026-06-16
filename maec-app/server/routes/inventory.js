@@ -14,6 +14,7 @@ const { requireAuth, requirePermission } = require('../middleware/auth')
 const { withWarehouseScope, listAccessibleWarehouses, isSupervisor } = require('../lib/warehouseScope')
 const { localDate } = require('../lib/dates')
 const { nextTxCode, nextStocktakeCode } = require('../lib/counters')
+const { fifoDeduct } = require('../lib/fifoDeduct')
 
 const manageInventory = requirePermission('inventory.manage')
 
@@ -457,30 +458,8 @@ router.post('/transactions', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// FIFO deduct a quantity of a supply from a specific warehouse. Returns the
-// list of (lotId, deducted) pairs actually consumed. Soft-fail: if insufficient,
-// deducts what's available and returns { satisfied: false, shortfall: N }.
-async function fifoDeduct({ warehouseId, supplyId, quantity }) {
-  let remaining = quantity
-  const consumed = []
-  const lots = await InventoryLot.find({
-    warehouseId, supplyId, status: 'available', currentQuantity: { $gt: 0 },
-  }).sort({ expiryDate: 1, createdAt: 1 })
-  for (const lot of lots) {
-    if (remaining <= 0) break
-    const take = Math.min(lot.currentQuantity, remaining)
-    lot.currentQuantity -= take
-    if (lot.currentQuantity <= 0) lot.status = 'depleted'
-    await lot.save()
-    consumed.push({
-      lotId: lot._id, lotNumber: lot.lotNumber, quantity: take,
-      expiryDate: lot.expiryDate, manufacturingDate: lot.manufacturingDate || '',
-      unitPrice: lot.unitPrice || 0,
-    })
-    remaining -= take
-  }
-  return { satisfied: remaining <= 0, shortfall: Math.max(0, remaining), consumed }
-}
+// fifoDeduct now lives in lib/fifoDeduct.js (single canonical, atomic version
+// shared with encounters + ris). Imported above.
 
 // Confirm transaction → apply effects (create lots on import, FIFO-deduct on export, etc.)
 router.put('/transactions/:id/confirm', requireAuth, async (req, res) => {

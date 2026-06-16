@@ -12,6 +12,7 @@ const models = [
   ['Invoice', require('../models/Invoice'), { _id: 'smoke', invoiceNumber: 'x' }],
   ['Payment', require('../models/Payment'), { _id: 'smoke', amount: 1 }],
   ['InventoryTransaction', require('../models/InventoryTransaction'), { _id: 'smoke', warehouseId: 'w' }],
+  ['InventoryLot', require('../models/InventoryLot'), { _id: 'smoke', supplyId: 's', warehouseId: 'w' }],
   ['StocktakeSession', require('../models/StocktakeSession'), { _id: 'smoke', warehouseId: 'w' }],
   ['Patient', require('../models/Patient'), { _id: 'smoke', name: 'x' }],
 ]
