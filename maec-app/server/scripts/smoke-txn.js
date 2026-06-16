@@ -32,7 +32,8 @@ async function run() {
   const afterRollback = await Counter.findById(KEY).lean()
   const rollbackOk = threw && !afterRollback
 
-  // 2) commit
+  // 2) commit (delete first so a failed rollback above doesn't crash this step)
+  await Counter.deleteOne({ _id: KEY })
   await withTxn(async (session) => { await Counter.create([{ _id: KEY, seq: 7 }], { session }) })
   const afterCommit = await Counter.findById(KEY).lean()
   const commitOk = !!afterCommit && afterCommit.seq === 7

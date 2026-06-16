@@ -14,8 +14,34 @@ let _supportsTxn = null
 async function supportsTransactions() {
   if (_supportsTxn !== null) return _supportsTxn
   try {
-    const hello = await mongoose.connection.db.admin().command({ hello: 1 })
-    _supportsTxn = !!(hello.setName || hello.msg === 'isdbgrid') // replica set or mongos
+    // Wait for the connection to be ready — otherwise an early call (e.g. the
+    // first request right after boot, before connect() resolves) would read an
+    // undefined connection.db, throw, and cache `false` forever.
+    if (mongoose.connection.readyState !== 1) {
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error('connection not ready')), 15000)
+        mongoose.connection.once('connected', () => { clearTimeout(t); resolve() })
+        mongoose.connection.once('error', (e) => { clearTimeout(t); reject(e) })
+      })
+    }
+    // Primary: replica-set / mongos handshake.
+    try {
+      const hello = await mongoose.connection.db.admin().command({ hello: 1 })
+      if (hello.setName || hello.msg === 'isdbgrid') { _supportsTxn = true; return true }
+    } catch { /* fall through to the probe */ }
+    // Fallback: probe a trivial no-op transaction (safe — runs no user code).
+    // On a standalone mongod this throws the replica-set error → false.
+    const s = await mongoose.connection.startSession()
+    try {
+      await s.withTransaction(async () => {
+        await mongoose.connection.db.collection('counters').findOne({ _id: '__txn_probe__' }, { session: s })
+      })
+      _supportsTxn = true
+    } catch {
+      _supportsTxn = false
+    } finally {
+      await s.endSession()
+    }
   } catch {
     _supportsTxn = false
   }
