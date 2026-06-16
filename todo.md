@@ -1,39 +1,22 @@
 # TODO
 
-## ✅ DONE — Dx engine: down-rank an emergency when its hallmark signs are explicitly ABSENT
+_Nothing open right now._
 
-Shipped (`ranker.js`). The differential ranker was purely additive; now a complaint's
-explicit `'none'` qualifiers (pain, visionChange) map to the finding tags they'd
-otherwise produce, and for each NON-red-flag candidate the **symptom-derived**
-suspicion is dampened ×(1 − frequency·0.7) per absent *usual* finding (frequency
-≥ 0.6). Recorded in the previously-unused `refutingFindings`.
+## Recently completed
 
-Key design point (a regression caught by the validation batch forced this): the
-penalty applies **only to symptom-derived evocation**, not observation-derived —
-`baseScore = symScore · refuteFactor + obsScore`. So a confirmatory exam sign
-(e.g. closed-angle gonioscopy) is never overridden by a history negative.
-
-Guardrails (all verified on prod): fires only on explicit `'none'` (never
-`unknown`/missing); never touches a red-flag candidate; red-flag GATE untouched.
-Validation batch back to baseline **77 / 91 / 93** (top-1 / top-3 / red-flag) — zero
-net regression. Painless-halos correctly drops acute angle-closure; exam-confirmed
-AACG stays top.
-
-### Follow-up (open) — capture pertinent negatives in the chip UI
-The down-rank only fires on explicit `pain:'none'` / `visionChange:'none'`. The
-**AI free-text parser** sets those (from e.g. "không đau đỏ"), so it works on that
-path. But the **chip-based intake leaves them `'unknown'`**, so the feature is
-latent for chip users. To make it fire in normal use, add a small "pertinent
-negatives" capture to `ComplaintForm` (Diagnostic.jsx) — e.g. a "Không có:
-[Đau] [Đỏ] [Giảm thị lực]" toggle row that sets the qualifiers to `'none'`.
-(`redness:'none'` has no ranker effect — no redness finding edge — but is read by
-the red-flag gate, so capturing it is still useful.)
-
----
-
-## Also pending (housekeeping, not started)
-
-- **Prune prod test data.** `_TEST_` / `_TESTFE_` / `_ADVR_` / `_TESTUI*_` patients +
-  encounters and orphan `dx_*` sessions (no patient) accumulated during sims /
-  reviews / repros. Hard-delete via `railway ssh` running a name-prefix
-  `deleteMany` (see `tmp-playwright/cleanup-testfe.js`). Non-urgent.
+- **Dx engine — pertinent-negative down-ranking** (`ranker.js`). An emergency no
+  longer leads the differential when its hallmark is explicitly absent. Refute
+  applies to symptom-derived evocation only (observation/exam evidence keeps full
+  weight); fires only on explicit `'none'` (never `unknown`); never touches a
+  red-flag candidate; red-flag GATE untouched. Validation batch at baseline
+  **77/91/93** (zero regression).
+- **Pertinent-negative capture in the UI** — ComplaintForm has a "Không có (đã hỏi):
+  [Không đau] [Không đỏ] [Thị lực bình thường]" toggle row (+ AI-parse captures
+  parsed `'none'`), so the down-rank fires in the normal chip flow, not just via
+  the API. Verified end-to-end: toggle "Không đau" on a halos complaint drops
+  acute angle-closure.
+- **Prod test-data prune** — `scripts/cleanup-testdata.js` (dry-run by default,
+  `--apply` to delete; scoped to `_TEST*_`/`_ADVR_` names + open-orphan dx-sessions,
+  keeps closed/confirmed sessions). Ran on prod: deleted 14 patients, 17 encounters,
+  543 dx-sessions; 9 confirmed-outcome sessions preserved; 0 test rows remaining.
+  Re-runnable any time.
