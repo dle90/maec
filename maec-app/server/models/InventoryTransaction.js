@@ -68,5 +68,7 @@ const inventoryTransactionSchema = new mongoose.Schema({
 
 inventoryTransactionSchema.index({ warehouseId: 1, createdAt: -1 })
 inventoryTransactionSchema.index({ transferId: 1 })
+// Hard backstop against duplicate phiếu numbers (partial: non-empty strings only).
+inventoryTransactionSchema.index({ transactionNumber: 1 }, { unique: true, partialFilterExpression: { transactionNumber: { $gt: '' } } })
 
 module.exports = mongoose.model('InventoryTransaction', inventoryTransactionSchema)

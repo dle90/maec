@@ -56,4 +56,8 @@ const invoiceSchema = new mongoose.Schema({
   updatedAt: String,
 }, { _id: false })
 
+// Hard backstop against duplicate invoice numbers (partial: only non-empty
+// strings, so absent/legacy rows never collide on null).
+invoiceSchema.index({ invoiceNumber: 1 }, { unique: true, partialFilterExpression: { invoiceNumber: { $gt: '' } } })
+
 module.exports = mongoose.model('Invoice', invoiceSchema)

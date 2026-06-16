@@ -44,5 +44,7 @@ const stocktakeSessionSchema = new mongoose.Schema({
 }, { _id: false })
 
 stocktakeSessionSchema.index({ warehouseId: 1, status: 1 })
+// Hard backstop against duplicate kiểm kê session numbers (partial: non-empty strings only).
+stocktakeSessionSchema.index({ sessionNumber: 1 }, { unique: true, partialFilterExpression: { sessionNumber: { $gt: '' } } })
 
 module.exports = mongoose.model('StocktakeSession', stocktakeSessionSchema)

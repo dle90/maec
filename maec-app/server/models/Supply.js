@@ -27,5 +27,8 @@ const supplySchema = new mongoose.Schema({
 }, { _id: false })
 
 supplySchema.index({ productKind: 1, status: 1 })
+// One master SKU per (productKind, productCode) — partial: only rows with a
+// non-empty productCode (legacy radiology supplies without one are unconstrained).
+supplySchema.index({ productKind: 1, productCode: 1 }, { unique: true, partialFilterExpression: { productCode: { $gt: '' } } })
 
 module.exports = mongoose.model('Supply', supplySchema)

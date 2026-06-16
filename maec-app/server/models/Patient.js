@@ -53,7 +53,9 @@ const patientSchema = new mongoose.Schema({
 patientSchema.index({ createdAt: -1 })
 patientSchema.index({ name: 1 })
 patientSchema.index({ phone: 1 })
-patientSchema.index({ patientId: 1 })
+// Unique backstop on mã BN (partial: non-empty strings only, so shell/legacy
+// rows without a patientId don't collide on null).
+patientSchema.index({ patientId: 1 }, { unique: true, partialFilterExpression: { patientId: { $gt: '' } } })
 patientSchema.index({ guardianPhone: 1 })
 patientSchema.index({ dob: 1 })
 patientSchema.index({ gender: 1 })
