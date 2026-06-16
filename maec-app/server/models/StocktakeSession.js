@@ -17,7 +17,7 @@ const stocktakeItemSchema = new mongoose.Schema({
   notes: String,
   countedAt: String,
   countedBy: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 const stocktakeSessionSchema = new mongoose.Schema({
   _id: String,
@@ -41,7 +41,7 @@ const stocktakeSessionSchema = new mongoose.Schema({
   cancelledAt: String,
   notes: String,
   updatedAt: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 stocktakeSessionSchema.index({ warehouseId: 1, status: 1 })
 // Hard backstop against duplicate kiểm kê session numbers (partial: non-empty strings only).

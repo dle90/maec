@@ -22,7 +22,7 @@ const txItemSchema = new mongoose.Schema({
   discountAmount: { type: Number, default: 0 },
   amount: { type: Number, default: 0 },
   notes: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 // type semantics:
 //   import       — from external supplier into warehouseId (creates lots)
@@ -64,7 +64,7 @@ const inventoryTransactionSchema = new mongoose.Schema({
   createdBy: String,
   createdAt: String,
   updatedAt: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 inventoryTransactionSchema.index({ warehouseId: 1, createdAt: -1 })
 inventoryTransactionSchema.index({ transferId: 1 })

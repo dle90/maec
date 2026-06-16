@@ -9,7 +9,7 @@ const invoiceItemSchema = new mongoose.Schema({
   taxRate: { type: Number, default: 0 },
   taxAmount: { type: Number, default: 0 },
   amount: Number,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 const invoiceSchema = new mongoose.Schema({
   _id: String,
@@ -54,7 +54,7 @@ const invoiceSchema = new mongoose.Schema({
   notes: String,
   createdAt: String,
   updatedAt: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 // Hard backstop against duplicate invoice numbers (partial: only non-empty
 // strings, so absent/legacy rows never collide on null).

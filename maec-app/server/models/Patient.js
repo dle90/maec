@@ -42,7 +42,7 @@ const patientSchema = new mongoose.Schema({
   lastEncounterAt: String,
   createdAt: String,
   updatedAt: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 // Indexes — required to scale the Bệnh nhân list past ~1k rows. Each filter
 // the catalog UI exposes (gender, age range via dob, createdAt range,

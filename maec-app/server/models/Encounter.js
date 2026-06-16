@@ -20,7 +20,7 @@ const billItemSchema = new mongoose.Schema({
   addedBy: String,
   addedAt: String,
   note: String,
-}) // implicit _id: true — Mongoose auto-generates ObjectId per item
+}, { strict: 'throw' }) // implicit _id: true — Mongoose auto-generates ObjectId per item
 
 const encounterSchema = new mongoose.Schema({
   _id: String,
@@ -181,6 +181,6 @@ const encounterSchema = new mongoose.Schema({
 
   createdAt: String,
   updatedAt: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 module.exports = mongoose.model('Encounter', encounterSchema)

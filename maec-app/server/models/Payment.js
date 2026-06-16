@@ -21,6 +21,6 @@ const paymentSchema = new mongoose.Schema({
   refundedAt: String,
   refundReason: String,
   createdAt: String,
-}, { _id: false })
+}, { _id: false, strict: 'throw' })
 
 module.exports = mongoose.model('Payment', paymentSchema)
