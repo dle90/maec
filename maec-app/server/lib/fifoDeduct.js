@@ -31,7 +31,7 @@ async function fifoDeduct({ warehouseId, supplyId, quantity }, { session } = {})
         { $set: { currentQuantity: { $subtract: ['$currentQuantity', take] } } },
         { $set: { status: { $cond: [{ $lte: ['$currentQuantity', 0] }, 'depleted', '$status'] } } },
       ],
-      { session }
+      { session, updatePipeline: true } // Mongoose 9 requires opt-in for pipeline updates
     )
     if (upd.modifiedCount === 0) continue // lost the race — re-fetch FIFO
     consumed.push({
