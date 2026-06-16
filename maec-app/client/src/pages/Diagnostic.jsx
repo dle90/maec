@@ -117,6 +117,8 @@ const SYMPTOM_GROUPS = [
 ]
 const SYMPTOMS = SYMPTOM_GROUPS.flatMap(g => g.symptoms)
 const SYMPTOM_BY_ID = Object.fromEntries(SYMPTOMS.map(s => [s.id, s]))
+// Acuity symptoms — picking any of these contradicts a "thị lực bình thường" negative.
+const VISION_GROUP_IDS = new Set((SYMPTOM_GROUPS.find(g => g.key === 'vision')?.symptoms || []).map(s => s.id))
 
 // Severity ladders per graded axis (value → label).
 const SEVERITY = {
@@ -140,7 +142,7 @@ const DURATION_TO_DAYS = { hours: 1 / 24, days: 1, weeks: 7, months: 30 }
 // the flat `symptoms[]` + global qualifiers, so per-row onset/severity is
 // flattened CONSERVATIVELY (most-urgent wins → red flags never missed); the
 // full per-eye/per-symptom detail is preserved in `symptomDetails[]`.
-function buildComplaintFromRows(rows, text, patientContext) {
+function buildComplaintFromRows(rows, text, patientContext, negatives = {}) {
   const symptoms = []
   let pain = 'unknown', redness = 'unknown', visionChange = 'unknown', onset = 'unknown'
   const eyes = new Set()
@@ -162,6 +164,13 @@ function buildComplaintFromRows(rows, text, patientContext) {
     }
   }
   const eyeAffected = eyes.size === 1 ? [...eyes][0] : eyes.size > 1 ? 'OU' : 'unknown'
+  // Pertinent negatives — "patient denies X" sets the qualifier to 'none' (only
+  // when no positive of that axis was entered; a positive symptom always wins).
+  // The ranker uses an explicit 'none' to down-rank a disease whose hallmark is
+  // absent (e.g. painless eye → angle-closure).
+  if (pain === 'unknown' && negatives.pain) pain = 'none'
+  if (redness === 'unknown' && negatives.redness) redness = 'none'
+  if (visionChange === 'unknown' && negatives.visionChange) visionChange = 'none'
   return { text, symptoms, onset, pain, redness, visionChange, eyeAffected, symptomDetails, patientContext }
 }
 
@@ -655,6 +664,7 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
   const [parsing, setParsing] = useState(false)
   const [parseInfo, setParseInfo] = useState(null)
   const [parseErr, setParseErr]   = useState('')
+  const [neg, setNeg] = useState({})   // pertinent negatives: { pain, redness, visionChange } booleans
   const keyCtr = useRef(0)
 
   const newRow = (id, { eye = 'OU', severity, onset } = {}) => {
@@ -665,7 +675,14 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
       onset: onset ?? (cfg.impliesOnset || 'unknown'),
     }
   }
-  const addRow    = (id) => setRows(rs => [...rs, newRow(id)])
+  const addRow = (id) => {
+    setRows(rs => [...rs, newRow(id)])
+    // Clear a contradicting pertinent negative (can't deny pain AND add a pain row).
+    const cfg = SYMPTOM_BY_ID[id]
+    if (cfg?.graded === 'pain') setNeg(n => ({ ...n, pain: false }))
+    else if (cfg?.graded === 'redness') setNeg(n => ({ ...n, redness: false }))
+    else if (VISION_GROUP_IDS.has(id)) setNeg(n => ({ ...n, visionChange: false }))
+  }
   const removeRow = (key) => setRows(rs => rs.filter(r => r.key !== key))
   const updateRow = (key, patch) => setRows(rs => rs.map(r => r.key === key ? { ...r, ...patch } : r))
   const countOf   = (id) => rows.filter(r => r.id === id).length
@@ -712,6 +729,12 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
       if (typeof c.patientContext?.isContactLensWearer === 'boolean')  setCL(c.patientContext.isContactLensWearer)
       if (typeof c.patientContext?.recentTrauma === 'boolean')         setTrauma(c.patientContext.recentTrauma)
       if (typeof c.patientContext?.recentIntraocularSurgeryOrInjection === 'boolean') setPostOp(c.patientContext.recentIntraocularSurgeryOrInjection)
+      // Capture explicit negatives the parser found ("không đau đỏ" → pain/redness none).
+      const negFromParse = {}
+      if (c.pain === 'none') negFromParse.pain = true
+      if (c.redness === 'none') negFromParse.redness = true
+      if (c.visionChange === 'none') negFromParse.visionChange = true
+      if (Object.keys(negFromParse).length) setNeg(n => ({ ...n, ...negFromParse }))
       setParseInfo({ confidence: result.confidence, explanationVi: result.explanationVi, dropped: result.droppedUnknownTags })
     } catch (err) {
       const code = err.response?.data?.code
@@ -721,7 +744,7 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
   }
 
   function submit() {
-    const complaint = buildComplaintFromRows(rows, text.trim(), buildContext())
+    const complaint = buildComplaintFromRows(rows, text.trim(), buildContext(), neg)
     if (durVal && Number(durVal) > 0) complaint.durationDays = Number(durVal) * DURATION_TO_DAYS[durUnit]
     lastRunSig.current = inputSig   // mark current inputs as "run"
     onSubmit(complaint)
@@ -735,6 +758,7 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
   const inputSig = JSON.stringify({
     rows: rows.map(r => ({ id: r.id, eye: r.eye, onset: r.onset, severity: r.severity })),
     text: text.trim(), age, sex, cl, trauma, postOp, pregnant, smoker, systemic, meds, family, durVal, durUnit,
+    neg,
   })
   const lastRunSig = useRef(inputSig)   // first render (empty form) == the auto-synced blank session
   const dirty = hasSession && canRun && inputSig !== lastRunSig.current
@@ -772,8 +796,28 @@ function ComplaintForm({ onSubmit, busy, hasSession }) {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {tr('2. Triệu chứng')} <span className="text-xs font-normal text-gray-500">{tr('— thêm từng triệu chứng (có thể thêm cùng triệu chứng cho 2 mắt); ghi rõ mắt, khởi phát & mức độ từng dòng')}</span>
         </label>
-        <div className="mb-3">
+        <div className="mb-2">
           <SymptomPicker onPick={addRow} countOf={countOf} />
+        </div>
+        {/* Pertinent negatives — "đã hỏi, bệnh nhân không có". Sets the qualifier
+            to 'none' so the engine can down-rank a disease whose hallmark is
+            explicitly absent (e.g. painless eye → không phải glôcôm góc đóng). */}
+        <div className="mb-3 flex items-center gap-1.5 flex-wrap text-xs">
+          <span className="text-gray-500">{tr('Không có (đã hỏi):')}</span>
+          {[
+            ['pain', tr('Không đau'), rows.some(r => SYMPTOM_BY_ID[r.id]?.graded === 'pain')],
+            ['redness', tr('Không đỏ'), rows.some(r => SYMPTOM_BY_ID[r.id]?.graded === 'redness')],
+            ['visionChange', tr('Thị lực bình thường'), rows.some(r => VISION_GROUP_IDS.has(r.id))],
+          ].map(([k, label, disabled]) => (
+            <button key={k} type="button" disabled={disabled}
+              onClick={() => setNeg(n => ({ ...n, [k]: !n[k] }))}
+              title={disabled ? tr('Đã có triệu chứng này ở trên') : tr('Bệnh nhân phủ nhận triệu chứng này')}
+              className={`px-2 py-0.5 rounded-full border transition ${
+                disabled ? 'opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-200'
+                  : neg[k] ? 'bg-slate-700 text-white border-slate-700'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-slate-400'
+              }`}>{neg[k] && !disabled ? '✓ ' : ''}{label}</button>
+          ))}
         </div>
         {rows.length === 0 ? (
           <div className="text-xs text-gray-400 italic">{tr('Chưa chọn triệu chứng nào.')}</div>
