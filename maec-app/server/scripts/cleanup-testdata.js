@@ -22,12 +22,17 @@ const DxSession = require('../diagnostic/models/DxSession')
 
 const APPLY = process.argv.includes('--apply')
 const PREFIX = /^_(?:TEST|ADVR)/i
-const orphan = {
+const noPatientEnc = {
   $and: [
     { $or: [{ patientId: null }, { patientId: '' }, { patientId: { $exists: false } }] },
     { $or: [{ encounterId: null }, { encounterId: '' }, { encounterId: { $exists: false } }] },
   ],
 }
+const notClosed = { $or: [{ 'clinicianOutcome.closedAt': null }, { 'clinicianOutcome.closedAt': '' }, { 'clinicianOutcome.closedAt': { $exists: false } }] }
+// Open scratch → delete. CLOSED orphan sessions are kept (confirmed-outcome =
+// training signal, even without a patient link).
+const orphan = { $and: [noPatientEnc, notClosed] }
+const orphanClosed = { $and: [noPatientEnc, { 'clinicianOutcome.closedAt': { $nin: [null, ''] } }] }
 
 async function run() {
   console.log(`\n=== cleanup-testdata  (${APPLY ? 'APPLY — will delete' : 'DRY-RUN — no deletes'}) ===`)
@@ -45,7 +50,8 @@ async function run() {
 
   const linkedSess = await DxSession.countDocuments({ $or: [{ patientId: { $in: patientIds } }, { encounterId: { $in: encIds } }] })
   const orphanSess = await DxSession.countDocuments(orphan)
-  console.log(`\nDxSessions — linked to test data: ${linkedSess}, truly-orphan (no patient/encounter): ${orphanSess}`)
+  const orphanKept = await DxSession.countDocuments(orphanClosed)
+  console.log(`\nDxSessions — linked to test data: ${linkedSess}, open-orphan (delete): ${orphanSess}, closed-orphan (KEEP, training signal): ${orphanKept}`)
 
   if (!APPLY) {
     console.log('\nDRY-RUN only. Re-run with --apply to delete the above.')
