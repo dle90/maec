@@ -5,15 +5,14 @@ const User = require('../models/User')
 const RolePermission = require('../models/RolePermission')
 
 const router = express.Router()
-// Phase 0: signing secret should come from the environment. The literal is a
-// last-resort fallback so a deploy never crashes if the env var is missing — it
-// is removed once SESSION_SECRET is set + rotated in Railway (a deliberate
-// off-hours step, since rotating invalidates all live tokens). See
+// Phase 0: signing secret comes from the environment only — no committed
+// fallback. Fail fast if it is missing so a misconfigured deploy can never
+// silently sign tokens with a known/default secret. See
 // docs/prod-upgrade-plan.md Phase 0.
-const SECRET = process.env.SESSION_SECRET || (() => {
-  console.warn('[auth] SESSION_SECRET not set — using insecure built-in default. Set it in Railway and rotate.')
-  return 'maec-secret-2026'
-})()
+const SECRET = process.env.SESSION_SECRET
+if (!SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required')
+}
 const BCRYPT_ROUNDS = 10
 const TOKEN_TTL_SEC = Number(process.env.AUTH_TOKEN_TTL_SEC) || 12 * 3600 // 12h
 
