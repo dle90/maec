@@ -9,6 +9,7 @@ const PartnerReferral = require('../models/PartnerReferral')
 const Patient = require('../models/Patient')
 const Appointment = require('../models/Appointment')
 const Encounter = require('../models/Encounter')
+const { nextPatientCode } = require('../lib/counters')
 
 const now = () => new Date().toISOString()
 
@@ -130,11 +131,9 @@ router.put('/referrals/:id/accept', requireAuth, async (req, res) => {
     // Find or create patient by phone (shell record — details confirmed at Đăng ký)
     let patient = await Patient.findOne({ phone: referral.patientPhone }).lean()
     if (!patient) {
-      const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const seq = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
       const newPatient = new Patient({
         _id: crypto.randomUUID(),
-        patientId: `BN-${d}-${seq}`,
+        patientId: await nextPatientCode(),
         name: referral.patientName,
         phone: referral.patientPhone,
         dob: referral.patientDob || '',

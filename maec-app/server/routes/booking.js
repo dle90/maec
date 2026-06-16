@@ -4,6 +4,7 @@ const router = express.Router()
 const Patient = require('../models/Patient')
 const Appointment = require('../models/Appointment')
 const Service = require('../models/Service')
+const { nextPatientCode } = require('../lib/counters')
 
 const now = () => new Date().toISOString()
 const today = () => now().slice(0, 10)
@@ -74,11 +75,9 @@ router.post('/submit', async (req, res) => {
     // Find or create patient by phone
     let patient = await Patient.findOne({ phone }).lean()
     if (!patient) {
-      const d = today().replace(/-/g, '')
-      const seq = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
       patient = new Patient({
         _id: crypto.randomUUID(),
-        patientId: `BN-${d}-${seq}`,
+        patientId: await nextPatientCode(),
         name,
         phone,
         dob: dob || '',

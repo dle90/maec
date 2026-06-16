@@ -13,6 +13,7 @@ const StocktakeSession = require('../models/StocktakeSession')
 const { requireAuth, requirePermission } = require('../middleware/auth')
 const { withWarehouseScope, listAccessibleWarehouses, isSupervisor } = require('../lib/warehouseScope')
 const { localDate } = require('../lib/dates')
+const { nextTxCode, nextStocktakeCode } = require('../lib/counters')
 
 const manageInventory = requirePermission('inventory.manage')
 
@@ -336,10 +337,7 @@ async function nextTxNumber(type) {
   const prefixMap = { import: 'NK', export: 'XK', adjustment: 'DC', transfer_out: 'CO', transfer_in: 'CI', auto_deduct: 'AU' }
   const prefix = prefixMap[type] || 'TX'
   const d = today().replace(/-/g, '')
-  const count = await InventoryTransaction.countDocuments({
-    transactionNumber: { $regex: `^${prefix}-${d}` },
-  })
-  return `${prefix}-${d}-${String(count + 1).padStart(3, '0')}`
+  return nextTxCode(prefix, d)  // PREFIX-YYYYMMDD-NNN, atomic per-day per-type (was countDocuments()+1)
 }
 
 function calcItemTotals(items) {
@@ -769,10 +767,9 @@ router.post('/stocktakes', requireAuth, async (req, res) => {
     }))
 
     const yyyymm = today().slice(0, 7).replace('-', '')
-    const count = await StocktakeSession.countDocuments({ sessionNumber: { $regex: `^KK-${yyyymm}` } })
     const session = new StocktakeSession({
       _id: rid('KK'),
-      sessionNumber: `KK-${yyyymm}-${String(count + 1).padStart(3, '0')}`,
+      sessionNumber: await nextStocktakeCode(yyyymm),  // KK-YYYYMM-NNN, atomic per-month (was countDocuments()+1)
       warehouseId: wh._id,
       warehouseName: wh.name,
       name: name || `Kiểm kê ${today()}`,

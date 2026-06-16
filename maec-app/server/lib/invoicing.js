@@ -1,7 +1,7 @@
-const Invoice = require('../models/Invoice')
 const ReferralDoctor = require('../models/ReferralDoctor')
 const PartnerFacility = require('../models/PartnerFacility')
 const User = require('../models/User')
+const { nextInvoiceCode } = require('./counters')
 
 const now = () => new Date().toISOString()
 const today = () => now().slice(0, 10)
@@ -30,8 +30,7 @@ async function resolveEffectiveSalesperson(referralType, referralId) {
 
 async function nextInvoiceNumber() {
   const d = today().replace(/-/g, '')
-  const count = await Invoice.countDocuments({ invoiceNumber: { $regex: `^HD-${d}` } })
-  return `HD-${d}-${String(count + 1).padStart(4, '0')}`
+  return nextInvoiceCode(d)  // HD-YYYYMMDD-NNNN, atomic per-day sequence (was countDocuments()+1)
 }
 
 module.exports = { resolveEffectiveSalesperson, nextInvoiceNumber }

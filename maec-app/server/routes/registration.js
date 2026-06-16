@@ -8,6 +8,7 @@ const Invoice = require('../models/Invoice')
 const Service = require('../models/Service')
 const { requireAuth } = require('../middleware/auth')
 const { resolveEffectiveSalesperson, nextInvoiceNumber } = require('../lib/invoicing')
+const { nextPatientCode } = require('../lib/counters')
 
 // Helper: site filter based on role
 function buildSiteFilter(user) {
@@ -17,11 +18,10 @@ function buildSiteFilter(user) {
   return {} // giamdoc, admin, bacsi: all sites
 }
 
-// Generate IDs
-function genPatientId() {
-  const d = new Date()
-  const ymd = d.toISOString().slice(0, 10).replace(/-/g, '')
-  return `BN-${ymd}-${Math.floor(Math.random() * 9000) + 1000}`
+// Generate IDs — BN-YYYYMMDD-NNNN via the atomic per-day counter (was a random
+// 1000-9999 suffix that could collide by birthday paradox).
+async function genPatientId() {
+  return nextPatientCode()
 }
 
 function now() {
@@ -73,7 +73,7 @@ router.post('/patients', requireAuth, async (req, res) => {
       sourceCode, sourceName, referralType, referralId, referralName,
     } = req.body
     if (!name) return res.status(400).json({ error: 'name required' })
-    const id = genPatientId()
+    const id = await genPatientId()
     const patient = new Patient({
       _id: id,
       patientId: id,
