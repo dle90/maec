@@ -13,6 +13,7 @@ const InventoryLot = require('../models/InventoryLot')
 const { requireAuth } = require('../middleware/auth')
 const { fifoDeduct, stockCheck } = require('../lib/fifoDeduct')
 const { nextTxCode } = require('../lib/counters')
+const { withTxn } = require('../db')
 const SERVICE_OUTPUT_FIELDS = require('../config/serviceOutputFields')
 const { localDate, localDayStartUtcZ, localDayEndUtcZ } = require('../lib/dates')
 const { renderPrintout } = require('../lib/patientPrintout')
@@ -673,33 +674,38 @@ router.get('/:id/checkout-preview', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
+// Tag a business error with an HTTP status so the (transaction-wrapped) route
+// handlers can throw it and have the outer catch send the right code.
+const httpError = (status, message) => Object.assign(new Error(message), { status })
+
 // Q3 — Stock-deduct on first payment. Extracted from the legacy /checkout
 // path so /payment can call it on the first (and only first) payment to a
-// previously-unpaid encounter. Returns { txId } on success or throws an Error
-// with a user-facing message on failure (caller should send 400).
-async function deductStockForFirstPayment(enc, user) {
+// previously-unpaid encounter. Returns { txId } on success or throws an error
+// (with .status=400) with a user-facing message on failure. Runs inside the
+// caller's transaction — every read + write takes the { session }.
+async function deductStockForFirstPayment(enc, user, session) {
   const stockItems = (enc.billItems || []).filter(b => (b.kind === 'thuoc' || b.kind === 'kinh') && b.code)
   if (stockItems.length === 0) return { txId: null }
 
-  const wh = await Warehouse.findOne({ site: enc.site, status: 'active' }).lean()
-  if (!wh) throw new Error(`Không có kho cho cơ sở "${enc.site}". Tạo Warehouse trước khi thanh toán.`)
+  const wh = await Warehouse.findOne({ site: enc.site, status: 'active' }, null, { session }).lean()
+  if (!wh) throw httpError(400, `Không có kho cho cơ sở "${enc.site}". Tạo Warehouse trước khi thanh toán.`)
 
   // Pre-flight stock check (no mutations) so we fail before deducting anything.
   const preChecks = []
   for (const b of stockItems) {
-    const exists = await Supply.exists({ _id: b.code })
-    if (!exists) throw new Error(`"${b.name}" không có trong Inventory — tạo Supply trước.`)
-    const r = await stockCheck({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
+    const exists = await Supply.findById(b.code, '_id', { session }).lean()
+    if (!exists) throw httpError(400, `"${b.name}" không có trong Inventory — tạo Supply trước.`)
+    const r = await stockCheck({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty }, { session })
     if (!r.satisfied) {
-      throw new Error(`Không đủ tồn kho cho "${b.name}" tại ${wh.name} — cần ${b.qty}, còn ${r.totalAvailable}. Nhập kho thêm hoặc bỏ mục khỏi bill.`)
+      throw httpError(400, `Không đủ tồn kho cho "${b.name}" tại ${wh.name} — cần ${b.qty}, còn ${r.totalAvailable}. Nhập kho thêm hoặc bỏ mục khỏi bill.`)
     }
     preChecks.push({ b, plan: r.plan })
   }
 
   const txItems = []
   for (const { b } of preChecks) {
-    const result = await fifoDeduct({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty })
-    const supply = await Supply.findById(b.code).lean()
+    const result = await fifoDeduct({ warehouseId: wh._id, supplyId: b.code, quantity: b.qty }, { session })
+    const supply = await Supply.findById(b.code, null, { session }).lean()
     for (const c of result.consumed) {
       txItems.push({
         supplyId: b.code, supplyName: b.name, supplyCode: b.code,
@@ -721,7 +727,7 @@ async function deductStockForFirstPayment(enc, user) {
     notes: `Thu ngân ${user.displayName || user.username} — ${enc.patientName}`,
     status: 'confirmed', confirmedBy: user.username, confirmedAt: now(),
     createdBy: user.username, createdAt: now(), updatedAt: now(),
-  }).save()
+  }).save({ session })
   return { txId }
 }
 
@@ -736,45 +742,48 @@ router.post('/:id/payment', requireAuth, async (req, res) => {
     const amount = Number(req.body.amount)
     if (!(amount > 0)) return res.status(400).json({ error: 'Số tiền phải lớn hơn 0' })
 
-    const enc = await Encounter.findById(req.params.id)
-    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
-    if (enc.status === 'cancelled') return res.status(400).json({ error: 'Lượt khám đã hủy' })
+    // All-or-nothing: stock deduct + payment ledger commit together. Re-reading
+    // the encounter inside withTxn means a transactional retry (concurrent
+    // settle) sees committed state, so two racing first-payments can't both
+    // deduct — the loser re-reads and finds isFirstPayment=false.
+    const result = await withTxn(async (session) => {
+      const enc = await Encounter.findById(req.params.id, null, { session })
+      if (!enc) throw httpError(404, 'Không tìm thấy lượt khám')
+      if (enc.status === 'cancelled') throw httpError(400, 'Lượt khám đã hủy')
 
-    const grand = grandTotalForEnc(enc)
-    if (grand <= 0) return res.status(400).json({ error: 'Bill chưa có mục để thanh toán' })
+      const grand = grandTotalForEnc(enc)
+      if (grand <= 0) throw httpError(400, 'Bill chưa có mục để thanh toán')
 
-    const isFirstPayment = (enc.payments || []).filter(p => p.kind !== 'refund').length === 0
-
-    let txId = null
-    if (isFirstPayment) {
-      try { ({ txId } = await deductStockForFirstPayment(enc, req.user)) }
-      catch (e) { return res.status(400).json({ error: e.message }) }
-      if (txId) {
-        enc.consumablesTransactionId = txId
-        enc.consumablesDeductedAt = now()
+      const isFirstPayment = (enc.payments || []).filter(p => p.kind !== 'refund').length === 0
+      if (isFirstPayment) {
+        const { txId } = await deductStockForFirstPayment(enc, req.user, session)
+        if (txId) {
+          enc.consumablesTransactionId = txId
+          enc.consumablesDeductedAt = now()
+        }
       }
-    }
 
-    const at = now()
-    const entry = {
-      at, by: req.user.username, byName: req.user.displayName || req.user.username,
-      amount, method: req.body.method || 'cash', kind: 'payment',
-      reason: req.body.note || '',
-    }
-    if (!enc.payments) enc.payments = []
-    enc.payments.push(entry)
+      const at = now()
+      if (!enc.payments) enc.payments = []
+      enc.payments.push({
+        at, by: req.user.username, byName: req.user.displayName || req.user.username,
+        amount, method: req.body.method || 'cash', kind: 'payment',
+        reason: req.body.note || '',
+      })
 
-    enc.paidAmount = netPaidAmount(enc)
-    enc.status = enc.paidAmount >= grand ? 'paid' : 'partial'
-    if (isFirstPayment) {
-      enc.paidAt = at
-      enc.paidBy = req.user.username
-      enc.paidByName = req.user.displayName || req.user.username
-    }
-    enc.updatedAt = now()
-    await enc.save()
-    res.json(enc.toObject())
-  } catch (err) { res.status(500).json({ error: err.message }) }
+      enc.paidAmount = netPaidAmount(enc)
+      enc.status = enc.paidAmount >= grand ? 'paid' : 'partial'
+      if (isFirstPayment) {
+        enc.paidAt = at
+        enc.paidBy = req.user.username
+        enc.paidByName = req.user.displayName || req.user.username
+      }
+      enc.updatedAt = now()
+      await enc.save({ session })
+      return enc.toObject()
+    })
+    res.json(result)
+  } catch (err) { res.status(err.status || 500).json({ error: err.message }) }
 })
 
 // POST /encounters/:id/refund — record a refund. Optionally creates a
@@ -787,91 +796,89 @@ router.post('/:id/refund', requireAuth, async (req, res) => {
     const amount = Number(req.body.amount)
     if (!(amount > 0)) return res.status(400).json({ error: 'Số tiền hoàn phải lớn hơn 0' })
 
-    const enc = await Encounter.findById(req.params.id)
-    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
+    // Refund ledger + optional stock-return (import tx + lots + supply bumps)
+    // all commit atomically.
+    const result = await withTxn(async (session) => {
+      const enc = await Encounter.findById(req.params.id, null, { session })
+      if (!enc) throw httpError(404, 'Không tìm thấy lượt khám')
 
-    const currentPaid = netPaidAmount(enc)
-    if (currentPaid <= 0) return res.status(400).json({ error: 'Lượt khám chưa có thu — không thể hoàn' })
-    if (amount > currentPaid) return res.status(400).json({ error: `Số tiền hoàn vượt mức đã thu (${currentPaid.toLocaleString('vi-VN')}đ)` })
+      const currentPaid = netPaidAmount(enc)
+      if (currentPaid <= 0) throw httpError(400, 'Lượt khám chưa có thu — không thể hoàn')
+      if (amount > currentPaid) throw httpError(400, `Số tiền hoàn vượt mức đã thu (${currentPaid.toLocaleString('vi-VN')}đ)`)
 
-    // Optional stock return: clone the original auto_deduct transaction as a
-    // positive 'import' that recreates the same lots' qty. Only meaningful
-    // when there's a consumablesTransactionId AND the caller opts in.
-    let stockReturnTxId = null
-    if (req.body.returnStock && enc.consumablesTransactionId) {
-      const origTx = await InventoryTransaction.findById(enc.consumablesTransactionId).lean()
-      if (!origTx) return res.status(400).json({ error: 'Không tìm thấy phiếu trừ kho gốc — không thể hoàn kho.' })
-      // Recreate a lot per item (manufacturingDate inferred from origTx item if present)
-      const wh = await Warehouse.findOne({ _id: origTx.warehouseId }).lean()
-      const txItems = origTx.items.map(it => ({
-        supplyId: it.supplyId, supplyName: it.supplyName, supplyCode: it.supplyCode,
-        unit: it.unit, packagingSpec: it.packagingSpec || '',
-        lotNumber: it.lotNumber, expiryDate: it.expiryDate || '',
-        quantity: it.quantity, unitPrice: it.unitPrice || 0,
-        amount: (it.quantity || 0) * (it.unitPrice || 0),
-      }))
-      stockReturnTxId = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-      const importTx = new InventoryTransaction({
-        _id: stockReturnTxId, transactionNumber: stockReturnTxId, type: 'import',
-        warehouseId: origTx.warehouseId, warehouseName: origTx.warehouseName,
-        warehouseCode: origTx.warehouseCode, site: origTx.site,
-        items: txItems,
-        totalAmount: txItems.reduce((s, i) => s + (i.amount || 0), 0),
-        relatedVisitId: enc._id,
-        notes: `Hoàn kho — ${enc.patientName} (${enc._id}). Lý do: ${req.body.reason || 'không ghi'}`,
-        status: 'draft',
-        createdBy: req.user.username, createdAt: now(), updatedAt: now(),
-      })
-      await importTx.save()
-      // Inline confirm to actually create the lots + bump Supply.currentStock.
-      for (const item of importTx.items) {
-        const supply = await Supply.findById(item.supplyId)
-        if (!supply) continue
-        const lot = new InventoryLot({
-          _id: `LOT-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-          supplyId: item.supplyId, warehouseId: importTx.warehouseId,
-          site: importTx.site || '',
-          lotNumber: item.lotNumber || `RET-${Date.now().toString().slice(-6)}`,
-          manufacturingDate: '', expiryDate: item.expiryDate || '',
-          importTransactionId: importTx._id, importDate: now().slice(0, 10),
-          initialQuantity: item.quantity, currentQuantity: item.quantity,
-          unitPrice: item.unitPrice || 0, status: 'available', createdAt: now(),
+      // Optional stock return: clone the original auto_deduct transaction as a
+      // positive 'import' that recreates the same lots' qty. Only meaningful
+      // when there's a consumablesTransactionId AND the caller opts in.
+      let stockReturnTxId = null
+      if (req.body.returnStock && enc.consumablesTransactionId) {
+        const origTx = await InventoryTransaction.findById(enc.consumablesTransactionId, null, { session }).lean()
+        if (!origTx) throw httpError(400, 'Không tìm thấy phiếu trừ kho gốc — không thể hoàn kho.')
+        const txItems = origTx.items.map(it => ({
+          supplyId: it.supplyId, supplyName: it.supplyName, supplyCode: it.supplyCode,
+          unit: it.unit, packagingSpec: it.packagingSpec || '',
+          lotNumber: it.lotNumber, expiryDate: it.expiryDate || '',
+          quantity: it.quantity, unitPrice: it.unitPrice || 0,
+          amount: (it.quantity || 0) * (it.unitPrice || 0),
+        }))
+        stockReturnTxId = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+        const importTx = new InventoryTransaction({
+          _id: stockReturnTxId, transactionNumber: await nextTxCode('NK', localDate().replace(/-/g, '')), type: 'import',
+          warehouseId: origTx.warehouseId, warehouseName: origTx.warehouseName,
+          warehouseCode: origTx.warehouseCode, site: origTx.site,
+          items: txItems,
+          totalAmount: txItems.reduce((s, i) => s + (i.amount || 0), 0),
+          relatedVisitId: enc._id,
+          notes: `Hoàn kho — ${enc.patientName} (${enc._id}). Lý do: ${req.body.reason || 'không ghi'}`,
+          status: 'draft',
+          createdBy: req.user.username, createdAt: now(), updatedAt: now(),
         })
-        await lot.save()
-        supply.currentStock += item.quantity
-        supply.updatedAt = now()
-        await supply.save()
+        await importTx.save({ session })
+        // Inline confirm to actually create the lots + bump Supply.currentStock.
+        for (const item of importTx.items) {
+          const supply = await Supply.findById(item.supplyId, null, { session })
+          if (!supply) continue
+          const lot = new InventoryLot({
+            _id: `LOT-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+            supplyId: item.supplyId, warehouseId: importTx.warehouseId,
+            site: importTx.site || '',
+            lotNumber: item.lotNumber || `RET-${Date.now().toString().slice(-6)}`,
+            manufacturingDate: '', expiryDate: item.expiryDate || '',
+            importTransactionId: importTx._id, importDate: now().slice(0, 10),
+            initialQuantity: item.quantity, currentQuantity: item.quantity,
+            unitPrice: item.unitPrice || 0, status: 'available', createdAt: now(),
+          })
+          await lot.save({ session })
+          supply.currentStock += item.quantity
+          supply.updatedAt = now()
+          await supply.save({ session })
+        }
+        importTx.status = 'confirmed'
+        importTx.confirmedBy = req.user.username
+        importTx.confirmedAt = now()
+        importTx.updatedAt = now()
+        await importTx.save({ session })
       }
-      importTx.status = 'confirmed'
-      importTx.confirmedBy = req.user.username
-      importTx.confirmedAt = now()
-      importTx.updatedAt = now()
-      await importTx.save()
-    }
 
-    const entry = {
-      at: now(), by: req.user.username, byName: req.user.displayName || req.user.username,
-      amount, method: req.body.method || 'cash', kind: 'refund',
-      reason: req.body.reason || '', stockReturnTxId,
-    }
-    if (!enc.payments) enc.payments = []
-    enc.payments.push(entry)
+      if (!enc.payments) enc.payments = []
+      enc.payments.push({
+        at: now(), by: req.user.username, byName: req.user.displayName || req.user.username,
+        amount, method: req.body.method || 'cash', kind: 'refund',
+        reason: req.body.reason || '', stockReturnTxId,
+      })
 
-    enc.paidAmount = netPaidAmount(enc)
-    // Status semantics on refund: leave 'paid' if any positive remains
-    // (cashier can see it's been a paid encounter even after partial refund);
-    // drop to 'completed' when fully refunded so the encounter is no longer
-    // counted as paid in revenue queries that filter status === 'paid'. But
-    // we still net out the refund in reports for safety, so this is mostly
-    // cosmetic. Use 'partial' if there's a leftover < grandTotal but > 0.
-    const grand = grandTotalForEnc(enc)
-    enc.status = enc.paidAmount === 0 ? 'completed'
-      : enc.paidAmount < grand ? 'partial'
-      : 'paid'
-    enc.updatedAt = now()
-    await enc.save()
-    res.json(enc.toObject())
-  } catch (err) { res.status(500).json({ error: err.message }) }
+      enc.paidAmount = netPaidAmount(enc)
+      // Status: 'paid' if positive remains, 'completed' when fully refunded,
+      // 'partial' for a leftover < grandTotal but > 0.
+      const grand = grandTotalForEnc(enc)
+      enc.status = enc.paidAmount === 0 ? 'completed'
+        : enc.paidAmount < grand ? 'partial'
+        : 'paid'
+      enc.updatedAt = now()
+      await enc.save({ session })
+      return enc.toObject()
+    })
+    res.json(result)
+  } catch (err) { res.status(err.status || 500).json({ error: err.message }) }
 })
 
 // POST /encounters/:id/checkout — full-payment shortcut, kept for backward
@@ -880,42 +887,43 @@ router.post('/:id/refund', requireAuth, async (req, res) => {
 // /payment directly so partial payments are first-class.
 router.post('/:id/checkout', requireAuth, async (req, res) => {
   try {
-    const enc = await Encounter.findById(req.params.id)
-    if (!enc) return res.status(404).json({ error: 'Không tìm thấy lượt khám' })
-    if (enc.status === 'paid') return res.status(400).json({ error: 'Lượt khám đã được thanh toán' })
+    const result = await withTxn(async (session) => {
+      const enc = await Encounter.findById(req.params.id, null, { session })
+      if (!enc) throw httpError(404, 'Không tìm thấy lượt khám')
+      if (enc.status === 'paid') throw httpError(400, 'Lượt khám đã được thanh toán')
 
-    const remaining = Math.max(0, grandTotalForEnc(enc) - netPaidAmount(enc))
-    if (remaining <= 0) return res.status(400).json({ error: 'Bill chưa có mục để thanh toán' })
+      const remaining = Math.max(0, grandTotalForEnc(enc) - netPaidAmount(enc))
+      if (remaining <= 0) throw httpError(400, 'Bill chưa có mục để thanh toán')
 
-    const isFirstPayment = (enc.payments || []).filter(p => p.kind !== 'refund').length === 0
-    let txId = null
-    if (isFirstPayment) {
-      try { ({ txId } = await deductStockForFirstPayment(enc, req.user)) }
-      catch (e) { return res.status(400).json({ error: e.message }) }
-      if (txId) {
-        enc.consumablesTransactionId = txId
-        enc.consumablesDeductedAt = now()
+      const isFirstPayment = (enc.payments || []).filter(p => p.kind !== 'refund').length === 0
+      if (isFirstPayment) {
+        const { txId } = await deductStockForFirstPayment(enc, req.user, session)
+        if (txId) {
+          enc.consumablesTransactionId = txId
+          enc.consumablesDeductedAt = now()
+        }
       }
-    }
 
-    const at = now()
-    if (!enc.payments) enc.payments = []
-    enc.payments.push({
-      at, by: req.user.username, byName: req.user.displayName || req.user.username,
-      amount: remaining, method: req.body.paymentMethod || req.body.method || 'cash',
-      kind: 'payment', reason: '',
+      const at = now()
+      if (!enc.payments) enc.payments = []
+      enc.payments.push({
+        at, by: req.user.username, byName: req.user.displayName || req.user.username,
+        amount: remaining, method: req.body.paymentMethod || req.body.method || 'cash',
+        kind: 'payment', reason: '',
+      })
+      enc.paidAmount = netPaidAmount(enc)
+      enc.status = 'paid'
+      if (isFirstPayment) {
+        enc.paidAt = at
+        enc.paidBy = req.user.username
+        enc.paidByName = req.user.displayName || req.user.username
+      }
+      enc.updatedAt = now()
+      await enc.save({ session })
+      return enc.toObject()
     })
-    enc.paidAmount = netPaidAmount(enc)
-    enc.status = 'paid'
-    if (isFirstPayment) {
-      enc.paidAt = at
-      enc.paidBy = req.user.username
-      enc.paidByName = req.user.displayName || req.user.username
-    }
-    enc.updatedAt = now()
-    await enc.save()
-    res.json(enc.toObject())
-  } catch (err) { res.status(500).json({ error: err.message }) }
+    res.json(result)
+  } catch (err) { res.status(err.status || 500).json({ error: err.message }) }
 })
 
 // DELETE /encounters/:id/bill-items/:billItemId — remove an item by its
