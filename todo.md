@@ -1,6 +1,14 @@
 # TODO
 
-_Nothing open right now._
+## Active: production-grade upgrade (Phases 0–6)
+Full plan + status table: [docs/prod-upgrade-plan.md](docs/prod-upgrade-plan.md).
+Shipping one phase at a time (build → deploy → verify on prod → review before next).
+
+- **Phase 0 — Security** ▶ shipping. bcrypt (lazy-upgrade legacy plaintext) +
+  token iat/exp (grandfather legacy) + account-status gate + timingSafeEqual.
+  **Remaining (deliberate off-hours step):** set `SESSION_SECRET` in Railway +
+  remove literal fallback — rotating logs everyone out once.
+- Phases 1–6: queued (see plan doc).
 
 ## Recently completed
 

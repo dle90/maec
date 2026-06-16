@@ -2,6 +2,29 @@
 
 Living doc of deferred work / known limits. Append before finishing any feature; check before starting one.
 
+## Production-grade upgrade (started 2026-06-16) — Phases 0–6
+Full plan + live status: [docs/prod-upgrade-plan.md](docs/prod-upgrade-plan.md).
+Stays on MongoDB; no new features; shipped one phase at a time (build → deploy →
+verify on prod → review before next). Scope chosen: **Full (0–6)**.
+
+### Phase 0 — Security — shipped 2026-06-16 (`043be36`), verified on prod
+- **bcrypt** password hashing (`bcryptjs`) in `routes/auth.js`: hash on
+  create/update; login uses `bcrypt.compare` for hashed values and **lazily
+  re-hashes** legacy plaintext on first successful login (zero-downtime).
+- **`scripts/hash-passwords.js`** (dry-run default, `--apply`) run on prod →
+  **23/23 users now hashed, 0 plaintext** remaining at rest.
+- **Token expiry**: signed tokens carry `iat`/`exp` (`AUTH_TOKEN_TTL_SEC`, default
+  12h); `verify()` rejects expired but **grandfathers legacy no-exp tokens** (no
+  forced logout). Login returns `expiresAt`. `timingSafeEqual` on the HMAC compare.
+- **Account-status gate**: login blocks `employmentStatus` inactive/resigned.
+- Verified on prod: bcrypt login `200`, wrong pw `401`, lazy-upgrade persists.
+- **⚠️ Remaining Phase-0 item (deliberate, deferred):** move signing secret fully
+  to env + remove the committed `'maec-secret-2026'` fallback + rotate in Railway.
+  Code already prefers `SESSION_SECRET` (warns if unset). Rotating the secret
+  **invalidates all live tokens → everyone re-logs in once**, so it must be done
+  at an off-hours moment with the owner's go-ahead. Until then the known literal
+  is still a valid fallback signer.
+
 ## Sprint state (2026-05-02 EOD) — re-verified clean
 
 Four sprints shipped + audit-verified:

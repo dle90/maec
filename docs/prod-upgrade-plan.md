@@ -24,7 +24,7 @@ hardening what already exists. Scope chosen: **Full (Phases 0–6)**, shipped
 ## Status
 | Phase | Title | Status |
 |---|---|---|
-| 0 | Security | ▶ in progress |
+| 0 | Security | ✅ done (secret rotation pending off-hours) |
 | 1 | Data safety (Mongo hardening) | ☐ todo |
 | 2 | API hygiene (validation/errors) | ☐ todo |
 | 3 | Observability & ops | ☐ todo |
@@ -34,19 +34,19 @@ hardening what already exists. Scope chosen: **Full (Phases 0–6)**, shipped
 
 ---
 
-## Phase 0 — Security `[S, urgent]`
+## Phase 0 — Security `[S, urgent]` ✅ shipped 2026-06-16 (`043be36`)
 Live holes, all in [auth.js](../maec-app/server/routes/auth.js).
 
-- [ ] **bcrypt passwords.** Hash on user-create/update; on login, `bcrypt.compare`
+- [x] **bcrypt passwords.** Hash on user-create/update; on login, `bcrypt.compare`
       for hashed values and **lazy-upgrade** legacy plaintext on successful login
       (zero-downtime). `bcryptjs` (pure-JS, Railway-safe).
-- [ ] **Straggler migration** `scripts/hash-passwords.js` (dry-run default,
-      `--apply`) to hash any plaintext passwords for accounts that don't log in.
-- [ ] **Account-status gate** on login (reject `employmentStatus` inactive/resigned).
-- [ ] **Token expiry.** Add `iat`/`exp` to signed tokens (env TTL,
+- [x] **Straggler migration** `scripts/hash-passwords.js` (dry-run default,
+      `--apply`) — run on prod, 23/23 users hashed, 0 plaintext remaining.
+- [x] **Account-status gate** on login (reject `employmentStatus` inactive/resigned).
+- [x] **Token expiry.** Add `iat`/`exp` to signed tokens (env TTL,
       `AUTH_TOKEN_TTL_SEC`, default 12h); `verify()` rejects expired, **grandfathers
       legacy tokens with no `exp`** (zero-downtime). Return `expiresAt` to client.
-- [ ] **Secret to env + rotate** ⚠️ *one-time logout, needs a Railway action.*
+- [ ] **Secret to env + rotate** ⚠️ *one-time logout, needs a Railway action — DEFERRED to off-hours.*
       Move signing secret to required env (`SESSION_SECRET`), remove the committed
       `'maec-secret-2026'` literal, fail-fast if unset, `timingSafeEqual` on compare.
       **Done as a deliberate off-hours step** (rotating the secret invalidates all
