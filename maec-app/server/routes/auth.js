@@ -1,14 +1,31 @@
 const express = require('express')
 const crypto = require('crypto')
+const bcrypt = require('bcryptjs')
 const User = require('../models/User')
 const RolePermission = require('../models/RolePermission')
 
 const router = express.Router()
-const SECRET = process.env.SESSION_SECRET || 'maec-secret-2026'
+// Phase 0: signing secret should come from the environment. The literal is a
+// last-resort fallback so a deploy never crashes if the env var is missing — it
+// is removed once SESSION_SECRET is set + rotated in Railway (a deliberate
+// off-hours step, since rotating invalidates all live tokens). See
+// docs/prod-upgrade-plan.md Phase 0.
+const SECRET = process.env.SESSION_SECRET || (() => {
+  console.warn('[auth] SESSION_SECRET not set — using insecure built-in default. Set it in Railway and rotate.')
+  return 'maec-secret-2026'
+})()
+const BCRYPT_ROUNDS = 10
+const TOKEN_TTL_SEC = Number(process.env.AUTH_TOKEN_TTL_SEC) || 12 * 3600 // 12h
 
-// Stateless HMAC-signed tokens — survive server restarts
+const isHashed = (s) => typeof s === 'string' && /^\$2[aby]\$/.test(s)
+
+// Stateless HMAC-signed tokens — survive server restarts. Now time-bounded:
+// iat/exp are stamped at sign time and enforced in verify() (legacy tokens with
+// no exp are grandfathered so this rolls out with zero forced logout).
 const sign = (payload) => {
-  const data = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const now = Math.floor(Date.now() / 1000)
+  const body = { ...payload, iat: now, exp: now + TOKEN_TTL_SEC }
+  const data = Buffer.from(JSON.stringify(body)).toString('base64url')
   const sig = crypto.createHmac('sha256', SECRET).update(data).digest('base64url')
   return `${data}.${sig}`
 }
@@ -20,8 +37,13 @@ const verify = (token) => {
     const data = token.slice(0, dot)
     const sig = token.slice(dot + 1)
     const expected = crypto.createHmac('sha256', SECRET).update(data).digest('base64url')
-    if (sig !== expected) return null
-    return JSON.parse(Buffer.from(data, 'base64url').toString())
+    // Constant-time compare on equal-length buffers
+    const sigBuf = Buffer.from(sig)
+    const expBuf = Buffer.from(expected)
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null
+    const parsed = JSON.parse(Buffer.from(data, 'base64url').toString())
+    if (parsed.exp && Math.floor(Date.now() / 1000) > parsed.exp) return null // expired
+    return parsed
   } catch { return null }
 }
 
@@ -69,7 +91,25 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body
     const user = await User.findById(username)
-    if (!user || user.password !== password) {
+    if (!user) {
+      return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' })
+    }
+    if (user.employmentStatus === 'inactive' || user.employmentStatus === 'resigned') {
+      return res.status(403).json({ error: 'Tài khoản đã bị vô hiệu hóa' })
+    }
+    // bcrypt for hashed passwords; legacy plaintext is compared directly and
+    // lazily re-hashed on the first successful login (zero-downtime migration).
+    let ok = false
+    if (isHashed(user.password)) {
+      ok = await bcrypt.compare(password || '', user.password)
+    } else {
+      ok = !!password && user.password === password
+      if (ok) {
+        user.password = await bcrypt.hash(password, BCRYPT_ROUNDS)
+        await user.save()
+      }
+    }
+    if (!ok) {
       return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' })
     }
     const eff = await computeEffective(user)
@@ -84,7 +124,7 @@ router.post('/login', async (req, res) => {
       sitePerms: eff.sitePerms,
     }
     const token = sign(session)
-    res.json({ token, ...session })
+    res.json({ token, expiresAt: Date.now() + TOKEN_TTL_SEC * 1000, ...session })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -107,9 +147,10 @@ router.post('/users', async (req, res) => {
     if (!username || !password || !role) {
       return res.status(400).json({ error: 'username, password, role required' })
     }
+    const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS)
     const user = await User.findByIdAndUpdate(
       username,
-      { _id: username, password, role, department: department || null, displayName: displayName || username },
+      { _id: username, password: hashed, role, department: department || null, displayName: displayName || username },
       { upsert: true, new: true }
     )
     res.json({ ok: true, user: { username: user._id, role: user.role, displayName: user.displayName } })
